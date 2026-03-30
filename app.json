@@ -1,28 +1,46 @@
 {
   "expo": {
-    "name": "golfsolitaire2",
-    "slug": "golfsolitaire2",
+    "name": "Mythic Peaks",
+    "slug": "mythic-peaks",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "landscape",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "ios": {
       "supportsTablet": true
     },
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#0F1A12"
+    },
     "android": {
+      "package": "com.husejn.mythicpeaks",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#0F1A12"
       }
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-asset",
+      "expo-font",
+      "@react-native-firebase/app",
+      "@react-native-firebase/auth",
+      "@react-native-google-signin/google-signin"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "0708e2fe-ec6a-4493-aa69-aed33e48e4ba"
+      }
+    },
+    "androidStatusBar": {
+      "hidden": true,
+      "translucent": true
     }
   }
 }
