@@ -1,11 +1,12 @@
-import React, { useEffect, useRef, useState } from "react"
-import {
-  Dimensions,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native"
+import React, {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
+import { Dimensions, Pressable, StyleSheet, Text, View } from "react-native"
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -26,13 +27,14 @@ export interface ICard {
 interface ICardProps {
   card?: ICard
   isOpen?: boolean
-  onClick?: () => void
+  onClick: (index: number) => void
   remove?: boolean
   disabled?: boolean
   alwaysEnabled?: boolean
   remaining?: number
   hinted?: boolean
   cardBackColor?: string
+  index: number
 }
 
 const SUIT_ICONS: Record<string, string> = {
@@ -134,44 +136,50 @@ const FlippingCard = ({
   onDone: () => void
 }) => {
   const progress = useSharedValue(0)
+
   useEffect(() => {
     progress.value = withTiming(
       1,
-      { duration: 120, easing: Easing.inOut(Easing.ease) },
-      () => {
-        runOnJS(onDone)()
+      {
+        duration: 160,
+        easing: Easing.out(Easing.cubic),
       },
+      () => runOnJS(onDone)(),
     )
   }, [])
-  const backStyle = useAnimatedStyle(() => ({
-    transform: [
-      { perspective: 800 },
-      {
-        rotateY: `${interpolate(progress.value, [0, 0.5, 1], [0, 90, 90])}deg`,
-      },
-    ],
-    opacity: progress.value < 0.5 ? 1 : 0,
-    position: "absolute" as const,
-    width: "100%",
-    height: "100%",
-  }))
-  const faceStyle = useAnimatedStyle(() => ({
-    transform: [
-      { perspective: 800 },
-      {
-        rotateY: `${interpolate(progress.value, [0, 0.5, 1], [-90, -90, 0])}deg`,
-      },
-    ],
-    opacity: progress.value >= 0.5 ? 1 : 0,
-    position: "absolute" as const,
-    width: "100%",
-    height: "100%",
-  }))
+
+  const backStyle = useAnimatedStyle(() => {
+    const rotate = interpolate(progress.value, [0, 0.5, 1], [0, 90, 90])
+    const scale = interpolate(progress.value, [0, 0.5, 1], [1, 0.95, 1])
+
+    return {
+      transform: [{ perspective: 900 }, { rotateY: `${rotate}deg` }, { scale }],
+      opacity: progress.value < 0.5 ? 1 : 0,
+      position: "absolute",
+      width: "100%",
+      height: "100%",
+    }
+  })
+
+  const faceStyle = useAnimatedStyle(() => {
+    const rotate = interpolate(progress.value, [0, 0.5, 1], [-90, -90, 0])
+    const scale = interpolate(progress.value, [0, 0.5, 1], [0.95, 0.95, 1])
+
+    return {
+      transform: [{ perspective: 900 }, { rotateY: `${rotate}deg` }, { scale }],
+      opacity: progress.value >= 0.5 ? 1 : 0,
+      position: "absolute",
+      width: "100%",
+      height: "100%",
+    }
+  })
+
   return (
     <View style={styles.wrap}>
       <Animated.View style={backStyle}>
         <CardBackView color={backColor} />
       </Animated.View>
+
       <Animated.View style={faceStyle}>
         <CardFace card={card} />
       </Animated.View>
@@ -190,18 +198,33 @@ const FallingCard = ({
   backColor: string
   onDone: () => void
 }) => {
-  const y = useSharedValue(0)
-  const o = useSharedValue(1)
+  const progress = useSharedValue(0)
+
   useEffect(() => {
-    y.value = withTiming(80, { duration: 80, easing: Easing.in(Easing.quad) })
-    o.value = withTiming(0, { duration: 70 }, () => {
-      runOnJS(onDone)()
-    })
+    progress.value = withTiming(
+      1,
+      {
+        duration: 180,
+        easing: Easing.out(Easing.quad),
+      },
+      () => runOnJS(onDone)(),
+    )
   }, [])
-  const style = useAnimatedStyle(() => ({
-    transform: [{ translateY: y.value }],
-    opacity: o.value,
-  }))
+
+  const style = useAnimatedStyle(() => {
+    return {
+      transform: [
+        {
+          translateY: interpolate(progress.value, [0, 1], [0, 90]),
+        },
+        {
+          scale: interpolate(progress.value, [0, 1], [1, 0.92]),
+        },
+      ],
+      opacity: interpolate(progress.value, [0, 0.8, 1], [1, 0.6, 0]),
+    }
+  })
+
   return (
     <Animated.View style={[styles.wrap, style]}>
       {isOpen && card ? (
@@ -212,109 +235,162 @@ const FallingCard = ({
     </Animated.View>
   )
 }
-
 const HintGlow = () => <View style={styles.hintGlow} pointerEvents="none" />
 
-const Card = React.memo((props: ICardProps) => {
-  const {
-    card,
-    isOpen,
-    onClick,
-    remove,
-    disabled = false,
-    alwaysEnabled = false,
-    remaining,
-    hinted = false,
-    cardBackColor: propBackColor,
-  } = props
-  const contextBackColor = useCardBackColor()
-  const cardBackColor = propBackColor || contextBackColor || DEFAULT_BACK_COLOR
-  const prevRemove = useRef(remove)
-  const prevIsOpen = useRef(isOpen)
-  const [falling, setFalling] = useState(false)
-  const [gone, setGone] = useState(!!remove)
-  const [flipping, setFlipping] = useState(false)
-
-  // Reset states on new level (remove goes false)
-  if (!remove && prevRemove.current) {
-    setFalling(false)
-    setGone(false)
-    setFlipping(false)
-  } else if (remove && !prevRemove.current && !falling && !gone) {
-    setFalling(true)
-  } else if (!remove && gone) {
-    setGone(false)
-  }
-  prevRemove.current = remove
-
-  // Flip detection — only if card was NOT just reset from a new level
-  if (
-    isOpen &&
-    !prevIsOpen.current &&
-    !remove &&
-    !falling &&
-    !gone &&
-    !flipping &&
-    prevRemove.current === remove
-  ) {
-    setFlipping(true)
-  }
-  prevIsOpen.current = isOpen
-
-  if (gone && !alwaysEnabled) return <View style={styles.emptySlot} />
-  if (falling && !alwaysEnabled)
-    return (
-      <View style={styles.touch}>
-        <FallingCard
-          card={card}
-          isOpen={isOpen}
-          backColor={cardBackColor}
-          onDone={() => {
-            setFalling(false)
-            setGone(true)
-          }}
-        />
-      </View>
+const Card = React.memo(
+  forwardRef((props: ICardProps, ref) => {
+    const {
+      card,
+      isOpen,
+      onClick,
+      remove,
+      disabled = false,
+      alwaysEnabled = false,
+      remaining,
+      hinted = false,
+      cardBackColor: propBackColor,
+      index,
+    } = props
+    const contextBackColor = useCardBackColor()
+    const cardBackColor = useMemo(
+      () => propBackColor || contextBackColor || DEFAULT_BACK_COLOR,
+      [propBackColor, contextBackColor],
     )
-  if (flipping && card)
-    return (
-      <View style={[styles.touch, { zIndex: 3 }]}>
-        <FlippingCard
-          card={card}
-          backColor={cardBackColor}
-          onDone={() => setFlipping(false)}
-        />
-      </View>
-    )
+    const prevRemove = useRef(remove)
+    const prevIsOpen = useRef(isOpen)
+    const [falling, setFalling] = useState(false)
+    const [gone, setGone] = useState(!!remove)
+    const [flipping, setFlipping] = useState(false)
 
-  const isDeck = remaining !== undefined
-  const isDisabled = !alwaysEnabled && (disabled || !isOpen)
-  return (
-    <TouchableOpacity
-      onPress={onClick}
-      disabled={isDisabled}
-      activeOpacity={0.6}
-      delayPressIn={0}
-      delayPressOut={0}
-      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-      style={[
-        isDeck ? styles.touchDeck : styles.touch,
-        { zIndex: isOpen ? 2 : 1 },
-      ]}
-    >
-      <View style={isDeck ? styles.wrapDeck : styles.wrap}>
-        {isDeck ? (
-          <DeckCard remaining={remaining!} backColor={cardBackColor} />
-        ) : isOpen && card ? (
-          <CardFace card={card} />
-        ) : (
-          <CardBackView color={cardBackColor} />
-        )}
-        {hinted && <HintGlow />}
-      </View>
-    </TouchableOpacity>
-  )
-})
+    const [displayOpen, setDisplayOpen] = useState(isOpen)
+
+    useEffect(() => {
+      if (isOpen) {
+        requestAnimationFrame(() => {
+          setDisplayOpen(true)
+        })
+      } else {
+        setDisplayOpen(false)
+      }
+    }, [isOpen])
+
+    useImperativeHandle(ref, () => ({
+      triggerRemove: () => {
+        setFalling(true)
+      },
+    }))
+
+    const [delayedOpen, setDelayedOpen] = useState(isOpen)
+
+    useEffect(() => {
+      if (isOpen) {
+        const timeout = setTimeout(
+          () => {
+            setDelayedOpen(true)
+          },
+          index ? index * 12 : 0,
+        ) // 👈 stagger based on index
+
+        return () => clearTimeout(timeout)
+      } else {
+        setDelayedOpen(false)
+      }
+    }, [isOpen])
+
+    useEffect(() => {
+      if (!remove && prevRemove.current) {
+        setFalling(false)
+        setGone(false)
+        setFlipping(false)
+      } else if (remove && !prevRemove.current && !gone) {
+        setFalling(true)
+      } else if (!remove && gone) {
+        setGone(false)
+      }
+
+      prevRemove.current = remove
+    }, [remove, gone])
+
+    useEffect(() => {
+      if (
+        isOpen &&
+        !prevIsOpen.current &&
+        !remove &&
+        !falling &&
+        !gone &&
+        !flipping
+      ) {
+        setFlipping(true)
+      }
+
+      prevIsOpen.current = isOpen
+    }, [isOpen, remove, falling, gone, flipping])
+
+    // Flip detection — only if card was NOT just reset from a new level
+    if (
+      isOpen &&
+      !prevIsOpen.current &&
+      !remove &&
+      !falling &&
+      !gone &&
+      !flipping &&
+      prevRemove.current === remove
+    ) {
+      setFlipping(true)
+    }
+    prevIsOpen.current = isOpen
+
+    if (gone && !alwaysEnabled) return <View style={styles.emptySlot} />
+    if (falling && !alwaysEnabled)
+      return (
+        <View style={styles.touch}>
+          <FallingCard
+            card={card}
+            isOpen={displayOpen}
+            backColor={cardBackColor}
+            onDone={() => {
+              setFalling(false)
+              setGone(true)
+            }}
+          />
+        </View>
+      )
+    if (flipping && card)
+      return (
+        <View style={[styles.touch, { zIndex: 3 }]}>
+          <FlippingCard
+            card={card}
+            backColor={cardBackColor}
+            onDone={() => setFlipping(false)}
+          />
+        </View>
+      )
+
+    const isDeck = remaining !== undefined
+    const isDisabled = !alwaysEnabled && (disabled || !isOpen)
+    return (
+      <Pressable
+        onPress={() => onClick(index)}
+        disabled={isDisabled}
+        style={[
+          isDeck ? styles.touchDeck : styles.touch,
+          { zIndex: isOpen ? 2 : 1 },
+        ]}
+      >
+        <View style={isDeck ? styles.wrapDeck : styles.wrap}>
+          {isDeck ? (
+            <DeckCard remaining={remaining!} backColor={cardBackColor} />
+          ) : delayedOpen && card ? (
+            <CardFace card={card} />
+          ) : (
+            <CardBackView color={cardBackColor} />
+          )}
+          {hinted && <HintGlow />}
+        </View>
+      </Pressable>
+    )
+  }),
+)
 
 const styles = StyleSheet.create({
   emptySlot: { width: DECK_W, height: DECK_H, margin: 2, padding: 2 },
@@ -450,4 +526,12 @@ const styles = StyleSheet.create({
   },
 })
 
-export default Card
+export default React.memo(Card, (prev, next) => {
+  return (
+    prev.card === next.card &&
+    prev.isOpen === next.isOpen &&
+    prev.remove === next.remove &&
+    prev.hinted === next.hinted &&
+    prev.remaining === next.remaining
+  )
+})

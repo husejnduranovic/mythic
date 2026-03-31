@@ -1,12 +1,18 @@
-import React from "react"
+import React, { useEffect } from "react"
 import { StyleSheet, View } from "react-native"
 import Card from "./Card"
 import { ICard } from "./Card"
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated"
 
 interface ILayout2Props {
   cards: ICard[]
   onClick: (index: number) => void
-  hintedIndices?: Set<number>
+  levelId?: number
 }
 
 /**
@@ -51,117 +57,147 @@ interface ILayout2Props {
 const isCleared = (cards: ICard[], ...indices: number[]) =>
   indices.every((i) => !cards[i]?.visible)
 
-const Layout2 = React.memo(
-  ({ cards, onClick, hintedIndices = new Set() }: ILayout2Props) => {
-    if (cards.length < 30) return null
+const Layout2 = React.memo(({ cards, onClick, levelId }: ILayout2Props) => {
+  if (cards.length < 30) return null
 
-    const C = (i: number, open: boolean) => (
-      <Card
-        card={cards[i]}
-        isOpen={open}
-        remove={!cards[i].visible}
-        onClick={() => onClick(i)}
-        hinted={hintedIndices.has(i)}
-      />
-    )
+  const cardRefs = React.useRef<(any | null)[]>([])
 
-    return (
-      <View style={styles.container}>
-        {/* ═══ LEFT — Inverted Pyramid ═══ */}
-        <View style={styles.section}>
-          <View style={styles.inner}>
-            <View style={[styles.absRow, { top: 0 }]}>
-              <View style={styles.row}>
-                {C(0, isCleared(cards, 4))}
-                {C(1, isCleared(cards, 4, 5))}
-                {C(2, isCleared(cards, 5, 6))}
-                {C(3, isCleared(cards, 6))}
-              </View>
-            </View>
-            <View style={[styles.absRow, { top: 50 }]}>
-              <View style={styles.row}>
-                {C(4, isCleared(cards, 7))}
-                {C(5, isCleared(cards, 7, 8))}
-                {C(6, isCleared(cards, 8))}
-              </View>
-            </View>
-            <View style={[styles.absRow, { top: 100 }]}>
-              <View style={styles.row}>
-                {C(7, isCleared(cards, 9))}
-                {C(8, isCleared(cards, 9))}
-              </View>
-            </View>
-            <View style={[styles.absRow, { top: 150 }]}>
-              <View style={styles.row}>{C(9, cards[9].visible)}</View>
+  const handleClick = React.useCallback(
+    (index: number) => {
+      onClick(index)
+    },
+    [onClick],
+  )
+
+  const layoutProgress = useSharedValue(0)
+
+  useEffect(() => {
+    layoutProgress.value = 0
+    layoutProgress.value = withTiming(1, {
+      duration: 250,
+      easing: Easing.out(Easing.cubic),
+    })
+  }, [levelId])
+
+  const layoutStyle = useAnimatedStyle(() => ({
+    opacity: layoutProgress.value,
+    transform: [
+      {
+        translateY: (1 - layoutProgress.value) * 20,
+      },
+      {
+        scale: 0.98 + 0.02 * layoutProgress.value,
+      },
+    ],
+  }))
+
+  const C = (i: number, open: boolean) => (
+    <Card
+      ref={(el) => (cardRefs.current[i] = el)}
+      card={cards[i]}
+      isOpen={open}
+      remove={!cards[i].visible}
+      onClick={handleClick}
+      index={i}
+    />
+  )
+
+  return (
+    <Animated.View style={[styles.container, layoutStyle]}>
+      {/* ═══ LEFT — Inverted Pyramid ═══ */}
+      <View style={styles.section}>
+        <View style={styles.inner}>
+          <View style={[styles.absRow, { top: 0 }]}>
+            <View style={styles.row}>
+              {C(0, isCleared(cards, 4))}
+              {C(1, isCleared(cards, 4, 5))}
+              {C(2, isCleared(cards, 5, 6))}
+              {C(3, isCleared(cards, 6))}
             </View>
           </View>
-        </View>
-
-        {/* ═══ CENTER — Diamond ═══ */}
-        <View style={styles.section}>
-          <View style={styles.inner}>
-            <View style={[styles.absRow, { top: 0 }]}>
-              <View style={styles.row}>
-                {C(10, isCleared(cards, 12, 13))}
-                {C(11, isCleared(cards, 13, 14))}
-              </View>
-            </View>
-            <View style={[styles.absRow, { top: 50 }]}>
-              <View style={styles.row}>
-                {C(12, isCleared(cards, 15))}
-                {C(13, isCleared(cards, 15, 16))}
-                {C(14, isCleared(cards, 16))}
-              </View>
-            </View>
-            <View style={[styles.absRow, { top: 100 }]}>
-              <View style={styles.row}>
-                {C(15, isCleared(cards, 17, 18))}
-                {C(16, isCleared(cards, 18, 19))}
-              </View>
-            </View>
-            <View style={[styles.absRow, { top: 150 }]}>
-              <View style={styles.row}>
-                {C(17, cards[17].visible)}
-                {C(18, cards[18].visible)}
-                {C(19, cards[19].visible)}
-              </View>
+          <View style={[styles.absRow, { top: 50 }]}>
+            <View style={styles.row}>
+              {C(4, isCleared(cards, 7))}
+              {C(5, isCleared(cards, 7, 8))}
+              {C(6, isCleared(cards, 8))}
             </View>
           </View>
+          <View style={[styles.absRow, { top: 100 }]}>
+            <View style={styles.row}>
+              {C(7, isCleared(cards, 9))}
+              {C(8, isCleared(cards, 9))}
+            </View>
+          </View>
+          <View style={[styles.absRow, { top: 150 }]}>
+            <View style={styles.row}>{C(9, cards[9].visible)}</View>
+          </View>
         </View>
+      </View>
 
-        {/* ═══ RIGHT — Normal Pyramid ═══ */}
-        <View style={styles.section}>
-          <View style={styles.inner}>
-            <View style={[styles.absRow, { top: 0 }]}>
-              <View style={styles.row}>{C(20, isCleared(cards, 21, 22))}</View>
+      {/* ═══ CENTER — Diamond ═══ */}
+      <View style={styles.section}>
+        <View style={styles.inner}>
+          <View style={[styles.absRow, { top: 0 }]}>
+            <View style={styles.row}>
+              {C(10, isCleared(cards, 12, 13))}
+              {C(11, isCleared(cards, 13, 14))}
             </View>
-            <View style={[styles.absRow, { top: 50 }]}>
-              <View style={styles.row}>
-                {C(21, isCleared(cards, 23, 24))}
-                {C(22, isCleared(cards, 24, 25))}
-              </View>
+          </View>
+          <View style={[styles.absRow, { top: 50 }]}>
+            <View style={styles.row}>
+              {C(12, isCleared(cards, 15))}
+              {C(13, isCleared(cards, 15, 16))}
+              {C(14, isCleared(cards, 16))}
             </View>
-            <View style={[styles.absRow, { top: 100 }]}>
-              <View style={styles.row}>
-                {C(23, isCleared(cards, 26, 27))}
-                {C(24, isCleared(cards, 27, 28))}
-                {C(25, isCleared(cards, 28, 29))}
-              </View>
+          </View>
+          <View style={[styles.absRow, { top: 100 }]}>
+            <View style={styles.row}>
+              {C(15, isCleared(cards, 17, 18))}
+              {C(16, isCleared(cards, 18, 19))}
             </View>
-            <View style={[styles.absRow, { top: 150 }]}>
-              <View style={styles.row}>
-                {C(26, cards[26].visible)}
-                {C(27, cards[27].visible)}
-                {C(28, cards[28].visible)}
-                {C(29, cards[29].visible)}
-              </View>
+          </View>
+          <View style={[styles.absRow, { top: 150 }]}>
+            <View style={styles.row}>
+              {C(17, cards[17].visible)}
+              {C(18, cards[18].visible)}
+              {C(19, cards[19].visible)}
             </View>
           </View>
         </View>
       </View>
-    )
-  },
-)
+
+      {/* ═══ RIGHT — Normal Pyramid ═══ */}
+      <View style={styles.section}>
+        <View style={styles.inner}>
+          <View style={[styles.absRow, { top: 0 }]}>
+            <View style={styles.row}>{C(20, isCleared(cards, 21, 22))}</View>
+          </View>
+          <View style={[styles.absRow, { top: 50 }]}>
+            <View style={styles.row}>
+              {C(21, isCleared(cards, 23, 24))}
+              {C(22, isCleared(cards, 24, 25))}
+            </View>
+          </View>
+          <View style={[styles.absRow, { top: 100 }]}>
+            <View style={styles.row}>
+              {C(23, isCleared(cards, 26, 27))}
+              {C(24, isCleared(cards, 27, 28))}
+              {C(25, isCleared(cards, 28, 29))}
+            </View>
+          </View>
+          <View style={[styles.absRow, { top: 150 }]}>
+            <View style={styles.row}>
+              {C(26, cards[26].visible)}
+              {C(27, cards[27].visible)}
+              {C(28, cards[28].visible)}
+              {C(29, cards[29].visible)}
+            </View>
+          </View>
+        </View>
+      </View>
+    </Animated.View>
+  )
+})
 
 const styles = StyleSheet.create({
   container: {

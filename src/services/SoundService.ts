@@ -2,6 +2,9 @@ import { Audio } from "expo-av"
 import { Asset } from "expo-asset"
 import * as Haptics from "expo-haptics"
 
+let lastMatchTime = 0
+let lastComboSound = 0
+
 let matchSound1: Audio.Sound | null = null
 let matchSound2: Audio.Sound | null = null
 let matchToggle = false
@@ -27,6 +30,19 @@ const loadSound = async (req: any): Promise<Audio.Sound | null> => {
   }
 }
 
+const clamp = (v: number, min: number, max: number) =>
+  Math.max(min, Math.min(max, v))
+
+const getComboVolume = (combo: number) => {
+  if (combo >= 30) return 1.0
+  if (combo >= 20) return 0.9
+  if (combo >= 15) return 0.8
+  if (combo >= 10) return 0.7
+  if (combo >= 5) return 0.6
+  if (combo >= 3) return 0.5
+  return 0.4
+}
+
 export const SoundService = {
   async init() {
     if (initialized) return
@@ -50,37 +66,44 @@ export const SoundService = {
     console.log("SOUND: all loaded")
   },
 
-  play(sound: Audio.Sound | null) {
+  play(sound: Audio.Sound | null, volume = 1) {
     if (!sound) return
+
     try {
-      sound.replayAsync()
+      sound.setPositionAsync(0)
+      sound.setVolumeAsync(clamp(volume, 0, 1))
+      sound.playAsync()
     } catch {}
   },
 
   async playMatch(combo: number) {
     try {
-      // Click on every match — double buffered
+      const now = Date.now()
+
+      // prevent audio spam within same frame burst
+      if (now - lastMatchTime < 30) return
+      lastMatchTime = now
+
       matchToggle = !matchToggle
-      this.play(matchToggle ? matchSound1 : matchSound2)
+      const volume = getComboVolume(combo)
+      this.play(matchToggle ? matchSound1 : matchSound2, volume)
 
       // Combo milestone sounds layered on top
       if (combo >= 30 && combo % 5 === 0) {
-        this.play(combo30Sound)
+        this.play(combo30Sound, 1.0)
       } else if (combo === 20 || combo === 25) {
-        this.play(combo20Sound)
+        this.play(combo20Sound, 0.9)
       } else if (combo === 15) {
-        this.play(combo15Sound)
+        this.play(combo15Sound, 0.8)
       } else if (combo === 10) {
-        this.play(combo10Sound)
+        this.play(combo10Sound, 0.7)
       }
 
       // Haptics
       if (combo >= 25) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-        setTimeout(
-          () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy),
-          100,
-        )
+        setTimeout(() => {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+        }, 20)
       } else if (combo >= 10) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
       } else if (combo >= 5) {

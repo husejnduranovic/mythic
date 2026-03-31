@@ -1,11 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import {
-  Animated,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native"
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native"
 import {
   generateDeck,
   generateDailyDeck,
@@ -30,6 +24,13 @@ import {
   submitGameScore,
 } from "../services/Dailychallenge"
 import { CardBackColorContext } from "../context/ThemeContext"
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withTiming,
+} from "react-native-reanimated"
+import { Animated as RNAnimated } from "react-native"
 
 interface GameProps {
   onHome?: () => void
@@ -192,7 +193,6 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
   const [gameOver, setGameOver] = useState(false)
   const [secondCard, setSecondCard] = useState<number | null>(null)
   const [paused, setPaused] = useState(false)
-  const [hintsLeft, setHintsLeft] = useState(MAX_HINTS)
   const [showHints, setShowHints] = useState(false)
   const [scoreSaved, setScoreSaved] = useState(false)
   const [wildCount, setWildCount] = useState(0)
@@ -201,22 +201,30 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
   const [showQuitConfirm, setShowQuitConfirm] = useState(false)
   const [alreadyPlayed, setAlreadyPlayed] = useState(false)
   const [alreadyPlayedScore, setAlreadyPlayedScore] = useState(0)
-  const wildPulse = useRef(new Animated.Value(1)).current
+  const wildPulse = useRef(new RNAnimated.Value(1)).current
   const [milestoneText, setMilestoneText] = useState("")
   const [milestoneIcon, setMilestoneIcon] = useState("")
   const [milestoneColor, setMilestoneColor] = useState("#fff")
-  const milestoneOpacity = useRef(new Animated.Value(0)).current
-  const milestoneScale = useRef(new Animated.Value(0.5)).current
-  const flashOpacity = useRef(new Animated.Value(0)).current
+  const milestoneOpacity = useRef(new RNAnimated.Value(0)).current
+  const milestoneScale = useRef(new RNAnimated.Value(0.5)).current
   const levelCompleteRef = useRef(false)
   const autoAdvanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const pointsOpacity = useRef(new Animated.Value(0)).current
-  const pointsMove = useRef(new Animated.Value(0)).current
+  const pointsOpacity = useRef(new RNAnimated.Value(0)).current
+  const pointsMove = useRef(new RNAnimated.Value(0)).current
   const [showPoints, setShowPoints] = useState(false)
   const [lastPoints, setLastPoints] = useState(0)
-  const comboPulse = useRef(new Animated.Value(1)).current
-  const scorePulse = useRef(new Animated.Value(1)).current
-  const deckScale = useRef(new Animated.Value(1)).current
+  const comboPulse = useRef(new RNAnimated.Value(1)).current
+  const scorePulse = useRef(new RNAnimated.Value(1)).current
+  const deckScale = useSharedValue(1)
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null)
+
+  const milestoneX = useRef(new RNAnimated.Value(0)).current
+  const milestoneY = useRef(new RNAnimated.Value(10)).current
+
+  const deckRef = useRef<View>(null)
+  const centerRef = useRef<View>(null)
+
+  const backgroundColor = theme.battlefieldColor
 
   // Check if already played daily
   useEffect(() => {
@@ -257,20 +265,23 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
   useEffect(() => {
     if (combo > 0) {
       if (combo > bestCombo) setBestCombo(combo)
-      Animated.sequence([
-        Animated.timing(comboPulse, {
+
+      RNAnimated.sequence([
+        RNAnimated.timing(comboPulse, {
           toValue: 1.4,
           duration: 80,
           useNativeDriver: true,
         }),
-        Animated.timing(comboPulse, {
+        RNAnimated.timing(comboPulse, {
           toValue: 1,
           duration: 80,
           useNativeDriver: true,
         }),
       ]).start()
+
       const m = COMBO_MILESTONES[combo]
       if (m) showMilestone(m.text, m.color, m.icon)
+
       if (combo >= WILD_SECOND_THRESHOLD && wildFirstEarned && wildCount < 2) {
         setWildCount(2)
         showMilestone("2nd WILD!", "#FF4757", "⚡⚡")
@@ -283,14 +294,14 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
   }, [combo])
   useEffect(() => {
     if (wildActive) {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(wildPulse, {
+      RNAnimated.loop(
+        RNAnimated.sequence([
+          RNAnimated.timing(wildPulse, {
             toValue: 1.15,
             duration: 400,
             useNativeDriver: true,
           }),
-          Animated.timing(wildPulse, {
+          RNAnimated.timing(wildPulse, {
             toValue: 1,
             duration: 400,
             useNativeDriver: true,
@@ -301,13 +312,13 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
   }, [wildActive])
   useEffect(() => {
     if (score > 0)
-      Animated.sequence([
-        Animated.timing(scorePulse, {
+      RNAnimated.sequence([
+        RNAnimated.timing(scorePulse, {
           toValue: 1.15,
           duration: 60,
           useNativeDriver: true,
         }),
-        Animated.timing(scorePulse, {
+        RNAnimated.timing(scorePulse, {
           toValue: 1,
           duration: 100,
           useNativeDriver: true,
@@ -319,30 +330,40 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
     setMilestoneText(text)
     setMilestoneColor(color)
     setMilestoneIcon(icon)
+
     milestoneOpacity.setValue(1)
-    milestoneScale.setValue(0.3)
-    flashOpacity.setValue(0.2)
-    Animated.parallel([
-      Animated.sequence([
-        Animated.spring(milestoneScale, {
-          toValue: 1,
-          friction: 4,
-          tension: 100,
-          useNativeDriver: true,
-        }),
-        Animated.delay(250),
-        Animated.timing(milestoneOpacity, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]),
-      Animated.timing(flashOpacity, {
-        toValue: 0,
-        duration: 600,
+    milestoneScale.setValue(0.85)
+    milestoneY.setValue(8)
+    milestoneX.setValue(0)
+
+    RNAnimated.parallel([
+      RNAnimated.spring(milestoneScale, {
+        toValue: 1,
+        friction: 7,
+        tension: 200,
         useNativeDriver: true,
       }),
-    ]).start()
+      RNAnimated.timing(milestoneY, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setTimeout(() => {
+        RNAnimated.parallel([
+          RNAnimated.timing(milestoneOpacity, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+          RNAnimated.timing(milestoneY, {
+            toValue: -15,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+        ]).start()
+      }, 350)
+    })
   }
 
   const config = LEVEL_CONFIG[level] ?? LEVEL_CONFIG[1]
@@ -373,7 +394,6 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
     setDeckIndex(config.deckStart + 1)
     setCombo(0)
     setSecondCard(null)
-    setHintsLeft(MAX_HINTS)
     setShowHints(false)
     setWildActive(false)
     setLoading(true)
@@ -433,13 +453,13 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
       setShowPoints(true)
       pointsOpacity.setValue(1)
       pointsMove.setValue(0)
-      Animated.parallel([
-        Animated.timing(pointsOpacity, {
+      RNAnimated.parallel([
+        RNAnimated.timing(pointsOpacity, {
           toValue: 0,
           duration: 600,
           useNativeDriver: true,
         }),
-        Animated.timing(pointsMove, {
+        RNAnimated.timing(pointsMove, {
           toValue: -35,
           duration: 600,
           useNativeDriver: true,
@@ -485,31 +505,25 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
     [currentIndex, secondCard, combo, wildActive],
   )
 
-  const handleDeckPress = useCallback(() => {
+  const handleDeckPress = useCallback(async () => {
     if (deckIndex >= cards.length) return
-    if (autoAdvanceTimer.current) {
-      clearTimeout(autoAdvanceTimer.current)
-      autoAdvanceTimer.current = null
-    }
+
     SoundService.playDeckDraw()
-    Animated.sequence([
-      Animated.timing(deckScale, {
-        toValue: 0.9,
-        duration: 40,
-        useNativeDriver: true,
-      }),
-      Animated.timing(deckScale, {
-        toValue: 1,
-        duration: 40,
-        useNativeDriver: true,
-      }),
-    ]).start()
-    setCurrentIndex(deckIndex)
-    setDeckIndex((i) => i + 1)
-    setCombo(0)
-    setSecondCard(null)
-    setShowHints(false)
-    setWildActive(false)
+
+    deckScale.value = withSequence(
+      withTiming(0.9, { duration: 40 }),
+      withTiming(1, { duration: 40 }),
+    )
+
+    // small delay so overlay renders first
+    requestAnimationFrame(() => {
+      setCurrentIndex(deckIndex)
+      setDeckIndex((i) => i + 1)
+      setCombo(0)
+      setSecondCard(null)
+      setShowHints(false)
+      setWildActive(false)
+    })
   }, [deckIndex, cards.length])
 
   const handleWild = () => {
@@ -577,9 +591,9 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
       case 3:
         return <Layout3 key={layoutKey} {...p} />
       case 2:
-        return <Layout2 key={layoutKey} {...p} />
+        return <Layout2 key={layoutKey} {...p} levelId={2} />
       default:
-        return <Layout1 key={layoutKey} {...p} />
+        return <Layout1 key={layoutKey} {...p} levelId={1} />
     }
   }
   const comboColor =
@@ -593,6 +607,23 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
             ? "#7BED9F"
             : "#E8C547"
 
+  const measure = (ref: any) =>
+    new Promise<{ x: number; y: number; width: number; height: number }>(
+      (resolve) => {
+        ref.current?.measure(
+          (
+            x: number,
+            y: number,
+            width: number,
+            height: number,
+            pageX: number,
+            pageY: number,
+          ) => {
+            resolve({ x: pageX, y: pageY, width, height })
+          },
+        )
+      },
+    )
   // Already played daily
   if (alreadyPlayed)
     return (
@@ -805,10 +836,20 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
 
   return (
     <CardBackColorContext.Provider value={theme.cardBackColor}>
-      <View
-        style={[styles.container, { backgroundColor: theme.battlefieldColor }]}
-      >
+      <RNAnimated.View style={[styles.container, { backgroundColor }]}>
         <Battlefield />
+        {combo >= 4 && (
+          <View
+            pointerEvents="none"
+            style={[
+              StyleSheet.absoluteFillObject,
+              {
+                backgroundColor:
+                  combo >= 30 ? "rgba(255,0,80,0.08)" : "rgba(255,140,0,0.05)",
+              },
+            ]}
+          />
+        )}
         <TouchableOpacity
           style={styles.backBtn}
           onPress={handleBackPress}
@@ -833,7 +874,7 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
         )}
 
         {wildActive && (
-          <Animated.View
+          <RNAnimated.View
             style={[styles.wildBorder, { transform: [{ scale: wildPulse }] }]}
             pointerEvents="none"
           />
@@ -851,28 +892,30 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
           <View style={styles.wall}>
             <WallTexture />
             <View style={styles.leftSection}>
-              <Animated.View style={{ transform: [{ scale: deckScale }] }}>
-                <Card
-                  remaining={remaining > 0 ? remaining : 0}
-                  alwaysEnabled={remaining > 0}
-                  disabled={remaining <= 0}
-                  onClick={handleDeckPress}
-                  cardBackColor={theme.cardBackColor}
-                />
-              </Animated.View>
+              <View ref={deckRef}>
+                <Animated.View style={{ transform: [{ scale: deckScale }] }}>
+                  <Card
+                    remaining={remaining > 0 ? remaining : 0}
+                    alwaysEnabled={remaining > 0}
+                    disabled={remaining <= 0}
+                    onClick={handleDeckPress}
+                    cardBackColor={theme.cardBackColor}
+                  />
+                </Animated.View>
+              </View>
               <View style={styles.spoilsBox}>
                 <Text style={styles.label}>SPOILS</Text>
-                <Animated.Text
+                <RNAnimated.Text
                   style={[
                     styles.scoreValue,
                     { transform: [{ scale: scorePulse }] },
                   ]}
                 >
                   {score.toLocaleString()}
-                </Animated.Text>
+                </RNAnimated.Text>
               </View>
             </View>
-            <View style={styles.centerCards}>
+            <View ref={centerRef} style={styles.centerCards}>
               <View
                 style={[
                   styles.openCardGlow,
@@ -880,14 +923,14 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
                 ]}
               />
               <Card
-                card={cards[currentIndex]}
+                card={previewIndex ?? cards[currentIndex]}
                 isOpen
                 disabled
                 cardBackColor={theme.cardBackColor}
               />
               {secondCard !== null && (
                 <Card
-                  card={cards[secondCard]}
+                  card={previewIndex ?? cards[secondCard]}
                   isOpen
                   disabled
                   cardBackColor={theme.cardBackColor}
@@ -903,21 +946,21 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
               />
               <View>
                 <Text style={styles.label}>COMBO</Text>
-                <Animated.Text
+                <RNAnimated.Text
                   style={[
                     styles.comboValue,
                     { transform: [{ scale: comboPulse }], color: comboColor },
                   ]}
                 >
                   x{combo}
-                </Animated.Text>
+                </RNAnimated.Text>
               </View>
             </View>
           </View>
         </View>
 
         {showPoints && (
-          <Animated.View
+          <RNAnimated.View
             style={[
               styles.pointsPopup,
               {
@@ -929,14 +972,18 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
             <Text style={styles.pointsText}>
               +{lastPoints.toLocaleString()}
             </Text>
-          </Animated.View>
+          </RNAnimated.View>
         )}
-        <Animated.View
+        <RNAnimated.View
           style={[
             styles.milestone,
             {
               opacity: milestoneOpacity,
-              transform: [{ scale: milestoneScale }],
+              transform: [
+                { translateX: milestoneX },
+                { translateY: milestoneY },
+                { scale: milestoneScale },
+              ],
             },
           ]}
           pointerEvents="none"
@@ -945,15 +992,12 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
           <Text style={[styles.milestoneText, { color: milestoneColor }]}>
             {milestoneText}
           </Text>
-        </Animated.View>
-        <Animated.View
-          style={[
-            styles.flash,
-            { opacity: flashOpacity, backgroundColor: milestoneColor },
-          ]}
+        </RNAnimated.View>
+        <RNAnimated.View
+          style={[styles.flash, { opacity: 0 }]}
           pointerEvents="none"
         />
-      </View>
+      </RNAnimated.View>
     </CardBackColorContext.Provider>
   )
 }
