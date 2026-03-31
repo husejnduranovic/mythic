@@ -1,11 +1,4 @@
-import React, {
-  forwardRef,
-  useEffect,
-  useImperativeHandle,
-  useMemo,
-  useRef,
-  useState,
-} from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import { Dimensions, Pressable, StyleSheet, Text, View } from "react-native"
 import Animated, {
   useAnimatedStyle,
@@ -141,7 +134,7 @@ const FlippingCard = ({
     progress.value = withTiming(
       1,
       {
-        duration: 160,
+        duration: 100,
         easing: Easing.out(Easing.cubic),
       },
       () => runOnJS(onDone)(),
@@ -204,7 +197,7 @@ const FallingCard = ({
     progress.value = withTiming(
       1,
       {
-        duration: 180,
+        duration: 90,
         easing: Easing.out(Easing.quad),
       },
       () => runOnJS(onDone)(),
@@ -237,160 +230,119 @@ const FallingCard = ({
 }
 const HintGlow = () => <View style={styles.hintGlow} pointerEvents="none" />
 
-const Card = React.memo(
-  forwardRef((props: ICardProps, ref) => {
-    const {
-      card,
-      isOpen,
-      onClick,
-      remove,
-      disabled = false,
-      alwaysEnabled = false,
-      remaining,
-      hinted = false,
-      cardBackColor: propBackColor,
-      index,
-    } = props
-    const contextBackColor = useCardBackColor()
-    const cardBackColor = useMemo(
-      () => propBackColor || contextBackColor || DEFAULT_BACK_COLOR,
-      [propBackColor, contextBackColor],
-    )
-    const prevRemove = useRef(remove)
-    const prevIsOpen = useRef(isOpen)
-    const [falling, setFalling] = useState(false)
-    const [gone, setGone] = useState(!!remove)
-    const [flipping, setFlipping] = useState(false)
+const Card = React.memo((props: ICardProps) => {
+  const {
+    card,
+    isOpen,
+    onClick,
+    remove,
+    disabled = false,
+    alwaysEnabled = false,
+    remaining,
+    hinted = false,
+    cardBackColor: propBackColor,
+    index,
+  } = props
+  const contextBackColor = useCardBackColor()
+  const cardBackColor = useMemo(
+    () => propBackColor || contextBackColor || DEFAULT_BACK_COLOR,
+    [propBackColor, contextBackColor],
+  )
+  const prevRemove = useRef(remove)
+  const prevIsOpen = useRef(isOpen)
+  const [falling, setFalling] = useState(false)
+  const [gone, setGone] = useState(!!remove)
+  const [flipping, setFlipping] = useState(false)
 
-    const [displayOpen, setDisplayOpen] = useState(isOpen)
+  const [displayOpen, setDisplayOpen] = useState(isOpen)
 
-    useEffect(() => {
-      if (isOpen) {
-        requestAnimationFrame(() => {
-          setDisplayOpen(true)
-        })
-      } else {
-        setDisplayOpen(false)
-      }
-    }, [isOpen])
-
-    useImperativeHandle(ref, () => ({
-      triggerRemove: () => {
-        setFalling(true)
-      },
-    }))
-
-    const [delayedOpen, setDelayedOpen] = useState(isOpen)
-
-    useEffect(() => {
-      if (isOpen) {
-        const timeout = setTimeout(
-          () => {
-            setDelayedOpen(true)
-          },
-          index ? index * 12 : 0,
-        ) // 👈 stagger based on index
-
-        return () => clearTimeout(timeout)
-      } else {
-        setDelayedOpen(false)
-      }
-    }, [isOpen])
-
-    useEffect(() => {
-      if (!remove && prevRemove.current) {
-        setFalling(false)
-        setGone(false)
-        setFlipping(false)
-      } else if (remove && !prevRemove.current && !gone) {
-        setFalling(true)
-      } else if (!remove && gone) {
-        setGone(false)
-      }
-
-      prevRemove.current = remove
-    }, [remove, gone])
-
-    useEffect(() => {
-      if (
-        isOpen &&
-        !prevIsOpen.current &&
-        !remove &&
-        !falling &&
-        !gone &&
-        !flipping
-      ) {
-        setFlipping(true)
-      }
-
-      prevIsOpen.current = isOpen
-    }, [isOpen, remove, falling, gone, flipping])
-
-    // Flip detection — only if card was NOT just reset from a new level
-    if (
-      isOpen &&
-      !prevIsOpen.current &&
-      !remove &&
-      !falling &&
-      !gone &&
-      !flipping &&
-      prevRemove.current === remove
-    ) {
-      setFlipping(true)
+  useEffect(() => {
+    if (isOpen) {
+      requestAnimationFrame(() => {
+        setDisplayOpen(true)
+      })
+    } else {
+      setDisplayOpen(false)
     }
-    prevIsOpen.current = isOpen
+  }, [isOpen])
 
-    if (gone && !alwaysEnabled) return <View style={styles.emptySlot} />
-    if (falling && !alwaysEnabled)
-      return (
-        <View style={styles.touch}>
-          <FallingCard
-            card={card}
-            isOpen={displayOpen}
-            backColor={cardBackColor}
-            onDone={() => {
-              setFalling(false)
-              setGone(true)
-            }}
-          />
-        </View>
-      )
-    if (flipping && card)
-      return (
-        <View style={[styles.touch, { zIndex: 3 }]}>
-          <FlippingCard
-            card={card}
-            backColor={cardBackColor}
-            onDone={() => setFlipping(false)}
-          />
-        </View>
-      )
+  useEffect(() => {
+    if (!remove && prevRemove.current) {
+      setFalling(false)
+      setGone(false)
+      setFlipping(false)
+    } else if (remove && !prevRemove.current && !gone) {
+      setFalling(true)
+    } else if (!remove && gone) {
+      setGone(false)
+    }
 
-    const isDeck = remaining !== undefined
-    const isDisabled = !alwaysEnabled && (disabled || !isOpen)
+    prevRemove.current = remove
+  }, [remove, gone])
+
+  // Synchronous flip detection — must be in render body to prevent blink
+  if (
+    isOpen &&
+    !prevIsOpen.current &&
+    !remove &&
+    !falling &&
+    !gone &&
+    !flipping
+  ) {
+    setFlipping(true)
+  }
+  prevIsOpen.current = isOpen
+
+  if (gone && !alwaysEnabled) return <View style={styles.emptySlot} />
+  if (falling && !alwaysEnabled)
     return (
-      <Pressable
-        onPress={() => onClick(index)}
-        disabled={isDisabled}
-        style={[
-          isDeck ? styles.touchDeck : styles.touch,
-          { zIndex: isOpen ? 2 : 1 },
-        ]}
-      >
-        <View style={isDeck ? styles.wrapDeck : styles.wrap}>
-          {isDeck ? (
-            <DeckCard remaining={remaining!} backColor={cardBackColor} />
-          ) : delayedOpen && card ? (
-            <CardFace card={card} />
-          ) : (
-            <CardBackView color={cardBackColor} />
-          )}
-          {hinted && <HintGlow />}
-        </View>
-      </Pressable>
+      <View style={styles.touch}>
+        <FallingCard
+          card={card}
+          isOpen={displayOpen}
+          backColor={cardBackColor}
+          onDone={() => {
+            setFalling(false)
+            setGone(true)
+          }}
+        />
+      </View>
     )
-  }),
-)
+  if (flipping && card)
+    return (
+      <View style={[styles.touch, { zIndex: 3 }]}>
+        <FlippingCard
+          card={card}
+          backColor={cardBackColor}
+          onDone={() => setFlipping(false)}
+        />
+      </View>
+    )
+
+  const isDeck = remaining !== undefined
+  const isDisabled = !alwaysEnabled && (disabled || !isOpen)
+  return (
+    <Pressable
+      onPress={() => onClick(index)}
+      disabled={isDisabled}
+      style={[
+        isDeck ? styles.touchDeck : styles.touch,
+        { zIndex: isOpen ? 2 : 1 },
+      ]}
+    >
+      <View style={isDeck ? styles.wrapDeck : styles.wrap}>
+        {isDeck ? (
+          <DeckCard remaining={remaining!} backColor={cardBackColor} />
+        ) : isOpen && card ? (
+          <CardFace card={card} />
+        ) : (
+          <CardBackView color={cardBackColor} />
+        )}
+        {hinted && <HintGlow />}
+      </View>
+    </Pressable>
+  )
+})
 
 const styles = StyleSheet.create({
   emptySlot: { width: DECK_W, height: DECK_H, margin: 2, padding: 2 },
@@ -526,12 +478,4 @@ const styles = StyleSheet.create({
   },
 })
 
-export default React.memo(Card, (prev, next) => {
-  return (
-    prev.card === next.card &&
-    prev.isOpen === next.isOpen &&
-    prev.remove === next.remove &&
-    prev.hinted === next.hinted &&
-    prev.remaining === next.remaining
-  )
-})
+export default Card

@@ -42,8 +42,6 @@ const isCleared = (cards: ICard[], ...i: number[]) =>
 const Layout4 = React.memo(({ cards, onClick, levelId }: ILayout4Props) => {
   if (cards.length < 28) return null
 
-  const cardRefs = React.useRef<(any | null)[]>([])
-
   const handleClick = React.useCallback(
     (index: number) => {
       onClick(index)
@@ -75,7 +73,6 @@ const Layout4 = React.memo(({ cards, onClick, levelId }: ILayout4Props) => {
 
   const C = (i: number, open: boolean) => (
     <Card
-      ref={(el) => (cardRefs.current[i] = el)}
       card={cards[i]}
       isOpen={open}
       remove={!cards[i].visible}

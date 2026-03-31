@@ -29,8 +29,6 @@ const Layout1 = React.memo(({ cards, onClick, levelId }: ILayout1Props) => {
     [onClick],
   )
 
-  const cardRefs = React.useRef<(any | null)[]>([])
-
   const layoutProgress = useSharedValue(0)
 
   useEffect(() => {
@@ -59,7 +57,6 @@ const Layout1 = React.memo(({ cards, onClick, levelId }: ILayout1Props) => {
       <View style={styles.tower}>
         <View style={styles.row}>
           <Card
-            ref={(el) => (cardRefs.current[1] = el)}
             card={cards[1]}
             isOpen={true}
             remove={!cards[1].visible}
@@ -69,7 +66,6 @@ const Layout1 = React.memo(({ cards, onClick, levelId }: ILayout1Props) => {
         </View>
         <View style={[styles.row, styles.overlapUp]}>
           <Card
-            ref={(el) => (cardRefs.current[0] = el)}
             card={cards[0]}
             isOpen={isOpen(cards, 1)}
             remove={!cards[0].visible}
@@ -77,7 +73,6 @@ const Layout1 = React.memo(({ cards, onClick, levelId }: ILayout1Props) => {
             index={0}
           />
           <Card
-            ref={(el) => (cardRefs.current[2] = el)}
             card={cards[2]}
             isOpen={isOpen(cards, 1)}
             remove={!cards[2].visible}
@@ -87,7 +82,6 @@ const Layout1 = React.memo(({ cards, onClick, levelId }: ILayout1Props) => {
         </View>
         <View style={[styles.row, styles.overlapUp]}>
           <Card
-            ref={(el) => (cardRefs.current[3] = el)}
             card={cards[3]}
             isOpen={true}
             remove={!cards[3].visible}
@@ -101,7 +95,6 @@ const Layout1 = React.memo(({ cards, onClick, levelId }: ILayout1Props) => {
       <View style={styles.pyramid}>
         <View style={styles.row}>
           <Card
-            ref={(el) => (cardRefs.current[4] = el)}
             card={cards[4]}
             isOpen={true}
             remove={!cards[4].visible}
@@ -109,7 +102,6 @@ const Layout1 = React.memo(({ cards, onClick, levelId }: ILayout1Props) => {
             index={4}
           />
           <Card
-            ref={(el) => (cardRefs.current[5] = el)}
             card={cards[5]}
             isOpen={true}
             remove={!cards[5].visible}
@@ -117,7 +109,6 @@ const Layout1 = React.memo(({ cards, onClick, levelId }: ILayout1Props) => {
             index={5}
           />
           <Card
-            ref={(el) => (cardRefs.current[6] = el)}
             card={cards[6]}
             isOpen={true}
             remove={!cards[6].visible}
@@ -125,7 +116,6 @@ const Layout1 = React.memo(({ cards, onClick, levelId }: ILayout1Props) => {
             index={6}
           />
           <Card
-            ref={(el) => (cardRefs.current[7] = el)}
             card={cards[7]}
             isOpen={true}
             remove={!cards[7].visible}
@@ -135,7 +125,6 @@ const Layout1 = React.memo(({ cards, onClick, levelId }: ILayout1Props) => {
         </View>
         <View style={[styles.row, styles.overlapUp]}>
           <Card
-            ref={(el) => (cardRefs.current[8] = el)}
             card={cards[8]}
             isOpen={isOpen(cards, 4, 5)}
             remove={!cards[8].visible}
@@ -143,7 +132,6 @@ const Layout1 = React.memo(({ cards, onClick, levelId }: ILayout1Props) => {
             index={8}
           />
           <Card
-            ref={(el) => (cardRefs.current[9] = el)}
             card={cards[9]}
             isOpen={isOpen(cards, 5, 6)}
             remove={!cards[9].visible}
@@ -151,7 +139,6 @@ const Layout1 = React.memo(({ cards, onClick, levelId }: ILayout1Props) => {
             index={9}
           />
           <Card
-            ref={(el) => (cardRefs.current[10] = el)}
             card={cards[10]}
             isOpen={isOpen(cards, 6, 7)}
             remove={!cards[10].visible}
@@ -161,7 +148,6 @@ const Layout1 = React.memo(({ cards, onClick, levelId }: ILayout1Props) => {
         </View>
         <View style={[styles.row, styles.overlapUp]}>
           <Card
-            ref={(el) => (cardRefs.current[11] = el)}
             card={cards[11]}
             isOpen={isOpen(cards, 8, 9)}
             remove={!cards[11].visible}
@@ -169,7 +155,6 @@ const Layout1 = React.memo(({ cards, onClick, levelId }: ILayout1Props) => {
             index={11}
           />
           <Card
-            ref={(el) => (cardRefs.current[12] = el)}
             card={cards[12]}
             isOpen={isOpen(cards, 9, 10)}
             remove={!cards[12].visible}
@@ -179,7 +164,6 @@ const Layout1 = React.memo(({ cards, onClick, levelId }: ILayout1Props) => {
         </View>
         <View style={[styles.row, styles.overlapUp]}>
           <Card
-            ref={(el) => (cardRefs.current[13] = el)}
             card={cards[13]}
             isOpen={isOpen(cards, 11, 12)}
             remove={!cards[13].visible}
@@ -193,7 +177,6 @@ const Layout1 = React.memo(({ cards, onClick, levelId }: ILayout1Props) => {
       <View style={styles.tower}>
         <View style={styles.row}>
           <Card
-            ref={(el) => (cardRefs.current[16] = el)}
             card={cards[16]}
             isOpen={true}
             remove={!cards[16].visible}
@@ -203,7 +186,6 @@ const Layout1 = React.memo(({ cards, onClick, levelId }: ILayout1Props) => {
         </View>
         <View style={[styles.row, styles.overlapUp]}>
           <Card
-            ref={(el) => (cardRefs.current[14] = el)}
             card={cards[14]}
             isOpen={isOpen(cards, 16)}
             remove={!cards[14].visible}
@@ -211,7 +193,6 @@ const Layout1 = React.memo(({ cards, onClick, levelId }: ILayout1Props) => {
             index={14}
           />
           <Card
-            ref={(el) => (cardRefs.current[17] = el)}
             card={cards[17]}
             isOpen={isOpen(cards, 16)}
             remove={!cards[17].visible}
@@ -221,7 +202,6 @@ const Layout1 = React.memo(({ cards, onClick, levelId }: ILayout1Props) => {
         </View>
         <View style={[styles.row, styles.overlapUp]}>
           <Card
-            ref={(el) => (cardRefs.current[15] = el)}
             card={cards[15]}
             isOpen={true}
             remove={!cards[15].visible}
