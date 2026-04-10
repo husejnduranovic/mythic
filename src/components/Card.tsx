@@ -52,16 +52,23 @@ const DEFAULT_BACK_COLOR = "#162A47"
 
 const BACK_ICONS: Record<string, string> = {
   "#162A47": "⚔",
-  "#4A1520": "🐉",
+  "#5C1A1A": "🐉",
   "#1A3524": "🐺",
-  "#3A2A10": "🦅",
+  "#4A3A10": "🦅",
   "#0A0A1A": "🐍",
-  "#2A1540": "👑",
+  "#3A1A50": "👑",
+  "#4A0A0A": "🌙",
+  "#0A2A4A": "⛈",
+  "#3A3A10": "ᚱ",
+  "#4A3800": "✦",
+  "#2A1040": "👻",
+  "#4A1500": "🔥",
+  "#3D2E0A": "📜",
 }
 
 // Responsive card scaling
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window")
-const CARD_SCALE = Math.min(SCREEN_W / 800, SCREEN_H / 400, 1)
+const CARD_SCALE = Math.min(SCREEN_W / 750, SCREEN_H / 340, 1)
 const CARD_W = Math.round(52 * CARD_SCALE)
 const CARD_H = Math.round(74 * CARD_SCALE)
 const DECK_W = Math.round(56 * CARD_SCALE)
@@ -324,21 +331,13 @@ const styles = StyleSheet.create({
     width: CARD_W,
     height: CARD_H,
     borderRadius: CARD_RADIUS,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
+    elevation: 2,
   },
   wrapDeck: {
     width: DECK_W,
     height: DECK_H,
     borderRadius: CARD_RADIUS,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.35,
-    shadowRadius: 6,
-    elevation: 8,
+    elevation: 2,
   },
   cardFace: {
     flex: 1,
@@ -422,11 +421,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     borderWidth: 2,
     borderColor: "#162A47",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 6,
+    elevation: 2,
   },
   deckCount: {
     fontSize: Math.round(12 * CARD_SCALE),

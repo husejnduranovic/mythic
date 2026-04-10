@@ -9,47 +9,36 @@ interface ILayout2Props {
   hintedIndices?: Set<number>
 }
 
-/**
- * Layout 2 — "Crown & Valley"
- *
- * 30 field cards in 3 sections, each 10 cards.
- *
- * LEFT — Inverted Pyramid (wide top, narrows to free cards at bottom):
- *   [0] [1] [2] [3]   <- blocked by row below
- *     [4] [5] [6]     <- blocked by row below
- *       [7] [8]       <- blocked by bottom
- *       [9]           <- OPEN (tip)
- *
- *   Blocking: [0]←[4], [1]←[4,5], [2]←[5,6], [3]←[6]
- *             [4]←[7], [5]←[7,8], [6]←[8]
- *             [7]←[9], [8]←[9]
- *             [9] always open
- *
- * CENTER — Diamond (narrow top, widens, narrows again, free at bottom):
- *     [10] [11]       <- blocked by row below
- *   [12] [13] [14]    <- blocked by row below
- *     [15] [16]       <- blocked by row below
- *   [17] [18] [19]    <- OPEN (base)
- *
- *   Blocking: [10]←[12,13], [11]←[13,14]
- *             [12]←[15], [13]←[15,16], [14]←[16]
- *             [15]←[17,18], [16]←[18,19]
- *             [17],[18],[19] always open
- *
- * RIGHT — Normal Pyramid (narrow top, widens to free cards at bottom):
- *       [20]          <- blocked by row below
- *     [21] [22]       <- blocked by row below
- *   [23] [24] [25]    <- blocked by row below
- *   [26] [27] [28] [29] <- OPEN (base)
- *
- *   Blocking: [20]←[21,22]
- *             [21]←[23,24], [22]←[24,25]
- *             [23]←[26,27], [24]←[27,28], [25]←[28,29]
- *             [26],[27],[28],[29] always open
- */
+const isOpen = (cards: ICard[], ...blockers: number[]) =>
+  blockers.every((i) => !cards[i]?.visible)
 
-const isCleared = (cards: ICard[], ...indices: number[]) =>
-  indices.every((i) => !cards[i]?.visible)
+/**
+ * Layout 2 — "Throne Room" (30 cards)
+ *
+ * Three wide diamond formations, 3 rows each:
+ *
+ * LEFT (10):           CENTER (10):           RIGHT (10):
+ *  [0] [1] [2]        [10][11][12][13]         [20][21][22]
+ * [3][4][5][6]          [14][15][16]           [23][24][25][26]
+ *  [7] [8] [9]          [17][18][19]            [27][28][29]
+ *
+ * LEFT blocking:
+ * [0]←[3,4], [1]←[4,5], [2]←[5,6]
+ * [3]←[7], [4]←[7,8], [5]←[8,9], [6]←[9]
+ * [7],[8],[9] open
+ *
+ * CENTER blocking:
+ * [10]←[14], [11]←[14,15], [12]←[15,16], [13]←[16]
+ * [14]←[17,18], [15]←[18], [16]←[18,19]
+ * [17],[18],[19] open
+ *
+ * RIGHT blocking (mirror of left):
+ * [20]←[23,24], [21]←[24,25], [22]←[25,26]
+ * [23]←[27], [24]←[27,28], [25]←[28,29], [26]←[29]
+ * [27],[28],[29] open
+ *
+ * Open from start: 7,8,9,17,18,19,27,28,29 = 9 open cards
+ */
 
 const Layout2 = React.memo(
   ({ cards, onClick, hintedIndices = new Set() }: ILayout2Props) => {
@@ -67,95 +56,63 @@ const Layout2 = React.memo(
 
     return (
       <View style={styles.container}>
-        {/* ═══ LEFT — Inverted Pyramid ═══ */}
+        {/* LEFT — diamond */}
         <View style={styles.section}>
-          <View style={styles.inner}>
-            <View style={[styles.absRow, { top: 0 }]}>
-              <View style={styles.row}>
-                {C(0, isCleared(cards, 4))}
-                {C(1, isCleared(cards, 4, 5))}
-                {C(2, isCleared(cards, 5, 6))}
-                {C(3, isCleared(cards, 6))}
-              </View>
-            </View>
-            <View style={[styles.absRow, { top: 50 }]}>
-              <View style={styles.row}>
-                {C(4, isCleared(cards, 7))}
-                {C(5, isCleared(cards, 7, 8))}
-                {C(6, isCleared(cards, 8))}
-              </View>
-            </View>
-            <View style={[styles.absRow, { top: 100 }]}>
-              <View style={styles.row}>
-                {C(7, isCleared(cards, 9))}
-                {C(8, isCleared(cards, 9))}
-              </View>
-            </View>
-            <View style={[styles.absRow, { top: 150 }]}>
-              <View style={styles.row}>{C(9, cards[9].visible)}</View>
-            </View>
+          <View style={styles.row}>
+            {C(0, isOpen(cards, 3, 4))}
+            {C(1, isOpen(cards, 4, 5))}
+            {C(2, isOpen(cards, 5, 6))}
+          </View>
+          <View style={[styles.row, styles.overlapUp]}>
+            {C(3, isOpen(cards, 7))}
+            {C(4, isOpen(cards, 7, 8))}
+            {C(5, isOpen(cards, 8, 9))}
+            {C(6, isOpen(cards, 9))}
+          </View>
+          <View style={[styles.row, styles.overlapUp]}>
+            {C(7, true)}
+            {C(8, true)}
+            {C(9, true)}
           </View>
         </View>
 
-        {/* ═══ CENTER — Diamond ═══ */}
-        <View style={styles.section}>
-          <View style={styles.inner}>
-            <View style={[styles.absRow, { top: 0 }]}>
-              <View style={styles.row}>
-                {C(10, isCleared(cards, 12, 13))}
-                {C(11, isCleared(cards, 13, 14))}
-              </View>
-            </View>
-            <View style={[styles.absRow, { top: 50 }]}>
-              <View style={styles.row}>
-                {C(12, isCleared(cards, 15))}
-                {C(13, isCleared(cards, 15, 16))}
-                {C(14, isCleared(cards, 16))}
-              </View>
-            </View>
-            <View style={[styles.absRow, { top: 100 }]}>
-              <View style={styles.row}>
-                {C(15, isCleared(cards, 17, 18))}
-                {C(16, isCleared(cards, 18, 19))}
-              </View>
-            </View>
-            <View style={[styles.absRow, { top: 150 }]}>
-              <View style={styles.row}>
-                {C(17, cards[17].visible)}
-                {C(18, cards[18].visible)}
-                {C(19, cards[19].visible)}
-              </View>
-            </View>
+        {/* CENTER — wide diamond */}
+        <View style={styles.centerSection}>
+          <View style={styles.row}>
+            {C(10, isOpen(cards, 14))}
+            {C(11, isOpen(cards, 14, 15))}
+            {C(12, isOpen(cards, 15, 16))}
+            {C(13, isOpen(cards, 16))}
+          </View>
+          <View style={[styles.row, styles.overlapUp]}>
+            {C(14, isOpen(cards, 17, 18))}
+            {C(15, isOpen(cards, 18))}
+            {C(16, isOpen(cards, 18, 19))}
+          </View>
+          <View style={[styles.row, styles.overlapUp]}>
+            {C(17, true)}
+            {C(18, true)}
+            {C(19, true)}
           </View>
         </View>
 
-        {/* ═══ RIGHT — Normal Pyramid ═══ */}
+        {/* RIGHT — diamond mirror */}
         <View style={styles.section}>
-          <View style={styles.inner}>
-            <View style={[styles.absRow, { top: 0 }]}>
-              <View style={styles.row}>{C(20, isCleared(cards, 21, 22))}</View>
-            </View>
-            <View style={[styles.absRow, { top: 50 }]}>
-              <View style={styles.row}>
-                {C(21, isCleared(cards, 23, 24))}
-                {C(22, isCleared(cards, 24, 25))}
-              </View>
-            </View>
-            <View style={[styles.absRow, { top: 100 }]}>
-              <View style={styles.row}>
-                {C(23, isCleared(cards, 26, 27))}
-                {C(24, isCleared(cards, 27, 28))}
-                {C(25, isCleared(cards, 28, 29))}
-              </View>
-            </View>
-            <View style={[styles.absRow, { top: 150 }]}>
-              <View style={styles.row}>
-                {C(26, cards[26].visible)}
-                {C(27, cards[27].visible)}
-                {C(28, cards[28].visible)}
-                {C(29, cards[29].visible)}
-              </View>
-            </View>
+          <View style={styles.row}>
+            {C(20, isOpen(cards, 23, 24))}
+            {C(21, isOpen(cards, 24, 25))}
+            {C(22, isOpen(cards, 25, 26))}
+          </View>
+          <View style={[styles.row, styles.overlapUp]}>
+            {C(23, isOpen(cards, 27))}
+            {C(24, isOpen(cards, 27, 28))}
+            {C(25, isOpen(cards, 28, 29))}
+            {C(26, isOpen(cards, 29))}
+          </View>
+          <View style={[styles.row, styles.overlapUp]}>
+            {C(27, true)}
+            {C(28, true)}
+            {C(29, true)}
           </View>
         </View>
       </View>
@@ -166,28 +123,15 @@ const Layout2 = React.memo(
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    flex: 1,
-    paddingHorizontal: 4,
-    paddingTop: 30,
-  },
-  section: {
-    flex: 1,
-    paddingHorizontal: 2,
-  },
-  inner: {
-    flex: 1,
+    justifyContent: "space-evenly",
     alignItems: "center",
-    justifyContent: "center",
+    paddingHorizontal: 8,
+    paddingTop: 10,
   },
-  absRow: {
-    position: "absolute",
-    width: "100%",
-  },
-  row: {
-    flexDirection: "row",
-    justifyContent: "center",
-  },
+  section: { alignItems: "center", marginHorizontal: 2 },
+  centerSection: { alignItems: "center", marginHorizontal: 6 },
+  row: { flexDirection: "row", justifyContent: "center", gap: 2 },
+  overlapUp: { marginTop: -14 },
 })
 
 export default Layout2

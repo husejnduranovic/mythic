@@ -9,6 +9,10 @@ import Armory from "./src/components/Armory"
 import AuthScreen from "./src/components/Authscreen"
 import IntroScreen, { hasSeenIntro } from "./src/components/Introscreen"
 import { SoundService } from "./src/services/SoundService"
+import Profile from "./src/components/Profile"
+import ArenaScreen from "./src/components/Arenascreen"
+import LoungeScreen from "./src/components/LoungeScreen"
+import { getLoungeInfo, getSavedLoungeCode } from "./src/services/LoungeService"
 
 interface UserData {
   uid: string
@@ -20,8 +24,20 @@ export default function App() {
   const [introSeen, setIntroSeen] = useState<boolean | null>(null)
   const [user, setUser] = useState<UserData | null>(null)
   const [screen, setScreen] = useState<
-    "home" | "game" | "scores" | "armory" | "daily"
+    | "home"
+    | "game"
+    | "scores"
+    | "armory"
+    | "daily"
+    | "profile"
+    | "arena"
+    | "arenaGame"
+    | "lounge"
   >("home")
+  const [roomCode, setRoomCode] = useState("")
+
+  const [loungeCode, setLoungeCode] = useState<string | null>(null)
+  const [loungeName, setLoungeName] = useState<string | null>(null)
 
   useEffect(() => {
     NavigationBar.setVisibilityAsync("hidden")
@@ -31,6 +47,13 @@ export default function App() {
 
   useEffect(() => {
     hasSeenIntro().then(setIntroSeen)
+    getSavedLoungeCode().then(async (code) => {
+      if (code) {
+        setLoungeCode(code)
+        const info = await getLoungeInfo(code)
+        if (info) setLoungeName(info.name)
+      }
+    })
   }, [])
 
   const handleLogout = async () => {
@@ -96,6 +119,59 @@ export default function App() {
         <Scoreboard onBack={() => setScreen("home")} />
       </>
     )
+  if (screen === "profile")
+    return (
+      <>
+        <StatusBar hidden />
+        <Profile
+          onBack={() => setScreen("home")}
+          uid={user.uid}
+          heroName={user.heroName}
+        />
+      </>
+    )
+  if (screen === "arena")
+    return (
+      <>
+        <StatusBar hidden />
+        <ArenaScreen
+          onBack={() => setScreen("home")}
+          onGameStart={(code, isHost) => {
+            setRoomCode(code)
+            setScreen("arenaGame")
+          }}
+          uid={user.uid}
+          heroName={user.heroName}
+        />
+      </>
+    )
+
+  if (screen === "arenaGame")
+    return (
+      <>
+        <StatusBar hidden />
+        <Game
+          onHome={() => setScreen("home")}
+          uid={user.uid}
+          heroName={user.heroName}
+          arenaMode
+          roomCode={roomCode}
+        />
+      </>
+    )
+
+  if (screen === "lounge")
+    return (
+      <>
+        <StatusBar hidden />
+        <LoungeScreen
+          onBack={() => setScreen("home")}
+          onPlay={() => setScreen("game")}
+          uid={user.uid}
+          heroName={user.heroName}
+        />
+      </>
+    )
   return (
     <>
       <StatusBar hidden />
@@ -103,10 +179,14 @@ export default function App() {
         onPlay={() => setScreen("game")}
         onScoreboard={() => setScreen("scores")}
         onArmory={() => setScreen("armory")}
-        onMultiplayer={() => {}}
         heroName={user.heroName}
         onDailyQuest={() => setScreen("daily")}
         onLogout={handleLogout}
+        onProfile={() => setScreen("profile")}
+        onArena={() => setScreen("arena")}
+        onLounge={() => setScreen("lounge")}
+        loungeCode={loungeCode}
+        loungeName={loungeName}
       />
     </>
   )

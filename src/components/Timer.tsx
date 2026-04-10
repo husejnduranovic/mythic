@@ -1,27 +1,49 @@
 import React, { useEffect, useRef, useState } from "react"
-import { Animated, StyleSheet, View } from "react-native"
+import { Animated, StyleSheet, Text, View } from "react-native"
 
 interface ITimerProps {
   initialTime: number
   onTimeUp: () => void
   paused?: boolean
+  frozen?: boolean
+  onTick?: (timeLeft: number) => void
 }
 
-const Timer = ({ initialTime, onTimeUp, paused = false }: ITimerProps) => {
+const Timer = ({
+  initialTime,
+  onTimeUp,
+  paused = false,
+  frozen = false,
+  onTick,
+}: ITimerProps) => {
   const [timeLeft, setTimeLeft] = useState(initialTime)
   const barAnim = useRef(new Animated.Value(1)).current
   const flashAnim = useRef(new Animated.Value(1)).current
+  const frozenPulse = useRef(new Animated.Value(0)).current
   const flashLoop = useRef<Animated.CompositeAnimation | null>(null)
+  const frozenLoop = useRef<Animated.CompositeAnimation | null>(null)
 
   useEffect(() => {
-    if (paused) return
+    if (onTick) onTick(initialTime)
+  }, [])
+
+  useEffect(() => {
+    if (paused || frozen) return
     if (timeLeft <= 0) {
       onTimeUp()
       return
     }
-    const tick = setTimeout(() => setTimeLeft((t) => t - 1), 1000)
+    const tick = setTimeout(
+      () =>
+        setTimeLeft((t) => {
+          const next = t - 1
+          if (onTick) onTick(next)
+          return next
+        }),
+      1000,
+    )
     return () => clearTimeout(tick)
-  }, [timeLeft, paused])
+  }, [timeLeft, paused, frozen])
 
   useEffect(() => {
     Animated.timing(barAnim, {
@@ -32,7 +54,7 @@ const Timer = ({ initialTime, onTimeUp, paused = false }: ITimerProps) => {
   }, [timeLeft])
 
   useEffect(() => {
-    if (timeLeft <= 10 && !paused) {
+    if (timeLeft <= 10 && !paused && !frozen) {
       flashLoop.current = Animated.loop(
         Animated.sequence([
           Animated.timing(flashAnim, {
@@ -53,10 +75,41 @@ const Timer = ({ initialTime, onTimeUp, paused = false }: ITimerProps) => {
       flashAnim.setValue(1)
     }
     return () => flashLoop.current?.stop()
-  }, [timeLeft <= 10, paused])
+  }, [timeLeft <= 10, paused, frozen])
+
+  // Frozen glow pulse
+  useEffect(() => {
+    if (frozen) {
+      frozenLoop.current = Animated.loop(
+        Animated.sequence([
+          Animated.timing(frozenPulse, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(frozenPulse, {
+            toValue: 0.4,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+        ]),
+      )
+      frozenLoop.current.start()
+    } else {
+      frozenLoop.current?.stop()
+      frozenPulse.setValue(0)
+    }
+    return () => frozenLoop.current?.stop()
+  }, [frozen])
 
   const isLow = timeLeft <= 10
-  const barColor = isLow ? "#E74C3C" : timeLeft <= 20 ? "#E8C547" : "#4CAF50"
+  const barColor = frozen
+    ? "#4FC3F7"
+    : isLow
+      ? "#E74C3C"
+      : timeLeft <= 20
+        ? "#E8C547"
+        : "#4CAF50"
   const mins = Math.floor(timeLeft / 60)
   const secs = timeLeft % 60
   const timeStr =
@@ -64,12 +117,17 @@ const Timer = ({ initialTime, onTimeUp, paused = false }: ITimerProps) => {
 
   return (
     <View style={styles.container}>
+      {frozen && (
+        <Animated.Text style={[styles.frozenIcon, { opacity: frozenPulse }]}>
+          ❄
+        </Animated.Text>
+      )}
       <Animated.Text
         style={[styles.timeText, { opacity: flashAnim, color: barColor }]}
       >
         {timeStr}
       </Animated.Text>
-      <View style={styles.barTrack}>
+      <View style={[styles.barTrack, frozen && styles.barTrackFrozen]}>
         <Animated.View
           style={[
             styles.barFill,
@@ -97,7 +155,11 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     overflow: "hidden",
   },
+  barTrackFrozen: {
+    backgroundColor: "rgba(79,195,247,0.2)",
+  },
   barFill: { height: "100%", borderRadius: 2 },
+  frozenIcon: { fontSize: 12, position: "absolute", top: -8, right: -8 },
 })
 
 export default Timer

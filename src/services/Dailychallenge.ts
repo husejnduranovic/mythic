@@ -127,3 +127,39 @@ export const submitGameScore = async (
     console.error("Failed to submit game score:", err)
   }
 }
+
+export const updateUserProfile = async (
+  uid: string,
+  score: number,
+  bestCombo: number,
+  cardsCleared: number,
+): Promise<void> => {
+  try {
+    const ref = firestore().collection("users").doc(uid)
+    const doc = await ref.get()
+    const data = doc.data() || {}
+
+    await ref.set(
+      {
+        ...data,
+        bestScore: Math.max(data.bestScore || 0, score),
+        bestCombo: Math.max(data.bestCombo || 0, bestCombo),
+        totalGames: (data.totalGames || 0) + 1,
+        totalCardsCleared: (data.totalCardsCleared || 0) + cardsCleared,
+        lastPlayedAt: firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    )
+  } catch (err) {
+    console.error("Failed to update user profile:", err)
+  }
+}
+
+export const getUserProfile = async (uid: string): Promise<any> => {
+  try {
+    const doc = await firestore().collection("users").doc(uid).get()
+    return doc.exists() ? doc.data() : null
+  } catch {
+    return null
+  }
+}

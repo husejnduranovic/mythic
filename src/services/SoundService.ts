@@ -6,10 +6,14 @@ let matchSound1: Audio.Sound | null = null
 let matchSound2: Audio.Sound | null = null
 let matchToggle = false
 let drawSound: Audio.Sound | null = null
+let combo5Sound: Audio.Sound | null = null
 let combo10Sound: Audio.Sound | null = null
 let combo15Sound: Audio.Sound | null = null
 let combo20Sound: Audio.Sound | null = null
+let combo25Sound: Audio.Sound | null = null
 let combo30Sound: Audio.Sound | null = null
+let wildSound: Audio.Sound | null = null
+let freezeSound: Audio.Sound | null = null
 let levelCompleteSound: Audio.Sound | null = null
 let shuffleSound: Audio.Sound | null = null
 let initialized = false
@@ -22,7 +26,6 @@ const loadSound = async (req: any): Promise<Audio.Sound | null> => {
     })
     return sound
   } catch (e) {
-    console.warn("Sound load failed:", e)
     return null
   }
 }
@@ -37,17 +40,20 @@ export const SoundService = {
     matchSound1 = await loadSound(require("../../assets/sounds/match.mp3"))
     matchSound2 = await loadSound(require("../../assets/sounds/match.mp3"))
     drawSound = await loadSound(require("../../assets/sounds/draw.mp3"))
+    combo5Sound = await loadSound(require("../../assets/sounds/combo5.mp3"))
     combo10Sound = await loadSound(require("../../assets/sounds/combo10.mp3"))
     combo15Sound = await loadSound(require("../../assets/sounds/combo15.mp3"))
     combo20Sound = await loadSound(require("../../assets/sounds/combo20.mp3"))
+    combo25Sound = await loadSound(require("../../assets/sounds/combo25.mp3"))
     combo30Sound = await loadSound(require("../../assets/sounds/combo30.mp3"))
+    wildSound = await loadSound(require("../../assets/sounds/wild.mp3"))
+    freezeSound = await loadSound(require("../../assets/sounds/freeze.mp3"))
     levelCompleteSound = await loadSound(
       require("../../assets/sounds/levelcomplete.mp3"),
     )
     shuffleSound = await loadSound(require("../../assets/sounds/shuffle.mp3"))
 
     initialized = true
-    console.log("SOUND: all loaded")
   },
 
   play(sound: Audio.Sound | null) {
@@ -59,22 +65,23 @@ export const SoundService = {
 
   async playMatch(combo: number) {
     try {
-      // Click on every match — double buffered
       matchToggle = !matchToggle
       this.play(matchToggle ? matchSound1 : matchSound2)
 
-      // Combo milestone sounds layered on top
       if (combo >= 30 && combo % 5 === 0) {
         this.play(combo30Sound)
-      } else if (combo === 20 || combo === 25) {
+      } else if (combo === 25) {
+        this.play(combo25Sound)
+      } else if (combo === 20) {
         this.play(combo20Sound)
       } else if (combo === 15) {
         this.play(combo15Sound)
       } else if (combo === 10) {
         this.play(combo10Sound)
+      } else if (combo === 5) {
+        this.play(combo5Sound)
       }
 
-      // Haptics
       if (combo >= 25) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
         setTimeout(
@@ -110,6 +117,18 @@ export const SoundService = {
   async playShuffle() {
     try {
       this.play(shuffleSound)
+    } catch {}
+  },
+
+  async playWild() {
+    try {
+      this.play(wildSound)
+    } catch {}
+  },
+
+  async playFreeze() {
+    try {
+      this.play(freezeSound)
     } catch {}
   },
 

@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   Animated,
+  Dimensions,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -28,21 +30,35 @@ import {
   submitAllTimeScore,
   submitDailyScore,
   submitGameScore,
+  updateUserProfile,
 } from "../services/Dailychallenge"
 import { CardBackColorContext } from "../context/ThemeContext"
+import {
+  leaveRoom,
+  onRoomUpdate,
+  resetRoomForRematch,
+  setPlayerRematch,
+  updatePlayerScore,
+} from "../services/ArenaService"
+import {
+  getSavedLoungeCode,
+  submitLoungeScore,
+} from "../services/LoungeService"
 
 interface GameProps {
   onHome?: () => void
   dailyMode?: boolean
   uid?: string
   heroName?: string
+  arenaMode?: boolean
+  roomCode?: string
 }
 
 const LEVEL_CONFIG: Record<
   number,
   { fieldCards: number; deckStart: number; time: number; layout: number }
 > = {
-  1: { fieldCards: 18, deckStart: 18, time: 75, layout: 1 },
+  1: { fieldCards: 30, deckStart: 30, time: 75, layout: 1 },
   2: { fieldCards: 30, deckStart: 30, time: 85, layout: 2 },
   3: { fieldCards: 36, deckStart: 36, time: 80, layout: 3 },
   4: { fieldCards: 28, deckStart: 28, time: 75, layout: 4 },
@@ -51,9 +67,8 @@ const LEVEL_CONFIG: Record<
 const TOTAL_LEVELS = Object.keys(LEVEL_CONFIG).length
 const BASE_CARD_VALUE = 500
 const SECOND_CARD_COMBO = 2
-const MAX_HINTS = 3
-const WILD_COMBO_THRESHOLD = 5
-const WILD_SECOND_THRESHOLD = 25
+const WILD_COMBO_THRESHOLD = 10
+const WILD_SECOND_THRESHOLD = 20
 
 const COMBO_MILESTONES: Record<
   number,
@@ -63,17 +78,17 @@ const COMBO_MILESTONES: Record<
   10: { text: "VALIANT!", color: "#FFD700", icon: "🛡" },
   15: { text: "GLORIOUS!", color: "#FF6B35", icon: "👑" },
   20: { text: "LEGENDARY!", color: "#FF4757", icon: "🐉" },
-  25: { text: "GODLIKE!", color: "#FF00FF", icon: "⚡" },
+  25: { text: "RAMPAGE!", color: "#FF00FF", icon: "⚡" },
   30: { text: "BEYOND MYTHIC!", color: "#FFFFFF", icon: "💀" },
   35: { text: "TRANSCENDENT!", color: "#00FFFF", icon: "🌀" },
 }
 
 const getComboMultiplier = (c: number) => {
-  if (c >= 35) return 75
-  if (c >= 30) return 50
-  if (c >= 25) return 35
-  if (c >= 20) return 25
-  if (c >= 15) return 15
+  if (c >= 35) return 120
+  if (c >= 30) return 80
+  if (c >= 25) return 50
+  if (c >= 20) return 30
+  if (c >= 15) return 18
   if (c >= 10) return 10
   if (c >= 7) return 6
   if (c >= 5) return 4
@@ -102,6 +117,49 @@ const RUNES = [
   "ᛞ",
   "ᛟ",
 ]
+
+const LayoutEntrance = ({
+  children,
+  layoutKey,
+}: {
+  children: React.ReactNode
+  layoutKey: string
+}) => {
+  const opacity = useRef(new Animated.Value(0)).current
+  const scale = useRef(new Animated.Value(0.92)).current
+
+  useEffect(() => {
+    opacity.setValue(0)
+    scale.setValue(0.92)
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scale, {
+        toValue: 1,
+        friction: 8,
+        tension: 100,
+        useNativeDriver: true,
+      }),
+    ]).start()
+  }, [layoutKey])
+
+  return (
+    <Animated.View
+      style={{
+        flex: 1,
+        justifyContent: "center",
+        opacity,
+        transform: [{ scale }],
+      }}
+    >
+      {children}
+    </Animated.View>
+  )
+}
+
 const Battlefield = React.memo(() => (
   <View style={styles.bgContainer} pointerEvents="none">
     {RUNES.map((r, i) => (
@@ -169,7 +227,19 @@ const WallTexture = React.memo(() => (
   </View>
 ))
 
-const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window")
+const CARD_SCALE = Math.min(SCREEN_W / 800, SCREEN_H / 400, 1)
+const CARD_W = Math.round(52 * CARD_SCALE)
+const CARD_H = Math.round(74 * CARD_SCALE)
+
+const Game = ({
+  onHome,
+  dailyMode = false,
+  uid,
+  heroName,
+  arenaMode,
+  roomCode,
+}: GameProps) => {
   const [theme, setTheme] = useState<ThemeConfig>({
     cardBack: "classic",
     cardBackColor: "#162A47",
@@ -192,12 +262,12 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
   const [gameOver, setGameOver] = useState(false)
   const [secondCard, setSecondCard] = useState<number | null>(null)
   const [paused, setPaused] = useState(false)
-  const [hintsLeft, setHintsLeft] = useState(MAX_HINTS)
   const [showHints, setShowHints] = useState(false)
   const [scoreSaved, setScoreSaved] = useState(false)
   const [wildCount, setWildCount] = useState(0)
   const [wildActive, setWildActive] = useState(false)
   const [wildFirstEarned, setWildFirstEarned] = useState(false)
+  const [wildSecondEarned, setWildSecondEarned] = useState(false)
   const [showQuitConfirm, setShowQuitConfirm] = useState(false)
   const [alreadyPlayed, setAlreadyPlayed] = useState(false)
   const [alreadyPlayedScore, setAlreadyPlayedScore] = useState(0)
@@ -207,7 +277,6 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
   const [milestoneColor, setMilestoneColor] = useState("#fff")
   const milestoneOpacity = useRef(new Animated.Value(0)).current
   const milestoneScale = useRef(new Animated.Value(0.5)).current
-  const flashOpacity = useRef(new Animated.Value(0)).current
   const levelCompleteRef = useRef(false)
   const autoAdvanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pointsOpacity = useRef(new Animated.Value(0)).current
@@ -217,6 +286,39 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
   const comboPulse = useRef(new Animated.Value(1)).current
   const scorePulse = useRef(new Animated.Value(1)).current
   const deckScale = useRef(new Animated.Value(1)).current
+  const [timerFrozen, setTimerFrozen] = useState(false)
+  const freezeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const timeLeftRef = useRef(0)
+  const [arenaPlayers, setArenaPlayers] = useState<any[]>([])
+  const arenaUnsubRef = useRef<(() => void) | null>(null)
+  const [arenaCountdown, setArenaCountdown] = useState<number | null>(null)
+  const shakeX = useRef(new Animated.Value(0)).current
+  const freezePulse = useRef(new Animated.Value(0)).current
+  const comboGlowOpacity = useRef(new Animated.Value(0)).current
+
+  useEffect(() => {
+    if (!arenaMode || !betweenLevels || arenaPlayers.length === 0) return
+    const allReady = arenaPlayers.every(
+      (p: any) => (p.currentLevel || 0) >= level,
+    )
+    if (allReady && arenaCountdown === null) {
+      setArenaCountdown(3)
+    }
+  }, [arenaPlayers, betweenLevels, level, arenaMode])
+
+  useEffect(() => {
+    if (arenaCountdown === null) return
+    if (arenaCountdown <= 0) {
+      setArenaCountdown(null)
+      handleNextLevel()
+      return
+    }
+    const timer = setTimeout(
+      () => setArenaCountdown((c) => (c !== null ? c - 1 : null)),
+      1000,
+    )
+    return () => clearTimeout(timer)
+  }, [arenaCountdown])
 
   // Check if already played daily
   useEffect(() => {
@@ -234,6 +336,23 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
   }, [])
 
   useEffect(() => {
+    if (arenaMode && roomCode) {
+      arenaUnsubRef.current = onRoomUpdate(roomCode, (room) => {
+        if (room?.players) {
+          console.log("ARENA PLAYERS:", JSON.stringify(room.players))
+          const sorted = Object.values(room.players).sort(
+            (a: any, b: any) => b.score - a.score,
+          )
+          setArenaPlayers(sorted)
+        }
+      })
+    }
+    return () => {
+      if (arenaUnsubRef.current) arenaUnsubRef.current()
+    }
+  }, [arenaMode, roomCode])
+
+  useEffect(() => {
     if (gameOver && !scoreSaved) {
       setScoreSaved(true)
       const clearPct =
@@ -243,8 +362,17 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
       if (uid && heroName) {
         submitGameScore(uid, heroName, score, bestCombo, dailyMode)
         submitAllTimeScore(uid, heroName, score, bestCombo)
+        getSavedLoungeCode().then((code) => {
+          if (code && uid && heroName) {
+            submitLoungeScore(code, uid, heroName, score, bestCombo)
+          }
+        })
+        updateUserProfile(uid, score, bestCombo, totalCleared)
         if (dailyMode) {
           submitDailyScore(uid, heroName, score, bestCombo, clearPct)
+        }
+        if (arenaMode && roomCode) {
+          updatePlayerScore(roomCode, uid, score, bestCombo, TOTAL_LEVELS, true)
         }
       }
       if (score > 0) {
@@ -257,6 +385,16 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
   useEffect(() => {
     if (combo > 0) {
       if (combo > bestCombo) setBestCombo(combo)
+      if (combo >= 10) {
+        comboGlowOpacity.setValue(0.8)
+        Animated.timing(comboGlowOpacity, {
+          toValue: 0.3,
+          duration: 2000,
+          useNativeDriver: true,
+        }).start()
+      } else {
+        comboGlowOpacity.setValue(0)
+      }
       Animated.sequence([
         Animated.timing(comboPulse, {
           toValue: 1.4,
@@ -271,13 +409,25 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
       ]).start()
       const m = COMBO_MILESTONES[combo]
       if (m) showMilestone(m.text, m.color, m.icon)
-      if (combo >= WILD_SECOND_THRESHOLD && wildFirstEarned && wildCount < 2) {
-        setWildCount(2)
-        showMilestone("2nd WILD!", "#FF4757", "⚡⚡")
+      // Freeze timer on combo milestones
+      if (combo === 5) freezeTimerForCombo(3)
+      else if (combo === 10) freezeTimerForCombo(5)
+      else if (combo === 15) freezeTimerForCombo(3)
+      else if (combo === 20) freezeTimerForCombo(5)
+      else if (combo === 25) freezeTimerForCombo(3)
+      else if (combo === 30) freezeTimerForCombo(5)
+      if (
+        combo >= WILD_SECOND_THRESHOLD &&
+        wildFirstEarned &&
+        !wildSecondEarned
+      ) {
+        setWildCount((c) => Math.min(c + 1, 2))
+        setWildSecondEarned(true)
+        showMilestone("2nd WILD!", "#FF4757", "🃏🃏")
       } else if (combo >= WILD_COMBO_THRESHOLD && !wildFirstEarned) {
         setWildCount(1)
         setWildFirstEarned(true)
-        showMilestone("WILD EARNED!", "#E8C547", "⚡")
+        showMilestone("WILD CARD!", "#E8C547", "🃏")
       }
     }
   }, [combo])
@@ -320,62 +470,105 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
     setMilestoneColor(color)
     setMilestoneIcon(icon)
     milestoneOpacity.setValue(1)
-    milestoneScale.setValue(0.3)
-    flashOpacity.setValue(0.2)
+    milestoneScale.setValue(1.3)
     Animated.parallel([
-      Animated.sequence([
-        Animated.spring(milestoneScale, {
-          toValue: 1,
-          friction: 4,
-          tension: 100,
-          useNativeDriver: true,
-        }),
-        Animated.delay(250),
-        Animated.timing(milestoneOpacity, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]),
-      Animated.timing(flashOpacity, {
-        toValue: 0,
-        duration: 600,
+      Animated.spring(milestoneScale, {
+        toValue: 1,
+        friction: 6,
+        tension: 200,
         useNativeDriver: true,
       }),
-    ]).start()
+    ]).start(() => {
+      setTimeout(() => {
+        Animated.timing(milestoneOpacity, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }).start()
+      }, 400)
+    })
+  }
+
+  const freezeTimerForCombo = (seconds: number) => {
+    if (freezeTimer.current) clearTimeout(freezeTimer.current)
+    setTimerFrozen(true)
+    freezeTimer.current = setTimeout(() => {
+      setTimerFrozen(false)
+    }, seconds * 1000)
+    freezePulse.setValue(0.8)
+    Animated.timing(freezePulse, {
+      toValue: 0.2,
+      duration: 3000,
+      useNativeDriver: true,
+    }).start()
+    SoundService.playFreeze()
   }
 
   const config = LEVEL_CONFIG[level] ?? LEVEL_CONFIG[1]
+
   const advanceLevel = useCallback(() => {
     if (levelCompleteRef.current) return
     levelCompleteRef.current = true
     if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current)
+    if (freezeTimer.current) clearTimeout(freezeTimer.current)
+    setTimerFrozen(false)
     const cl = cards
       .slice(0, config.fieldCards)
       .filter((c) => !c.visible).length
     setTotalCleared((p) => p + cl)
     setTotalFieldCards((p) => p + config.fieldCards)
+
+    // Time bonus — 50 points per second remaining
+    const timeBonus = timeLeftRef.current * 50
+    if (timeBonus > 0) setScore((s) => s + timeBonus)
+
     SoundService.playLevelComplete()
+    // Sync score to arena room
+    if (arenaMode && roomCode && uid) {
+      updatePlayerScore(
+        roomCode,
+        uid,
+        score,
+        bestCombo,
+        level,
+        level >= TOTAL_LEVELS,
+      )
+    }
+    if (arenaMode && roomCode && uid) {
+      updatePlayerScore(
+        roomCode,
+        uid,
+        score,
+        bestCombo,
+        level,
+        level >= TOTAL_LEVELS,
+      )
+    }
+    setArenaCountdown(null)
     setBetweenLevels(true)
   }, [cards, config.fieldCards])
 
   const initLevel = useCallback(() => {
     if (alreadyPlayed) return
     setLoading(true)
+    setWildActive(false)
     setReady(false)
     levelCompleteRef.current = false
     if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current)
     const deck = dailyMode
       ? generateDailyDeck(getTodayString(), level)
-      : generateDeck()
+      : arenaMode && roomCode
+        ? generateDailyDeck(`${roomCode}-${round}`, level)
+        : generateDeck()
     setCards(deck.map((c, i) => ({ ...c, visible: i < config.fieldCards })))
     setCurrentIndex(config.deckStart)
     setDeckIndex(config.deckStart + 1)
     setCombo(0)
     setSecondCard(null)
-    setHintsLeft(MAX_HINTS)
     setShowHints(false)
     setWildActive(false)
+    setTimerFrozen(false)
+    if (freezeTimer.current) clearTimeout(freezeTimer.current)
     setLoading(true)
     setTimeout(() => {
       setLoading(false)
@@ -390,6 +583,7 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
   useEffect(
     () => () => {
       if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current)
+      if (freezeTimer.current) clearTimeout(freezeTimer.current)
     },
     [],
   )
@@ -402,7 +596,10 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
     if (!ready || !cards.length || levelCompleteRef.current) return
     if (deckIndex < cards.length) return
     const hv = cards.slice(0, config.fieldCards).some((c) => c.visible)
-    if (!hv) return
+    if (!hv) {
+      advanceLevel()
+      return
+    }
     const cur = cards[currentIndex]
     const sec = secondCard !== null ? cards[secondCard] : null
     if (!cur) {
@@ -417,12 +614,21 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
       if (!autoAdvanceTimer.current) {
         autoAdvanceTimer.current = setTimeout(() => {
           if (!levelCompleteRef.current) advanceLevel()
-        }, 5000)
+        }, 2000)
       }
       return
     }
-    if (!hm && wildCount <= 0 && !wildActive) {
-      advanceLevel()
+    if (!hm && !wildActive) {
+      if (wildCount <= 0) {
+        advanceLevel()
+        return
+      }
+      // Has wild but no matches — give 3 seconds to use it
+      if (!autoAdvanceTimer.current) {
+        autoAdvanceTimer.current = setTimeout(() => {
+          if (!levelCompleteRef.current) advanceLevel()
+        }, 2000)
+      }
       return
     }
   }, [deckIndex, cards, currentIndex, secondCard, ready, wildActive, wildCount])
@@ -463,7 +669,10 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
           autoAdvanceTimer.current = null
         }
         const nc = combo + 1
-        const pts = Math.round(BASE_CARD_VALUE * getComboMultiplier(nc))
+        const layoutMultiplier = 1 + (level - 1) * 0.5 // L1=1x, L2=1.5x, L3=2x, L4=2.5x, L5=3x
+        const pts = Math.round(
+          BASE_CARD_VALUE * getComboMultiplier(nc) * layoutMultiplier,
+        )
         SoundService.playMatch(nc)
         showPointsAnimation(pts)
         const u = [...prev]
@@ -507,6 +716,8 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
     setCurrentIndex(deckIndex)
     setDeckIndex((i) => i + 1)
     setCombo(0)
+    setTimerFrozen(false)
+    if (freezeTimer.current) clearTimeout(freezeTimer.current)
     setSecondCard(null)
     setShowHints(false)
     setWildActive(false)
@@ -535,6 +746,7 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
     setScoreSaved(false)
     setWildCount(0)
     setWildFirstEarned(false)
+    setWildSecondEarned(false)
     setWildActive(false)
     setWildActive(false)
     setRound((r) => r + 1)
@@ -547,11 +759,80 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
     setShowQuitConfirm(false)
     setPaused(false)
   }
-  const handleConfirmQuit = () => {
+  const handleConfirmQuit = async () => {
     setShowQuitConfirm(false)
     setPaused(false)
+    if (arenaMode && roomCode && uid) {
+      await leaveRoom(roomCode, uid)
+    }
     onHome?.()
   }
+
+  const [wantsRematch, setWantsRematch] = useState(false)
+
+  const handleArenaRematch = async () => {
+    if (!arenaMode || !roomCode || !uid || wantsRematch) return
+    setWantsRematch(true)
+    await setPlayerRematch(roomCode, uid)
+  }
+
+  useEffect(() => {
+    if (!arenaMode || !roomCode || !uid) return
+
+    // Watch rematchCount — when it reaches player count, first player to see it resets
+    const db = require("@react-native-firebase/database").default()
+    const rematchRef = db.ref(`rooms/${roomCode}/rematchCount`)
+
+    const onRematchCount = rematchRef.on("value", async (snap: any) => {
+      const count = snap.val() ?? 0
+      const total = arenaPlayers.length
+      if (total > 0 && count >= total && wantsRematch) {
+        // Use a transaction on a "resetting" flag so only ONE player triggers the reset
+        const resetFlagRef = db.ref(`rooms/${roomCode}/isResetting`)
+        resetFlagRef.transaction(
+          (current: boolean | null) => {
+            return current ? undefined : true // undefined = abort if already true
+          },
+          async (err: any, committed: boolean) => {
+            if (!committed) return // another player got here first
+            await resetRoomForRematch(roomCode)
+          },
+        )
+      }
+    })
+
+    return () => rematchRef.off("value", onRematchCount)
+  }, [arenaMode, roomCode, uid, arenaPlayers.length, wantsRematch])
+
+  // Watch room state — when it flips back to "playing", restart the game
+  useEffect(() => {
+    if (!arenaMode || !roomCode || !gameOver) return
+
+    const db = require("@react-native-firebase/database").default()
+    const stateRef = db.ref(`rooms/${roomCode}/state`)
+
+    const onState = stateRef.on("value", (snap: any) => {
+      const state = snap.val()
+      if (state === "playing" && wantsRematch) {
+        // Reset all local state and restart
+        setScore(0)
+        setBestCombo(0)
+        setTotalCleared(0)
+        setTotalFieldCards(0)
+        setLevel(1)
+        setGameOver(false)
+        setScoreSaved(false)
+        setWildCount(0)
+        setWildFirstEarned(false)
+        setWildSecondEarned(false)
+        setWildActive(false)
+        setWantsRematch(false)
+        setRound((r) => r + 1)
+      }
+    })
+
+    return () => stateRef.off("value", onState)
+  }, [arenaMode, roomCode, gameOver, wantsRematch])
 
   const remaining = cards.length - deckIndex
   const hintedIndices = useMemo(() => {
@@ -637,55 +918,141 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
       totalFieldCards > 0
         ? Math.round((totalCleared / totalFieldCards) * 100)
         : 0
+
     return (
       <View
-        style={[styles.center, { backgroundColor: theme.battlefieldColor }]}
+        style={[
+          styles.center,
+          {
+            backgroundColor: theme.battlefieldColor,
+            flexDirection: arenaMode ? "row" : "column",
+            gap: arenaMode ? 20 : 4,
+            paddingHorizontal: arenaMode ? 40 : 32,
+          },
+        ]}
       >
         <Battlefield />
-        <Text style={styles.crownIcon}>👑</Text>
-        <Text style={styles.gameTitle}>
-          {dailyMode ? "QUEST COMPLETE" : "VICTORY"}
-        </Text>
-        <View style={styles.divider} />
-        <Text style={styles.scoreLabel}>FINAL SCORE</Text>
-        <Text style={styles.finalScore}>{score.toLocaleString()}</Text>
-        <View style={styles.statsRow}>
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>{clearPct}%</Text>
-            <Text style={styles.statLabel}>CLEARED</Text>
+
+        {/* Left side — your score */}
+        <View
+          style={{
+            alignItems: "center",
+            flex: arenaMode ? 1 : undefined,
+            gap: 4,
+          }}
+        >
+          <Text style={styles.crownIcon}>👑</Text>
+          <Text style={styles.gameTitle}>
+            {dailyMode ? "QUEST COMPLETE" : "VICTORY"}
+          </Text>
+          <View style={styles.divider} />
+          <Text style={styles.scoreLabel}>FINAL SCORE</Text>
+          <Text style={styles.finalScore}>{score.toLocaleString()}</Text>
+          <View style={styles.statsRow}>
+            <View style={styles.statBox}>
+              <Text style={styles.statValue}>{clearPct}%</Text>
+              <Text style={styles.statLabel}>CLEARED</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statBox}>
+              <Text style={styles.statValue}>x{bestCombo}</Text>
+              <Text style={styles.statLabel}>BEST COMBO</Text>
+            </View>
           </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>x{bestCombo}</Text>
-            <Text style={styles.statLabel}>BEST COMBO</Text>
-          </View>
+          {dailyMode && (
+            <Text style={styles.dailySubmitted}>
+              ✓ Score submitted to daily leaderboard
+            </Text>
+          )}
+          {!dailyMode && uid && !arenaMode && (
+            <Text style={styles.dailySubmitted}>
+              ✓ Score saved to Hall of Glory
+            </Text>
+          )}
         </View>
-        {dailyMode && (
-          <Text style={styles.dailySubmitted}>
-            ✓ Score submitted to daily leaderboard
-          </Text>
-        )}
-        {!dailyMode && uid && (
-          <Text style={styles.dailySubmitted}>
-            ✓ Score saved to Hall of Glory
-          </Text>
-        )}
-        <View style={styles.divider} />
-        {!dailyMode && (
-          <Text style={styles.partialText}>
-            Check Hall of Glory for rankings
-          </Text>
-        )}
-        <TouchableOpacity style={styles.goldBtn} onPress={handlePlayAgain}>
-          <Text style={styles.goldBtnText}>
-            {dailyMode ? "🏰 Return to Castle" : "⚔ Battle Again"}
-          </Text>
-        </TouchableOpacity>
-        {!dailyMode && onHome && (
-          <TouchableOpacity style={styles.ghostBtn} onPress={onHome}>
-            <Text style={styles.ghostBtnText}>🏰 Return to Castle</Text>
-          </TouchableOpacity>
-        )}
+
+        {/* Right side — arena rankings OR buttons */}
+        <View
+          style={{
+            alignItems: "center",
+            flex: arenaMode ? 1 : undefined,
+            gap: 6,
+          }}
+        >
+          {arenaMode && arenaPlayers.length > 0 && (
+            <View style={styles.arenaBoard}>
+              <Text style={styles.arenaBoardTitle}>🏆 FINAL RANKINGS</Text>
+              <ScrollView style={styles.arenaScroll} nestedScrollEnabled>
+                {arenaPlayers.map((p: any, i: number) => (
+                  <View
+                    key={p.uid || i}
+                    style={[
+                      styles.arenaRow,
+                      p.uid === uid && styles.arenaRowYou,
+                    ]}
+                  >
+                    <Text style={styles.arenaRank}>
+                      {i === 0
+                        ? "🥇"
+                        : i === 1
+                          ? "🥈"
+                          : i === 2
+                            ? "🥉"
+                            : `${i + 1}.`}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.arenaName,
+                        p.uid === uid && styles.arenaNameYou,
+                      ]}
+                    >
+                      {p.heroName}
+                    </Text>
+                    <Text style={styles.arenaCombo}>x{p.bestCombo || 0}</Text>
+                    <Text style={styles.arenaScore}>
+                      {(p.score || 0).toLocaleString()}
+                    </Text>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+          {arenaMode && roomCode ? (
+            <TouchableOpacity
+              style={[styles.goldBtn, wantsRematch && styles.goldBtnDisabled]}
+              onPress={handleArenaRematch}
+              disabled={wantsRematch}
+            >
+              <Text style={styles.goldBtnText}>
+                {wantsRematch
+                  ? `Waiting... (${arenaPlayers.filter((p: any) => p.wantsRematch).length}/${arenaPlayers.length})`
+                  : "⚔ Rematch — New Deck"}
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={styles.goldBtn} onPress={handlePlayAgain}>
+              <Text style={styles.goldBtnText}>
+                {dailyMode ? "🏰 Return to Castle" : "⚔ Battle Again"}
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {!dailyMode && (
+            <TouchableOpacity
+              style={styles.ghostBtn}
+              onPress={arenaMode ? handleConfirmQuit : onHome}
+            >
+              <Text style={styles.ghostBtnText}>🏰 Return to Castle</Text>
+            </TouchableOpacity>
+          )}
+
+          {!dailyMode && !arenaMode && (
+            <Text style={styles.partialText}>
+              Check Hall of Glory for rankings
+            </Text>
+          )}
+        </View>
       </View>
     )
   }
@@ -695,50 +1062,151 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
     const rem =
       config.fieldCards -
       cards.slice(0, config.fieldCards).filter((c) => !c.visible).length
+
     return (
       <View
-        style={[styles.center, { backgroundColor: theme.battlefieldColor }]}
+        style={[
+          styles.center,
+          {
+            backgroundColor: theme.battlefieldColor,
+            flexDirection: arenaMode ? "row" : "column",
+            gap: arenaMode ? 20 : 4,
+            paddingHorizontal: arenaMode ? 40 : 32,
+          },
+        ]}
       >
         <Battlefield />
-        <Text style={styles.lvlIcon}>{cleared ? "⚔" : "🛡"}</Text>
-        <View style={styles.banner}>
-          <View style={styles.bannerEdge} />
-          <View style={styles.bannerBody}>
-            <Text style={styles.bannerTitle}>
-              {cleared ? "FIELD CLEARED" : "RETREAT"}
-            </Text>
-            <Text style={styles.bannerSub}>
-              Battlefield {level} of {TOTAL_LEVELS}
-            </Text>
-          </View>
-          <View style={styles.bannerEdge} />
-        </View>
-        {!cleared && (
-          <Text style={styles.partialText}>
-            {rem} beast{rem !== 1 ? "s" : ""} remained —{" "}
-            {rem <= 3 ? "so close!" : "onward!"}
-          </Text>
-        )}
-        <Text style={styles.scoreLabel}>TOTAL SPOILS</Text>
-        <Text style={styles.scoreText}>{score.toLocaleString()}</Text>
-        <View style={styles.progressRow}>
-          {Array.from({ length: TOTAL_LEVELS }).map((_, i) => (
-            <View
-              key={i}
-              style={[
-                styles.progressDot,
-                i < level && styles.progressDotFilled,
-              ]}
-            >
-              {i < level && <Text style={styles.progressCheck}>✓</Text>}
+
+        {/* Left side — level info */}
+        <View
+          style={{
+            alignItems: "center",
+            flex: arenaMode ? 1 : undefined,
+            gap: 4,
+          }}
+        >
+          <Text style={styles.lvlIcon}>{cleared ? "⚔" : "🛡"}</Text>
+          <View style={styles.banner}>
+            <View style={styles.bannerEdge} />
+            <View style={styles.bannerBody}>
+              <Text style={styles.bannerTitle}>
+                {cleared ? "FIELD CLEARED" : "RETREAT"}
+              </Text>
+              <Text style={styles.bannerSub}>
+                Battlefield {level} of {TOTAL_LEVELS}
+              </Text>
             </View>
-          ))}
+            <View style={styles.bannerEdge} />
+          </View>
+          {!cleared && (
+            <Text style={styles.partialText}>
+              {rem} beast{rem !== 1 ? "s" : ""} remained
+            </Text>
+          )}
+          <Text style={styles.scoreLabel}>TOTAL SPOILS</Text>
+          <Text style={styles.scoreText}>{score.toLocaleString()}</Text>
+          {timeLeftRef.current > 0 && (
+            <View style={styles.timeBonusBox}>
+              <Text style={styles.timeBonusText}>
+                ⏱ +{(timeLeftRef.current * 50).toLocaleString()}
+              </Text>
+              <Text style={styles.timeBonusLabel}>TIME BONUS</Text>
+            </View>
+          )}
+          <View style={styles.progressRow}>
+            {Array.from({ length: TOTAL_LEVELS }).map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.progressDot,
+                  i < level && styles.progressDotFilled,
+                ]}
+              >
+                {i < level && <Text style={styles.progressCheck}>✓</Text>}
+              </View>
+            ))}
+          </View>
         </View>
-        <TouchableOpacity style={styles.goldBtn} onPress={handleNextLevel}>
-          <Text style={styles.goldBtnText}>
-            {level >= TOTAL_LEVELS ? "🏆 Claim Victory" : "⚔ Next Battle"}
-          </Text>
-        </TouchableOpacity>
+
+        {/* Right side — arena scoreboard OR next button */}
+        <View style={{ alignItems: "center", flex: arenaMode ? 1 : undefined }}>
+          {arenaMode && arenaPlayers.length > 0 && (
+            <View style={styles.arenaBoard}>
+              <Text style={styles.arenaBoardTitle}>⚔ ARENA STANDINGS</Text>
+              {arenaMode && arenaPlayers.length > 0 && (
+                <View style={styles.arenaBoard}>
+                  <Text style={styles.arenaBoardTitle}>⚔ ARENA STANDINGS</Text>
+                  <ScrollView style={styles.arenaScroll} nestedScrollEnabled>
+                    {arenaPlayers.map((p: any, i: number) => (
+                      <View
+                        key={p.uid || i}
+                        style={[
+                          styles.arenaRow,
+                          p.uid === uid && styles.arenaRowYou,
+                        ]}
+                      >
+                        <Text style={styles.arenaRank}>
+                          {i === 0
+                            ? "🥇"
+                            : i === 1
+                              ? "🥈"
+                              : i === 2
+                                ? "🥉"
+                                : `${i + 1}.`}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.arenaName,
+                            p.uid === uid && styles.arenaNameYou,
+                          ]}
+                        >
+                          {p.heroName}
+                        </Text>
+                        <Text style={styles.arenaScore}>
+                          {(p.score || 0).toLocaleString()}
+                        </Text>
+                      </View>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+            </View>
+          )}
+
+          {arenaMode ? (
+            (() => {
+              const allReady =
+                arenaPlayers.length > 0 &&
+                arenaPlayers.every((p: any) => (p.currentLevel || 0) >= level)
+              return allReady ? (
+                <View style={styles.countdownBox}>
+                  <Text style={styles.countdownText}>
+                    {arenaCountdown || "GO!"}
+                  </Text>
+                  <Text style={styles.countdownLabel}>NEXT BATTLE IN</Text>
+                </View>
+              ) : (
+                <View style={styles.waitingBox}>
+                  <Text style={styles.waitingArenaText}>
+                    Waiting... (
+                    {
+                      arenaPlayers.filter(
+                        (p: any) => (p.currentLevel || 0) >= level,
+                      ).length
+                    }
+                    /{arenaPlayers.length})
+                  </Text>
+                </View>
+              )
+            })()
+          ) : (
+            <TouchableOpacity style={styles.goldBtn} onPress={handleNextLevel}>
+              <Text style={styles.goldBtnText}>
+                {level >= TOTAL_LEVELS ? "🏆 Claim Victory" : "⚔ Next Battle"}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     )
   }
@@ -746,7 +1214,15 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
   if (showQuitConfirm)
     return (
       <View
-        style={[styles.center, { backgroundColor: theme.battlefieldColor }]}
+        style={[
+          styles.center,
+          {
+            backgroundColor: theme.battlefieldColor,
+            margin: 0,
+            padding: 0,
+            paddingHorizontal: 32,
+          },
+        ]}
       >
         <Battlefield />
         <Text style={styles.quitIcon}>⚠</Text>
@@ -804,11 +1280,33 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
     )
 
   return (
-    <CardBackColorContext.Provider value={theme.cardBackColor}>
-      <View
-        style={[styles.container, { backgroundColor: theme.battlefieldColor }]}
+    <CardBackColorContext.Provider
+      value={dailyMode ? "#3D2E0A" : theme.cardBackColor}
+    >
+      <Animated.View
+        style={[
+          styles.container,
+          { backgroundColor: dailyMode ? "#0F0A05" : theme.battlefieldColor },
+        ]}
       >
         <Battlefield />
+        {combo >= 10 && (
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              StyleSheet.absoluteFillObject,
+              {
+                backgroundColor:
+                  combo >= 25
+                    ? "rgba(200,50,255,0.12)"
+                    : combo >= 15
+                      ? "rgba(255,70,70,0.1)"
+                      : "rgba(255,200,50,0.06)",
+                opacity: comboGlowOpacity,
+              },
+            ]}
+          />
+        )}
         <TouchableOpacity
           style={styles.backBtn}
           onPress={handleBackPress}
@@ -816,21 +1314,6 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
         >
           <Text style={styles.backBtnText}>✕</Text>
         </TouchableOpacity>
-
-        {/* Daily mode badge */}
-        {dailyMode && (
-          <View style={styles.dailyBadge}>
-            <Text style={styles.dailyBadgeText}>📜 DAILY QUEST</Text>
-          </View>
-        )}
-
-        {wildCount > 0 && !wildActive && (
-          <View style={styles.floatingRight}>
-            <TouchableOpacity style={styles.wildBtn} onPress={handleWild}>
-              <Text style={styles.wildIcon}>⚡{wildCount > 1 ? "x2" : ""}</Text>
-            </TouchableOpacity>
-          </View>
-        )}
 
         {wildActive && (
           <Animated.View
@@ -844,11 +1327,17 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
           </View>
         )}
 
-        <View style={styles.field}>{ready ? getLayout() : null}</View>
+        <View style={styles.field}>
+          {ready ? (
+            <LayoutEntrance key={layoutKey} layoutKey={layoutKey}>
+              {getLayout()}
+            </LayoutEntrance>
+          ) : null}
+        </View>
 
         <View style={styles.wallContainer}>
           <Battlements />
-          <View style={styles.wall}>
+          <View style={[styles.wall, dailyMode && styles.wallDaily]}>
             <WallTexture />
             <View style={styles.leftSection}>
               <Animated.View style={{ transform: [{ scale: deckScale }] }}>
@@ -857,7 +1346,7 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
                   alwaysEnabled={remaining > 0}
                   disabled={remaining <= 0}
                   onClick={handleDeckPress}
-                  cardBackColor={theme.cardBackColor}
+                  cardBackColor={dailyMode ? "#3D2E0A" : theme.cardBackColor}
                 />
               </Animated.View>
               <View style={styles.spoilsBox}>
@@ -894,23 +1383,77 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
                 />
               )}
             </View>
+            {/* Wild cards between center and timer */}
+            {wildCount > 0 && !wildActive && (
+              <TouchableOpacity style={styles.wildBarBtn} onPress={handleWild}>
+                <View style={styles.wildCard}>
+                  <Text style={styles.wildCardIcon}>🃏</Text>
+                </View>
+                {wildCount > 1 && (
+                  <View style={[styles.wildCard, styles.wildCard2]}>
+                    <Text style={styles.wildCardIcon}>🃏</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            )}
             <View style={styles.rightBox}>
               <Timer
                 key={layoutKey}
                 initialTime={config.time}
                 onTimeUp={advanceLevel}
                 paused={paused || betweenLevels || showQuitConfirm}
+                frozen={timerFrozen}
+                onTick={(t) => {
+                  timeLeftRef.current = t
+                }}
               />
               <View>
                 <Text style={styles.label}>COMBO</Text>
-                <Animated.Text
-                  style={[
-                    styles.comboValue,
-                    { transform: [{ scale: comboPulse }], color: comboColor },
-                  ]}
+                <View
+                  style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
                 >
-                  x{combo}
-                </Animated.Text>
+                  {combo >= 3 && (
+                    <View
+                      style={{
+                        width: Math.min(combo * 2, 40),
+                        height: 3,
+                        borderRadius: 2,
+                        backgroundColor: comboColor,
+                        opacity: 0.6,
+                      }}
+                    />
+                  )}
+                  <Animated.Text
+                    style={[
+                      styles.comboValue,
+                      {
+                        transform: [{ scale: comboPulse }],
+                        color: comboColor,
+                        fontSize:
+                          combo >= 25
+                            ? 28
+                            : combo >= 15
+                              ? 24
+                              : combo >= 10
+                                ? 22
+                                : 18,
+                        textShadowColor:
+                          combo >= 10 ? comboColor : "transparent",
+                        textShadowOffset: { width: 0, height: 0 },
+                        textShadowRadius:
+                          combo >= 25
+                            ? 24
+                            : combo >= 15
+                              ? 16
+                              : combo >= 10
+                                ? 10
+                                : 0,
+                      },
+                    ]}
+                  >
+                    x{combo}
+                  </Animated.Text>
+                </View>
               </View>
             </View>
           </View>
@@ -926,9 +1469,50 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
               },
             ]}
           >
-            <Text style={styles.pointsText}>
+            <Text
+              style={[
+                styles.pointsText,
+                {
+                  fontSize:
+                    combo >= 25 ? 40 : combo >= 15 ? 34 : combo >= 10 ? 30 : 26,
+                  color:
+                    combo >= 25
+                      ? "#FF00FF"
+                      : combo >= 15
+                        ? "#FF4757"
+                        : combo >= 10
+                          ? "#FFD700"
+                          : "#E8C547",
+                },
+              ]}
+            >
               +{lastPoints.toLocaleString()}
             </Text>
+            {combo >= 5 && (
+              <Text
+                style={{
+                  fontSize: combo >= 25 ? 14 : combo >= 15 ? 12 : 10,
+                  fontWeight: "900",
+                  letterSpacing: 2,
+                  color:
+                    combo >= 25
+                      ? "rgba(200,50,255,0.7)"
+                      : combo >= 15
+                        ? "rgba(255,70,70,0.6)"
+                        : "rgba(255,200,50,0.5)",
+                }}
+              >
+                {combo >= 25
+                  ? "RAMPAGE"
+                  : combo >= 20
+                    ? "LEGENDARY"
+                    : combo >= 15
+                      ? "GLORIOUS"
+                      : combo >= 10
+                        ? "VALIANT"
+                        : "WORTHY"}
+              </Text>
+            )}
           </Animated.View>
         )}
         <Animated.View
@@ -941,19 +1525,21 @@ const Game = ({ onHome, dailyMode = false, uid, heroName }: GameProps) => {
           ]}
           pointerEvents="none"
         >
-          <Text style={styles.milestoneIcon}>{milestoneIcon}</Text>
-          <Text style={[styles.milestoneText, { color: milestoneColor }]}>
+          <Text
+            style={[styles.milestoneIcon, { fontSize: combo >= 20 ? 28 : 22 }]}
+          >
+            {milestoneIcon}
+          </Text>
+          <Text
+            style={[
+              styles.milestoneText,
+              { color: milestoneColor, fontSize: combo >= 20 ? 32 : 24 },
+            ]}
+          >
             {milestoneText}
           </Text>
         </Animated.View>
-        <Animated.View
-          style={[
-            styles.flash,
-            { opacity: flashOpacity, backgroundColor: milestoneColor },
-          ]}
-          pointerEvents="none"
-        />
-      </View>
+      </Animated.View>
     </CardBackColorContext.Provider>
   )
 }
@@ -1170,13 +1756,21 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(74,56,40,0.3)",
   },
 
-  leftSection: { flexDirection: "row", alignItems: "center", gap: 8 },
+  leftSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    zIndex: 2,
+  },
   spoilsBox: { justifyContent: "center" },
   centerCards: {
     flexDirection: "row",
     gap: 4,
     alignItems: "center",
-    position: "relative",
+    position: "absolute",
+    left: 0,
+    right: 0,
+    justifyContent: "center",
   },
   openCardGlow: {
     position: "absolute",
@@ -1193,7 +1787,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(232,197,71,0.08)",
     borderColor: "rgba(232,197,71,0.2)",
   },
-  rightBox: { alignItems: "flex-end", gap: 1 },
+  rightBox: { alignItems: "flex-end", gap: 1, minWidth: 70 },
   label: {
     color: "rgba(232,197,71,0.4)",
     fontSize: 8,
@@ -1214,36 +1808,32 @@ const styles = StyleSheet.create({
   },
   milestone: {
     position: "absolute",
-    top: "25%",
+    top: "35%",
     alignSelf: "center",
     zIndex: 999,
-    alignItems: "center",
     elevation: 999,
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.6)",
+    paddingHorizontal: 24,
+    paddingVertical: 8,
+    borderRadius: 12,
+    flexDirection: "row",
+    gap: 10,
   },
-  milestoneIcon: { fontSize: 32 },
+  milestoneIcon: { fontSize: 22 },
   milestoneText: {
-    fontSize: 38,
     fontWeight: "900",
-    textShadowColor: "rgba(0,0,0,0.7)",
-    textShadowOffset: { width: 0, height: 3 },
-    textShadowRadius: 10,
     letterSpacing: 4,
-  },
-  flash: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 998,
-    elevation: 998,
+    textShadowColor: "rgba(0,0,0,0.8)",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 8,
   },
 
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    gap: 6,
+    gap: 4,
     paddingHorizontal: 32,
   },
   loadText: {
@@ -1397,6 +1987,112 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
   },
+  wildCardStack: {
+    position: "relative",
+    width: CARD_W * 0.7,
+    height: CARD_H * 0.7,
+  },
+
+  wildBarBtn: {
+    position: "absolute",
+    right: 100,
+    bottom: 0,
+    top: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 10,
+    flexDirection: "row",
+    gap: 4,
+  },
+  wildCard: {
+    width: Math.round(36 * CARD_SCALE),
+    height: Math.round(50 * CARD_SCALE),
+    borderRadius: Math.round(6 * CARD_SCALE),
+    backgroundColor: "#1a0a2e",
+    borderWidth: 1,
+    borderColor: "#8247e8",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#E8C547",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  wildCard2: { marginLeft: 4 },
+  wildCardIcon: { fontSize: Math.round(26 * CARD_SCALE) },
+  timeBonusBox: {
+    alignItems: "center",
+    backgroundColor: "rgba(79,195,247,0.08)",
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(79,195,247,0.15)",
+  },
+  timeBonusText: { color: "#4FC3F7", fontSize: 14, fontWeight: "900" },
+  timeBonusLabel: {
+    color: "rgba(79,195,247,0.4)",
+    fontSize: 7,
+    fontWeight: "700",
+    letterSpacing: 2,
+  },
+  wallDaily: { backgroundColor: "#1A1510", borderTopColor: "#E8C547" },
+  arenaBoard: { width: "100%", maxWidth: 350, marginVertical: 6 },
+  arenaBoardTitle: {
+    color: "rgba(232,197,71,0.4)",
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 3,
+    marginBottom: 4,
+    textAlign: "center",
+  },
+  arenaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 3,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    marginBottom: 1,
+    gap: 8,
+  },
+  arenaRowYou: {
+    backgroundColor: "rgba(232,197,71,0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(232,197,71,0.12)",
+  },
+  arenaRank: { fontSize: 14, width: 28 },
+  arenaName: {
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 12,
+    fontWeight: "700",
+    flex: 1,
+  },
+  arenaNameYou: { color: "#E8C547" },
+  arenaCombo: {
+    color: "rgba(232,197,71,0.4)",
+    fontSize: 11,
+    fontWeight: "700",
+    marginRight: 8,
+  },
+  arenaScore: { color: "#E8C547", fontSize: 14, fontWeight: "900" },
+  countdownBox: { alignItems: "center", marginVertical: 4 },
+  countdownText: { color: "#E8C547", fontSize: 42, fontWeight: "900" },
+  countdownLabel: {
+    color: "rgba(232,197,71,0.4)",
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 3,
+  },
+  waitingArenaText: {
+    color: "rgba(232,197,71,0.4)",
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
+  waitingBox: { paddingVertical: 10 },
+  arenaScroll: { maxHeight: 100 },
+  goldBtnDisabled: { opacity: 0.4 },
 })
 
 export default Game

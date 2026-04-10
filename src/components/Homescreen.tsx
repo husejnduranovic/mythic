@@ -11,11 +11,15 @@ interface HomeScreenProps {
   onPlay: () => void
   onScoreboard: () => void
   onArmory?: () => void
-  onMultiplayer?: () => void
   heroName?: string
   uid?: string
   onDailyQuest?: () => void
   onLogout?: () => void
+  onProfile?: () => void
+  onArena?: () => void
+  onLounge?: () => void
+  loungeCode?: string | null
+  loungeName?: string | null
 }
 
 const BEASTS = ["🐉", "🦅", "🐺", "🐍"]
@@ -24,10 +28,14 @@ const HomeScreen = ({
   onPlay,
   onScoreboard,
   onArmory,
-  onMultiplayer,
   heroName,
   onDailyQuest,
   onLogout,
+  onProfile,
+  onArena,
+  onLounge,
+  loungeCode,
+  loungeName,
 }: HomeScreenProps) => {
   const titleScale = useRef(new Animated.Value(0.8)).current
   const titleOpacity = useRef(new Animated.Value(0)).current
@@ -112,14 +120,13 @@ const HomeScreen = ({
         <Text style={styles.tagline}>A Card Game of Beasts & Glory</Text>
       </Animated.View>
 
-      {/* Right side — Menu buttons */}
+      {/* Right side — Menu */}
       <Animated.View
         style={[
           styles.menuSection,
           { opacity: btnOpacity, transform: [{ translateY: btnY }] },
         ]}
       >
-        {/* Primary — Play */}
         <TouchableOpacity
           style={styles.playBtn}
           onPress={onPlay}
@@ -141,20 +148,16 @@ const HomeScreen = ({
           </Text>
         </TouchableOpacity>
 
-        {/* Secondary row */}
+        {/* Row 1: Arena + Armory + Glory */}
         <View style={styles.secondaryRow}>
           <TouchableOpacity
             style={styles.secBtn}
-            onPress={onMultiplayer}
+            onPress={onArena}
             activeOpacity={0.8}
           >
             <Text style={styles.secIcon}>🏟</Text>
             <Text style={styles.secText}>Arena</Text>
-            <View style={styles.soonBadge}>
-              <Text style={styles.soonText}>SOON</Text>
-            </View>
           </TouchableOpacity>
-
           <TouchableOpacity
             style={styles.secBtn}
             onPress={onArmory}
@@ -163,7 +166,6 @@ const HomeScreen = ({
             <Text style={styles.secIcon}>🛡</Text>
             <Text style={styles.secText}>Armory</Text>
           </TouchableOpacity>
-
           <TouchableOpacity
             style={styles.secBtn}
             onPress={onScoreboard}
@@ -173,13 +175,35 @@ const HomeScreen = ({
             <Text style={styles.secText}>Glory</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Row 2: Profile + Tournament */}
+        <View style={styles.secondaryRow}>
+          <TouchableOpacity
+            style={styles.secBtnWide}
+            onPress={onProfile}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.secIcon}>👤</Text>
+            <Text style={styles.secText}>Profile</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.secBtnWide, styles.loungeSecBtn]}
+            onPress={onLounge}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.secIcon}>🏛</Text>
+            <Text style={styles.secTextBlue}>
+              {loungeCode ? loungeName : "Tournament"}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </Animated.View>
+
       {onLogout && (
         <TouchableOpacity style={styles.logoutBtn} onPress={onLogout}>
           <Text style={styles.logoutText}>🚪 Sign Out</Text>
         </TouchableOpacity>
       )}
-
       <Text style={styles.footer}>
         5 Battlefields • 4 Beast Clans • Infinite Glory
       </Text>
@@ -224,6 +248,14 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(232,197,71,0.2)",
     marginVertical: 8,
   },
+  heroGreeting: {
+    color: "#E8C547",
+    fontSize: 14,
+    fontWeight: "800",
+    letterSpacing: 3,
+    marginTop: 4,
+    paddingBottom: 4,
+  },
   tagline: {
     color: "rgba(255,255,255,0.2)",
     fontSize: 10,
@@ -231,14 +263,14 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
 
-  menuSection: { flex: 1, maxWidth: 280, gap: 12 },
+  menuSection: { flex: 1, maxWidth: 280, gap: 8 },
 
   playBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#E8C547",
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderRadius: 12,
     gap: 10,
     shadowColor: "#E8C547",
@@ -255,60 +287,9 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
 
-  secondaryRow: { flexDirection: "row", gap: 8 },
-  secBtn: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "rgba(232,197,71,0.15)",
-    backgroundColor: "rgba(232,197,71,0.04)",
-    position: "relative",
-  },
-  secIcon: { fontSize: 20, marginBottom: 4 },
-  secText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "rgba(232,197,71,0.6)",
-    letterSpacing: 1,
-  },
-  soonBadge: {
-    position: "absolute",
-    top: -6,
-    right: -4,
-    backgroundColor: "#FF6B35",
-    borderRadius: 4,
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-  },
-  soonText: {
-    fontSize: 7,
-    fontWeight: "900",
-    color: "#fff",
-    letterSpacing: 0.5,
-  },
-
-  footer: {
-    position: "absolute",
-    bottom: 14,
-    color: "rgba(255,255,255,0.12)",
-    fontSize: 9,
-    fontWeight: "600",
-    letterSpacing: 1.5,
-  },
-  heroGreeting: {
-    color: "#E8C547",
-    fontSize: 14,
-    fontWeight: "800",
-    letterSpacing: 3,
-    marginTop: 4,
-    paddingBottom: 4,
-  },
   dailyBtn: {
     alignItems: "center",
-    paddingVertical: 10,
+    paddingVertical: 8,
     borderRadius: 12,
     backgroundColor: "rgba(232,197,71,0.06)",
     borderWidth: 1,
@@ -322,10 +303,10 @@ const styles = StyleSheet.create({
   },
   dailyTitle: {
     color: "#E8C547",
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: "900",
     letterSpacing: 3,
-    marginVertical: 2,
+    marginVertical: 1,
   },
   dailyBottom: {
     color: "rgba(255,255,255,0.4)",
@@ -333,34 +314,52 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     letterSpacing: 1,
   },
-  dailyInner: {
+
+  secondaryRow: { flexDirection: "row", gap: 6 },
+  secBtn: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(232,197,71,0.15)",
+    backgroundColor: "rgba(232,197,71,0.04)",
+  },
+  secBtnWide: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    gap: 12,
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(232,197,71,0.15)",
+    backgroundColor: "rgba(232,197,71,0.04)",
   },
-  dailyScroll: { fontSize: 22 },
-  dailyTextWrap: { flex: 1 },
-  dailySub: {
-    color: "rgba(232,197,71,0.4)",
-    fontSize: 9,
-    fontWeight: "600",
+  loungeSecBtn: {
+    borderColor: "rgba(79,195,247,0.15)",
+    backgroundColor: "rgba(79,195,247,0.04)",
+  },
+  secIcon: { fontSize: 16, marginBottom: 2 },
+  secText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "rgba(232,197,71,0.6)",
     letterSpacing: 1,
-    marginTop: 1,
   },
-  dailyArrow: { color: "#E8C547", fontSize: 18, fontWeight: "900" },
-  dailyIcon: { fontSize: 16 },
-  dailyText: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#E8C547",
-    letterSpacing: 2,
+  secTextBlue: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "rgba(79,195,247,0.6)",
+    letterSpacing: 1,
   },
+
   logoutBtn: {
     position: "absolute",
     bottom: 10,
-    right: 16,
+    left: 16,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
@@ -373,6 +372,15 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
     letterSpacing: 1,
+  },
+
+  footer: {
+    position: "absolute",
+    bottom: 14,
+    color: "rgba(255,255,255,0.12)",
+    fontSize: 9,
+    fontWeight: "600",
+    letterSpacing: 1.5,
   },
 })
 

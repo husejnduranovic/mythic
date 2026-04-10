@@ -12,168 +12,158 @@ interface ILayout1Props {
 const isOpen = (cards: ICard[], ...blockers: number[]) =>
   blockers.every((i) => !cards[i]?.visible)
 
+/**
+ * Layout 1 — "Battlements" (30 cards)
+ *
+ * Cascade blocking — 1 card opens 2-3 above:
+ *
+ * LEFT TOWER (6):       BRIDGE (12):              RIGHT TOWER (6):
+ * [0][1][2]          [12][13][14][15]             [6][7][8]
+ *   [3]               [16][17][18]                  [9]
+ *  [4][5]              [19][20]                   [10][11]
+ *                       [21]
+ *
+ * BASE ROW: [22][23][24][25][26][27]  — all OPEN
+ * PAIRS: [28]←[29], [29] open
+ *
+ * LEFT: [0]←[3], [1]←[3], [2]←[3]  ← clearing [3] opens THREE
+ *       [3]←[4,5]
+ *       [4],[5] open
+ *
+ * BRIDGE: [12]←[16], [13]←[16,17], [14]←[17,18], [15]←[18]
+ *         [16]←[19], [17]←[19,20], [18]←[20]
+ *         [19]←[21], [20]←[21]
+ *         [21] open
+ *
+ * RIGHT: [6]←[9], [7]←[9], [8]←[9]  ← clearing [9] opens THREE
+ *        [9]←[10,11]
+ *        [10],[11] open
+ *
+ * Open: 4,5,10,11,21,22,23,24,25,26,27,29 = 12 open cards
+ */
+
 const Layout1 = React.memo(
   ({ cards, onClick, hintedIndices = new Set() }: ILayout1Props) => {
-    if (cards.length < 18) return null
+    if (cards.length < 30) return null
+
+    const C = (i: number, open: boolean) => (
+      <Card
+        card={cards[i]}
+        isOpen={open}
+        remove={!cards[i].visible}
+        onClick={() => onClick(i)}
+        hinted={hintedIndices.has(i)}
+      />
+    )
 
     return (
       <View style={styles.container}>
-        {/* LEFT TOWER */}
-        <View style={styles.tower}>
-          <View style={styles.row}>
-            <Card
-              card={cards[1]}
-              isOpen={true}
-              remove={!cards[1].visible}
-              onClick={() => onClick(1)}
-              hinted={hintedIndices.has(1)}
-            />
+        <View style={styles.topSection}>
+          {/* Left tower — cascade */}
+          <View style={styles.tower}>
+            <View style={styles.towerInner}>
+              <View style={[styles.absRow, { top: 0 }]}>
+                <View style={styles.row}>
+                  {C(0, isOpen(cards, 3))}
+                  {C(1, isOpen(cards, 3))}
+                  {C(2, isOpen(cards, 3))}
+                </View>
+              </View>
+              <View style={[styles.absRow, { top: 50 }]}>
+                <View style={styles.row}>{C(3, isOpen(cards, 4, 5))}</View>
+              </View>
+              <View style={[styles.absRow, { top: 100 }]}>
+                <View style={styles.row}>
+                  {C(4, true)}
+                  {C(5, true)}
+                </View>
+              </View>
+            </View>
           </View>
-          <View style={[styles.row, styles.overlapUp]}>
-            <Card
-              card={cards[0]}
-              isOpen={isOpen(cards, 1)}
-              remove={!cards[0].visible}
-              onClick={() => onClick(0)}
-              hinted={hintedIndices.has(0)}
-            />
-            <Card
-              card={cards[2]}
-              isOpen={isOpen(cards, 1)}
-              remove={!cards[2].visible}
-              onClick={() => onClick(2)}
-              hinted={hintedIndices.has(2)}
-            />
+
+          {/* Left pair */}
+          <View style={styles.singlePair}>
+            <View style={styles.pairInner}>
+              <View style={[styles.absRow, { top: 20 }]}>
+                <View style={styles.row}>{C(28, isOpen(cards, 29))}</View>
+              </View>
+              <View style={[styles.absRow, { top: 66 }]}>
+                <View style={styles.row}>{C(29, true)}</View>
+              </View>
+            </View>
           </View>
-          <View style={[styles.row, styles.overlapUp]}>
-            <Card
-              card={cards[3]}
-              isOpen={true}
-              remove={!cards[3].visible}
-              onClick={() => onClick(3)}
-              hinted={hintedIndices.has(3)}
-            />
+
+          {/* Center bridge */}
+          <View style={styles.bridge}>
+            <View style={styles.bridgeInner}>
+              <View style={[styles.absRow, { top: 0 }]}>
+                <View style={styles.row}>
+                  {C(12, isOpen(cards, 16))}
+                  {C(13, isOpen(cards, 16, 17))}
+                  {C(14, isOpen(cards, 17, 18))}
+                  {C(15, isOpen(cards, 18))}
+                </View>
+              </View>
+              <View style={[styles.absRow, { top: 50 }]}>
+                <View style={styles.row}>
+                  {C(16, isOpen(cards, 19))}
+                  {C(17, isOpen(cards, 19, 20))}
+                  {C(18, isOpen(cards, 20))}
+                </View>
+              </View>
+              <View style={[styles.absRow, { top: 100 }]}>
+                <View style={styles.row}>
+                  {C(19, isOpen(cards, 21))}
+                  {C(20, isOpen(cards, 21))}
+                </View>
+              </View>
+              <View style={[styles.absRow, { top: 140 }]}>
+                <View style={styles.row}>{C(21, true)}</View>
+              </View>
+            </View>
+          </View>
+
+          {/* Right pair */}
+          <View style={styles.singlePair}>
+            <View style={styles.pairInner}>
+              <View style={[styles.absRow, { top: 20 }]}>
+                <View style={styles.row}>{C(22, isOpen(cards, 23))}</View>
+              </View>
+              <View style={[styles.absRow, { top: 66 }]}>
+                <View style={styles.row}>{C(23, true)}</View>
+              </View>
+            </View>
+          </View>
+
+          {/* Right tower — cascade */}
+          <View style={styles.tower}>
+            <View style={styles.towerInner}>
+              <View style={[styles.absRow, { top: 0 }]}>
+                <View style={styles.row}>
+                  {C(6, isOpen(cards, 9))}
+                  {C(7, isOpen(cards, 9))}
+                  {C(8, isOpen(cards, 9))}
+                </View>
+              </View>
+              <View style={[styles.absRow, { top: 50 }]}>
+                <View style={styles.row}>{C(9, isOpen(cards, 10, 11))}</View>
+              </View>
+              <View style={[styles.absRow, { top: 100 }]}>
+                <View style={styles.row}>
+                  {C(10, true)}
+                  {C(11, true)}
+                </View>
+              </View>
+            </View>
           </View>
         </View>
 
-        {/* CENTER PYRAMID */}
-        <View style={styles.pyramid}>
-          <View style={styles.row}>
-            <Card
-              card={cards[4]}
-              isOpen={true}
-              remove={!cards[4].visible}
-              onClick={() => onClick(4)}
-              hinted={hintedIndices.has(4)}
-            />
-            <Card
-              card={cards[5]}
-              isOpen={true}
-              remove={!cards[5].visible}
-              onClick={() => onClick(5)}
-              hinted={hintedIndices.has(5)}
-            />
-            <Card
-              card={cards[6]}
-              isOpen={true}
-              remove={!cards[6].visible}
-              onClick={() => onClick(6)}
-              hinted={hintedIndices.has(6)}
-            />
-            <Card
-              card={cards[7]}
-              isOpen={true}
-              remove={!cards[7].visible}
-              onClick={() => onClick(7)}
-              hinted={hintedIndices.has(7)}
-            />
-          </View>
-          <View style={[styles.row, styles.overlapUp]}>
-            <Card
-              card={cards[8]}
-              isOpen={isOpen(cards, 4, 5)}
-              remove={!cards[8].visible}
-              onClick={() => onClick(8)}
-              hinted={hintedIndices.has(8)}
-            />
-            <Card
-              card={cards[9]}
-              isOpen={isOpen(cards, 5, 6)}
-              remove={!cards[9].visible}
-              onClick={() => onClick(9)}
-              hinted={hintedIndices.has(9)}
-            />
-            <Card
-              card={cards[10]}
-              isOpen={isOpen(cards, 6, 7)}
-              remove={!cards[10].visible}
-              onClick={() => onClick(10)}
-              hinted={hintedIndices.has(10)}
-            />
-          </View>
-          <View style={[styles.row, styles.overlapUp]}>
-            <Card
-              card={cards[11]}
-              isOpen={isOpen(cards, 8, 9)}
-              remove={!cards[11].visible}
-              onClick={() => onClick(11)}
-              hinted={hintedIndices.has(11)}
-            />
-            <Card
-              card={cards[12]}
-              isOpen={isOpen(cards, 9, 10)}
-              remove={!cards[12].visible}
-              onClick={() => onClick(12)}
-              hinted={hintedIndices.has(12)}
-            />
-          </View>
-          <View style={[styles.row, styles.overlapUp]}>
-            <Card
-              card={cards[13]}
-              isOpen={isOpen(cards, 11, 12)}
-              remove={!cards[13].visible}
-              onClick={() => onClick(13)}
-              hinted={hintedIndices.has(13)}
-            />
-          </View>
-        </View>
-
-        {/* RIGHT TOWER */}
-        <View style={styles.tower}>
-          <View style={styles.row}>
-            <Card
-              card={cards[16]}
-              isOpen={true}
-              remove={!cards[16].visible}
-              onClick={() => onClick(16)}
-              hinted={hintedIndices.has(16)}
-            />
-          </View>
-          <View style={[styles.row, styles.overlapUp]}>
-            <Card
-              card={cards[14]}
-              isOpen={isOpen(cards, 16)}
-              remove={!cards[14].visible}
-              onClick={() => onClick(14)}
-              hinted={hintedIndices.has(14)}
-            />
-            <Card
-              card={cards[17]}
-              isOpen={isOpen(cards, 16)}
-              remove={!cards[17].visible}
-              onClick={() => onClick(17)}
-              hinted={hintedIndices.has(17)}
-            />
-          </View>
-          <View style={[styles.row, styles.overlapUp]}>
-            <Card
-              card={cards[15]}
-              isOpen={true}
-              remove={!cards[15].visible}
-              onClick={() => onClick(15)}
-              hinted={hintedIndices.has(15)}
-            />
-          </View>
+        {/* BASE ROW */}
+        <View style={styles.baseRow}>
+          {C(24, true)}
+          {C(25, true)}
+          {C(26, true)}
+          {C(27, true)}
         </View>
       </View>
     )
@@ -181,29 +171,23 @@ const Layout1 = React.memo(
 )
 
 const styles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    justifyContent: "space-evenly",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingTop: 8,
-  },
-  tower: {
-    alignItems: "center",
-    marginHorizontal: 8,
-  },
-  pyramid: {
-    alignItems: "center",
-    marginHorizontal: 12,
-  },
-  row: {
+  container: { flex: 1, justifyContent: "space-between", paddingHorizontal: 4 },
+  topSection: {
     flexDirection: "row",
     justifyContent: "center",
-    gap: 2,
+    alignItems: "flex-start",
+    flex: 1,
+    paddingTop: 4,
   },
-  overlapUp: {
-    marginTop: -14,
-  },
+  tower: { width: "18%", alignItems: "center" },
+  towerInner: { height: 160, width: "100%", alignItems: "center" },
+  singlePair: { width: "8%", alignItems: "center" },
+  pairInner: { height: 120, width: "100%", alignItems: "center" },
+  bridge: { width: "36%", alignItems: "center" },
+  bridgeInner: { height: 180, width: "100%", alignItems: "center" },
+  absRow: { position: "absolute", width: "100%" },
+  row: { flexDirection: "row", justifyContent: "center" },
+  baseRow: { flexDirection: "row", justifyContent: "center", paddingBottom: 2 },
 })
 
 export default Layout1
