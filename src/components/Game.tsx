@@ -44,6 +44,7 @@ import {
   getSavedLoungeCode,
   submitLoungeScore,
 } from "../services/LoungeService"
+import { firestore } from "../services/Firebase"
 
 interface GameProps {
   onHome?: () => void
@@ -292,9 +293,9 @@ const Game = ({
   const [arenaPlayers, setArenaPlayers] = useState<any[]>([])
   const arenaUnsubRef = useRef<(() => void) | null>(null)
   const [arenaCountdown, setArenaCountdown] = useState<number | null>(null)
-  const shakeX = useRef(new Animated.Value(0)).current
   const freezePulse = useRef(new Animated.Value(0)).current
   const comboGlowOpacity = useRef(new Animated.Value(0)).current
+  const [rank, setRank] = useState<number | null>(null)
 
   useEffect(() => {
     if (!arenaMode || !betweenLevels || arenaPlayers.length === 0) return
@@ -379,6 +380,16 @@ const Game = ({
         saveScore(score, bestCombo)
         incrementGamesPlayed()
       }
+      // Fetch rank
+      firestore()
+        .collection("allTimeScores")
+        .where("score", ">", score)
+        .count()
+        .get()
+        .then((snap) => {
+          setRank((snap.data().count || 0) + 1)
+        })
+        .catch(() => {})
     }
   }, [gameOver])
 
@@ -965,9 +976,16 @@ const Game = ({
             </Text>
           )}
           {!dailyMode && uid && !arenaMode && (
-            <Text style={styles.dailySubmitted}>
-              ✓ Score saved to Hall of Glory
-            </Text>
+            <>
+              <Text style={styles.dailySubmitted}>
+                ✓ Score saved to Hall of Glory
+              </Text>
+              {rank !== null && (
+                <Text style={styles.dailySubmitted}>
+                  ⚔ You placed #{rank} among all warriors
+                </Text>
+              )}
+            </>
           )}
         </View>
 
@@ -1105,6 +1123,13 @@ const Game = ({
           )}
           <Text style={styles.scoreLabel}>TOTAL SPOILS</Text>
           <Text style={styles.scoreText}>{score.toLocaleString()}</Text>
+          {level < TOTAL_LEVELS && (
+            <View style={styles.timeBonusBox}>
+              <Text style={[styles.timeBonusText, { color: "#E8C547" }]}>
+                ⚔ Next battlefield: {(1 + level * 0.5).toFixed(1)}x spoils
+              </Text>
+            </View>
+          )}
           {timeLeftRef.current > 0 && (
             <View style={styles.timeBonusBox}>
               <Text style={styles.timeBonusText}>
