@@ -104,7 +104,18 @@ const CardFace = React.memo(({ card }: { card: ICard }) => {
   const color = SUIT_COLORS[card.suit] ?? "#333"
   return (
     <View
-      style={[styles.cardFace, { borderColor: color + "60", borderWidth: 2 }]}
+      style={[
+        styles.cardFace,
+        {
+          borderColor: color + "60",
+          borderWidth: 2,
+          shadowColor: color,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.15,
+          shadowRadius: 4,
+          elevation: 3,
+        },
+      ]}
     >
       <View style={styles.cornerGroup}>
         <Text style={[styles.cornerValue, { color }]}>{card.displayValue}</Text>
@@ -144,7 +155,7 @@ const FlippingCard = ({
   useEffect(() => {
     progress.value = withTiming(
       1,
-      { duration: 120, easing: Easing.inOut(Easing.ease) },
+      { duration: 150, easing: Easing.inOut(Easing.ease) },
       () => {
         runOnJS(onDone)()
       },
@@ -200,8 +211,8 @@ const FallingCard = ({
   const y = useSharedValue(0)
   const o = useSharedValue(1)
   useEffect(() => {
-    y.value = withTiming(80, { duration: 80, easing: Easing.in(Easing.quad) })
-    o.value = withTiming(0, { duration: 70 }, () => {
+    y.value = withTiming(60, { duration: 120, easing: Easing.in(Easing.quad) })
+    o.value = withTiming(0, { duration: 110 }, () => {
       runOnJS(onDone)()
     })
   }, [])

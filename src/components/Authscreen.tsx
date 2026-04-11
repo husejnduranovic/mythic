@@ -87,6 +87,20 @@ const AuthScreen = ({ onAuthenticated }: AuthScreenProps) => {
     try {
       setError("")
       setStep("loading")
+
+      // Check if name is already taken
+      const existing = await firestore()
+        .collection("users")
+        .where("heroName", "==", trimmed)
+        .limit(1)
+        .get()
+
+      if (!existing.empty && existing.docs[0].id !== uid) {
+        setError("This hero name is already taken")
+        setStep("heroname")
+        return
+      }
+
       await firestore().collection("users").doc(uid).set(
         {
           heroName: trimmed,
