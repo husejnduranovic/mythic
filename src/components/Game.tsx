@@ -161,44 +161,110 @@ const LayoutEntrance = ({
   )
 }
 
-const Battlefield = React.memo(() => (
-  <View style={styles.bgContainer} pointerEvents="none">
-    {RUNES.map((r, i) => (
-      <Text
-        key={`r${i}`}
-        style={[
-          styles.bgRune,
-          {
-            top: `${(i * 17 + 5) % 86}%`,
-            left: `${(i * 21 + 4) % 90}%`,
-            fontSize: 12 + (i % 4) * 5,
-            transform: [{ rotate: `${i * 37}deg` }],
-          },
-        ]}
-      >
-        {r}
-      </Text>
-    ))}
-    <View style={styles.arenaRing} />
-    <View style={styles.arenaRingInner} />
-    <View style={styles.centerShield}>
-      <Text style={styles.centerShieldIcon}>⚔</Text>
-    </View>
-    <View style={[styles.compassLine, styles.compassH]} />
-    <View style={[styles.compassLine, styles.compassV]} />
-    <View style={[styles.compassLine, styles.compassD1]} />
-    <View style={[styles.compassLine, styles.compassD2]} />
-    <Text style={[styles.torch, { top: 6, left: 6 }]}>🕯</Text>
-    <Text style={[styles.torch, { top: 6, right: 6 }]}>🕯</Text>
-    <Text style={[styles.torch, { bottom: 6, left: 6 }]}>🕯</Text>
-    <Text style={[styles.torch, { bottom: 6, right: 6 }]}>🕯</Text>
-    <Text style={[styles.bgBeast, { top: "12%", left: "4%" }]}>🐉</Text>
-    <Text style={[styles.bgBeast, { top: "12%", right: "4%" }]}>🦅</Text>
-    <Text style={[styles.bgBeast, { bottom: "15%", left: "4%" }]}>🐺</Text>
-    <Text style={[styles.bgBeast, { bottom: "15%", right: "4%" }]}>🐍</Text>
-    <View style={styles.vignetteBottom} />
-  </View>
-))
+const Battlefield = React.memo(
+  ({ battlefieldId }: { battlefieldId?: string }) => {
+    const themeDetails: Record<string, { icons: string[]; accent: string }> = {
+      forest: {
+        icons: ["🌲", "🍃", "🌿", "🐺"],
+        accent: "rgba(100,180,100,0.08)",
+      },
+      dungeon: {
+        icons: ["🏰", "⛓", "🗝", "💀"],
+        accent: "rgba(180,160,120,0.08)",
+      },
+      ocean: {
+        icons: ["🌊", "🐚", "⚓", "🦑"],
+        accent: "rgba(80,150,200,0.08)",
+      },
+      volcano: {
+        icons: ["🌋", "🔥", "💎", "🐉"],
+        accent: "rgba(200,80,50,0.08)",
+      },
+      frost: {
+        icons: ["❄️", "🏔", "⛄", "🐻‍❄️"],
+        accent: "rgba(150,200,230,0.08)",
+      },
+      void: {
+        icons: ["🌑", "✨", "🕳", "👁"],
+        accent: "rgba(120,80,180,0.08)",
+      },
+      swamp: {
+        icons: ["🐸", "🍄", "🌾", "🐍"],
+        accent: "rgba(80,150,60,0.08)",
+      },
+      temple: {
+        icons: ["🏛", "🕯", "📜", "⚱️"],
+        accent: "rgba(200,180,100,0.08)",
+      },
+      shadow: {
+        icons: ["🌘", "🦇", "🕸", "👻"],
+        accent: "rgba(100,80,150,0.08)",
+      },
+      celestial: {
+        icons: ["⭐", "🌙", "☄️", "🔮"],
+        accent: "rgba(100,100,200,0.08)",
+      },
+      crimson: {
+        icons: ["💀", "🩸", "⚰️", "🗡"],
+        accent: "rgba(180,50,80,0.08)",
+      },
+      eternal: {
+        icons: ["♾", "🔥", "👑", "⚡"],
+        accent: "rgba(200,150,50,0.08)",
+      },
+    }
+
+    const theme = themeDetails[battlefieldId || "forest"] || themeDetails.forest
+    const icons = theme.icons
+
+    return (
+      <View style={styles.bgContainer} pointerEvents="none">
+        {RUNES.map((r, i) => (
+          <Text
+            key={`r${i}`}
+            style={[
+              styles.bgRune,
+              {
+                top: `${(i * 17 + 5) % 86}%`,
+                left: `${(i * 21 + 4) % 90}%`,
+                fontSize: 12 + (i % 4) * 5,
+                transform: [{ rotate: `${i * 37}deg` }],
+              },
+            ]}
+          >
+            {r}
+          </Text>
+        ))}
+        <View style={[styles.arenaRing, { borderColor: theme.accent }]} />
+        <View style={[styles.arenaRingInner, { borderColor: theme.accent }]} />
+        <View style={styles.centerShield}>
+          <Text style={styles.centerShieldIcon}>⚔</Text>
+        </View>
+        <View style={[styles.compassLine, styles.compassH]} />
+        <View style={[styles.compassLine, styles.compassV]} />
+        <View style={[styles.compassLine, styles.compassD1]} />
+        <View style={[styles.compassLine, styles.compassD2]} />
+        <Text style={[styles.torch, { top: 6, left: 6 }]}>🕯</Text>
+        <Text style={[styles.torch, { top: 6, right: 6 }]}>🕯</Text>
+        <Text style={[styles.torch, { bottom: 6, left: 6 }]}>🕯</Text>
+        <Text style={[styles.torch, { bottom: 6, right: 6 }]}>🕯</Text>
+        <Text style={[styles.bgBeast, { top: "12%", left: "4%" }]}>
+          {icons[0]}
+        </Text>
+        <Text style={[styles.bgBeast, { top: "12%", right: "4%" }]}>
+          {icons[1]}
+        </Text>
+        <Text style={[styles.bgBeast, { bottom: "15%", left: "4%" }]}>
+          {icons[2]}
+        </Text>
+        <Text style={[styles.bgBeast, { bottom: "15%", right: "4%" }]}>
+          {icons[3]}
+        </Text>
+        <View style={styles.vignetteBottom} />
+      </View>
+    )
+  },
+)
 const Battlements = React.memo(() => (
   <View style={styles.battlements}>
     {Array.from({ length: 18 }).map((_, i) => (
@@ -362,7 +428,20 @@ const Game = ({
           : 0
       if (uid && heroName) {
         submitGameScore(uid, heroName, score, bestCombo, dailyMode)
-        submitAllTimeScore(uid, heroName, score, bestCombo)
+        // Fetch rank — wait for score to save first
+        if (uid) {
+          submitGameScore(uid, heroName, score, bestCombo, dailyMode)
+          setTimeout(() => {
+            firestore()
+              .collection("gameScores")
+              .where("score", ">", score)
+              .get()
+              .then((snap) => {
+                setRank(snap.size + 1)
+              })
+              .catch(() => {})
+          }, 1500)
+        }
         getSavedLoungeCode().then((code) => {
           if (code && uid && heroName) {
             submitLoungeScore(code, uid, heroName, score, bestCombo)
@@ -380,16 +459,6 @@ const Game = ({
         saveScore(score, bestCombo)
         incrementGamesPlayed()
       }
-      // Fetch rank
-      firestore()
-        .collection("allTimeScores")
-        .where("score", ">", score)
-        .count()
-        .get()
-        .then((snap) => {
-          setRank((snap.data().count || 0) + 1)
-        })
-        .catch(() => {})
     }
   }, [gameOver])
 
@@ -891,7 +960,7 @@ const Game = ({
       <View
         style={[styles.center, { backgroundColor: theme.battlefieldColor }]}
       >
-        <Battlefield />
+        <Battlefield battlefieldId={theme.battlefield} />
         <Text style={styles.dailyBadgeIcon}>📜</Text>
         <Text style={styles.gameTitle}>QUEST COMPLETE</Text>
         <Text style={styles.partialText}>
@@ -917,7 +986,7 @@ const Game = ({
       <View
         style={[styles.center, { backgroundColor: theme.battlefieldColor }]}
       >
-        <Battlefield />
+        <Battlefield battlefieldId={theme.battlefield} />
         <Text style={styles.loadText}>
           ⚔ {dailyMode ? "Preparing daily quest..." : "Preparing the field..."}
         </Text>
@@ -942,7 +1011,7 @@ const Game = ({
           },
         ]}
       >
-        <Battlefield />
+        <Battlefield battlefieldId={theme.battlefield} />
 
         {/* Left side — your score */}
         <View
@@ -952,9 +1021,17 @@ const Game = ({
             gap: 4,
           }}
         >
-          <Text style={styles.crownIcon}>👑</Text>
+          <Text style={styles.crownIcon}>
+            {clearPct >= 80 ? "👑" : clearPct >= 50 ? "⚔" : "🛡"}
+          </Text>
           <Text style={styles.gameTitle}>
-            {dailyMode ? "QUEST COMPLETE" : "VICTORY"}
+            {dailyMode
+              ? "QUEST COMPLETE"
+              : clearPct >= 80
+                ? "VICTORY"
+                : clearPct >= 50
+                  ? "BATTLE OVER"
+                  : "RETREAT"}
           </Text>
           <View style={styles.divider} />
           <Text style={styles.scoreLabel}>FINAL SCORE</Text>
@@ -977,9 +1054,9 @@ const Game = ({
           )}
           {!dailyMode && uid && !arenaMode && (
             <>
-              <Text style={styles.dailySubmitted}>
+              {/* <Text style={styles.dailySubmitted}>
                 ✓ Score saved to Hall of Glory
-              </Text>
+              </Text> */}
               {rank !== null && (
                 <Text style={styles.dailySubmitted}>
                   ⚔ You placed #{rank} among all warriors
@@ -1093,7 +1170,7 @@ const Game = ({
           },
         ]}
       >
-        <Battlefield />
+        <Battlefield battlefieldId={theme.battlefield} />
 
         {/* Left side — level info */}
         <View
@@ -1158,43 +1235,38 @@ const Game = ({
           {arenaMode && arenaPlayers.length > 0 && (
             <View style={styles.arenaBoard}>
               <Text style={styles.arenaBoardTitle}>⚔ ARENA STANDINGS</Text>
-              {arenaMode && arenaPlayers.length > 0 && (
-                <View style={styles.arenaBoard}>
-                  <Text style={styles.arenaBoardTitle}>⚔ ARENA STANDINGS</Text>
-                  <ScrollView style={styles.arenaScroll} nestedScrollEnabled>
-                    {arenaPlayers.map((p: any, i: number) => (
-                      <View
-                        key={p.uid || i}
-                        style={[
-                          styles.arenaRow,
-                          p.uid === uid && styles.arenaRowYou,
-                        ]}
-                      >
-                        <Text style={styles.arenaRank}>
-                          {i === 0
-                            ? "🥇"
-                            : i === 1
-                              ? "🥈"
-                              : i === 2
-                                ? "🥉"
-                                : `${i + 1}.`}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.arenaName,
-                            p.uid === uid && styles.arenaNameYou,
-                          ]}
-                        >
-                          {p.heroName}
-                        </Text>
-                        <Text style={styles.arenaScore}>
-                          {(p.score || 0).toLocaleString()}
-                        </Text>
-                      </View>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
+              <ScrollView style={styles.arenaScroll} nestedScrollEnabled>
+                {arenaPlayers.map((p: any, i: number) => (
+                  <View
+                    key={p.uid || i}
+                    style={[
+                      styles.arenaRow,
+                      p.uid === uid && styles.arenaRowYou,
+                    ]}
+                  >
+                    <Text style={styles.arenaRank}>
+                      {i === 0
+                        ? "🥇"
+                        : i === 1
+                          ? "🥈"
+                          : i === 2
+                            ? "🥉"
+                            : `${i + 1}.`}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.arenaName,
+                        p.uid === uid && styles.arenaNameYou,
+                      ]}
+                    >
+                      {p.heroName}
+                    </Text>
+                    <Text style={styles.arenaScore}>
+                      {(p.score || 0).toLocaleString()}
+                    </Text>
+                  </View>
+                ))}
+              </ScrollView>
             </View>
           )}
 
@@ -1249,7 +1321,7 @@ const Game = ({
           },
         ]}
       >
-        <Battlefield />
+        <Battlefield battlefieldId={theme.battlefield} />
         <Text style={styles.quitIcon}>⚠</Text>
         <Text style={styles.quitTitle}>Abandon Battle?</Text>
         <Text style={styles.quitSub}>
@@ -1274,7 +1346,7 @@ const Game = ({
       <View
         style={[styles.center, { backgroundColor: theme.battlefieldColor }]}
       >
-        <Battlefield />
+        <Battlefield battlefieldId={theme.battlefield} />
         <Text style={styles.gameTitle}>⏸ PAUSED</Text>
         <Text style={styles.pauseScore}>{score.toLocaleString()}</Text>
         <TouchableOpacity
@@ -1314,7 +1386,7 @@ const Game = ({
           { backgroundColor: dailyMode ? "#0F0A05" : theme.battlefieldColor },
         ]}
       >
-        <Battlefield />
+        <Battlefield battlefieldId={theme.battlefield} />
         {combo >= 10 && (
           <Animated.View
             pointerEvents="none"
@@ -1573,7 +1645,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   field: { flex: 1, width: "100%", justifyContent: "center" },
   bgContainer: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
-  bgRune: { position: "absolute", color: "rgba(232,197,71,0.035)" },
+  bgRune: { position: "absolute", color: "rgba(232,197,71,0.14)" },
   arenaRing: {
     position: "absolute",
     top: "18%",
@@ -1582,7 +1654,7 @@ const styles = StyleSheet.create({
     height: "58%",
     borderRadius: 9999,
     borderWidth: 1,
-    borderColor: "rgba(232,197,71,0.04)",
+    borderColor: "rgba(232,197,71,0.12)",
   },
   arenaRingInner: {
     position: "absolute",
@@ -1592,7 +1664,7 @@ const styles = StyleSheet.create({
     height: "44%",
     borderRadius: 9999,
     borderWidth: 1,
-    borderColor: "rgba(232,197,71,0.025)",
+    borderColor: "rgba(232,197,71,0.08)",
     borderStyle: "dashed",
   },
   centerShield: {
@@ -1602,16 +1674,22 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "rgba(232,197,71,0.02)",
+    backgroundColor: "rgba(232,197,71,0.05)",
     justifyContent: "center",
     alignItems: "center",
   },
-  centerShieldIcon: { fontSize: 18, color: "rgba(232,197,71,0.04)" },
+  centerShieldIcon: { fontSize: 20, color: "rgba(232,197,71,0.12)" },
   compassLine: {
     position: "absolute",
     backgroundColor: "rgba(232,197,71,0.02)",
   },
-  compassH: { top: "48%", left: "12%", width: "76%", height: 1 },
+  compassH: {
+    top: "48%",
+    left: "12%",
+    width: "76%",
+    height: 1,
+    backgroundColor: "rgba(232,197,71,0.04)",
+  },
   compassV: { left: "50%", top: "12%", width: 1, height: "70%" },
   compassD1: {
     top: "28%",
@@ -1627,8 +1705,8 @@ const styles = StyleSheet.create({
     height: 1,
     transform: [{ rotate: "-45deg" }],
   },
-  torch: { position: "absolute", fontSize: 12, opacity: 0.07 },
-  bgBeast: { position: "absolute", fontSize: 20, opacity: 0.035 },
+  torch: { position: "absolute", fontSize: 14, opacity: 0.25 },
+  bgBeast: { position: "absolute", fontSize: 24, opacity: 0.12 },
   vignetteBottom: {
     position: "absolute",
     bottom: 0,
@@ -1682,6 +1760,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     marginTop: 4,
+    paddingBottom: 2,
   },
 
   floatingLeft: { position: "absolute", left: 8, bottom: 55, zIndex: 50 },

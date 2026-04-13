@@ -10,9 +10,9 @@ interface ILayout5Props {
 }
 
 /**
- * Layout 5 — "Colosseum" (32 cards) — EASIER version
+ * Layout 5 — "Colosseum" (32 cards)
  *
- * 3 arches with only 2 layers (not 3), pillars, and wide floor.
+ * 3 arches with 2 layers each, reversed pillars, and tiered floor.
  *
  * LEFT ARCH:     [0][1]     ← blocked by [2,3]
  *                [2][3]     ← blocked by middle row [16,17]
@@ -23,18 +23,23 @@ interface ILayout5Props {
  * RIGHT ARCH:    [8][9]     ← blocked by [10,11]
  *                [10][11]   ← blocked by middle row [21,22]
  *
- * LEFT PILLAR:   [12]←[13]  [13]=OPEN
- * RIGHT PILLAR:  [14]←[15]  [15]=OPEN
+ * LEFT PILLAR:   [12] OPEN  ← clearing 12 reveals 13
+ *                [13]←[12]
  *
- * MIDDLE ROW:    [16][17][18][19][20][21][22][23] ← blocked by bottom
- *   [16]←[24] [17]←[25] [18]←[26] [19]←[27]
- *   [20]←[28] [21]←[29] [22]←[30] [23]←[31]
+ * RIGHT PILLAR:  [14] OPEN  ← clearing 14 reveals 15
+ *                [15]←[14]
+ *
+ * MIDDLE ROW:    [16][17][18][19][20][21][22][23]
+ *   [16]←[24]  [17]←[25]  [18]←[26]  [19]←[27]
+ *   [20]←[28]  [21]←[29]  [22]←[30]  [23]←[31]
  *
  * BOTTOM ROW:    [24][25][26][27][28][29][30][31] ← OPEN
  *
- * Open at start: 2 (pillars) + 8 (bottom) = 10
- * Only 1 arch layer blocked → clear 1 middle card → unlock 1 arch base → unlock 1 arch top
- * Much faster progression than before!
+ * Open at start: 12, 14, 24-31 = 10 open cards
+ *
+ * Pillar change: top card is open and blocks the one below.
+ * Clearing a pillar top gives you an extra card to work with.
+ * More options early = more combo potential.
  */
 
 const isCleared = (cards: ICard[], ...i: number[]) =>
@@ -57,10 +62,10 @@ const Layout5 = React.memo(
     return (
       <View style={styles.container}>
         <View style={styles.topSection}>
-          {/* Left pillar */}
+          {/* Left pillar — top is open, blocks bottom */}
           <View style={styles.pillar}>
-            {C(12, isCleared(cards, 13))}
-            {C(13, cards[13].visible)}
+            {C(12, true)}
+            {C(13, isCleared(cards, 12))}
           </View>
 
           {/* Left arch — 2 layers */}
@@ -117,14 +122,14 @@ const Layout5 = React.memo(
             </View>
           </View>
 
-          {/* Right pillar */}
+          {/* Right pillar — top is open, blocks bottom */}
           <View style={styles.pillar}>
-            {C(14, isCleared(cards, 15))}
-            {C(15, cards[15].visible)}
+            {C(14, true)}
+            {C(15, isCleared(cards, 14))}
           </View>
         </View>
 
-        {/* MIDDLE ROW — blocked by bottom, 1-to-1 */}
+        {/* MIDDLE ROW — 1-to-1 blocking from bottom */}
         <View style={styles.floorRow}>
           {C(16, isCleared(cards, 24))}
           {C(17, isCleared(cards, 25))}
