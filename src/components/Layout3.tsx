@@ -7,6 +7,7 @@ interface ILayout3Props {
   cards: ICard[]
   onClick: (index: number) => void
   hintedIndices?: Set<number>
+  bountyIndices?: Set<number>
 }
 
 /**
@@ -33,7 +34,12 @@ const isCleared = (cards: ICard[], ...i: number[]) =>
   i.every((x) => !cards[x]?.visible)
 
 const Layout3 = React.memo(
-  ({ cards, onClick, hintedIndices = new Set() }: ILayout3Props) => {
+  ({
+    cards,
+    onClick,
+    hintedIndices = new Set(),
+    bountyIndices = new Set(),
+  }: ILayout3Props) => {
     if (cards.length < 36) return null
 
     const C = (i: number, open: boolean) => (
@@ -43,6 +49,7 @@ const Layout3 = React.memo(
         remove={!cards[i].visible}
         onClick={() => onClick(i)}
         hinted={hintedIndices.has(i)}
+        bounty={bountyIndices?.has(i)}
       />
     )
 

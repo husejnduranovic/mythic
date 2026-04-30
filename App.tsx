@@ -13,6 +13,9 @@ import Profile from "./src/components/Profile"
 import ArenaScreen from "./src/components/Arenascreen"
 import LoungeScreen from "./src/components/LoungeScreen"
 import { getLoungeInfo, getSavedLoungeCode } from "./src/services/LoungeService"
+import * as SplashScreen from "expo-splash-screen"
+
+SplashScreen.preventAutoHideAsync()
 
 interface UserData {
   uid: string
@@ -39,6 +42,8 @@ export default function App() {
   const [loungeCode, setLoungeCode] = useState<string | null>(null)
   const [loungeName, setLoungeName] = useState<string | null>(null)
 
+  const [showRules, setShowRules] = useState(false)
+
   useEffect(() => {
     NavigationBar.setVisibilityAsync("hidden")
     NavigationBar.setBehaviorAsync("overlay-swipe")
@@ -55,6 +60,14 @@ export default function App() {
       }
     })
   }, [])
+
+  useEffect(() => {
+    if (introSeen !== null) {
+      setTimeout(() => {
+        SplashScreen.hideAsync()
+      }, 2000)
+    }
+  }, [introSeen])
 
   const handleLogout = async () => {
     try {
@@ -89,6 +102,10 @@ export default function App() {
       </>
     )
 
+  if (showRules) {
+    return <IntroScreen onComplete={() => setShowRules(false)} />
+  }
+
   if (screen === "daily")
     return (
       <>
@@ -116,7 +133,7 @@ export default function App() {
     return (
       <>
         <StatusBar hidden />
-        <Scoreboard onBack={() => setScreen("home")} />
+        <Scoreboard onBack={() => setScreen("home")} uid={user?.uid} />
       </>
     )
   if (screen === "profile")
@@ -127,6 +144,9 @@ export default function App() {
           onBack={() => setScreen("home")}
           uid={user.uid}
           heroName={user.heroName}
+          onNameChange={(newName) =>
+            setUser((prev) => (prev ? { ...prev, heroName: newName } : prev))
+          }
         />
       </>
     )

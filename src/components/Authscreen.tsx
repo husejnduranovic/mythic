@@ -10,6 +10,7 @@ import {
 import auth from "@react-native-firebase/auth"
 import firestore from "@react-native-firebase/firestore"
 import { GoogleSignin } from "@react-native-google-signin/google-signin"
+import messaging from "@react-native-firebase/messaging"
 
 const WEB_CLIENT_ID =
   "644045789931-jfeqrr0361mu1qpf6b4si9447bhi21gg.apps.googleusercontent.com"
@@ -43,6 +44,10 @@ const AuthScreen = ({ onAuthenticated }: AuthScreenProps) => {
             heroName: doc.data()!.heroName,
             email: user.email || "",
           })
+          // Subscribe to all-time record notifications
+          messaging()
+            .subscribeToTopic("alltime-record")
+            .catch(() => {})
         } else {
           setStep("heroname")
         }
@@ -68,8 +73,8 @@ const AuthScreen = ({ onAuthenticated }: AuthScreenProps) => {
       const googleCredential = auth.GoogleAuthProvider.credential(idToken)
       await auth().signInWithCredential(googleCredential)
     } catch (err: any) {
-      console.error("Google Sign-In error:", err)
-      setError(err.message || "Sign-in failed")
+      console.error("FULL ERROR:", JSON.stringify(err, null, 2))
+      setError(`Code: ${err.code} | ${err.message}`)
       setStep("signin")
     }
   }
@@ -114,6 +119,9 @@ const AuthScreen = ({ onAuthenticated }: AuthScreenProps) => {
         { merge: true },
       )
       onAuthenticated({ uid, heroName: trimmed, email })
+      messaging()
+        .subscribeToTopic("alltime-record")
+        .catch(() => {})
     } catch (err: any) {
       setError("Failed to save hero name")
       setStep("heroname")

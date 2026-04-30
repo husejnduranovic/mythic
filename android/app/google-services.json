@@ -15,11 +15,27 @@
       },
       "oauth_client": [
         {
+          "client_id": "644045789931-27hd9e9gucsrtdtcrcdgnrmke02ft5nu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.husejn.mythicpeaks",
+            "certificate_hash": "edea7836b806a755d928f168695720aac1a22cda"
+          }
+        },
+        {
           "client_id": "644045789931-425s506fpblvmh33beo4mgle10u6nice.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.husejn.mythicpeaks",
             "certificate_hash": "17b85c651896b9376a2fa368d6ddaf0251a48501"
+          }
+        },
+        {
+          "client_id": "644045789931-krt7ssbj56iqf96j1lsne069b0lktlof.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.husejn.mythicpeaks",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
           }
         },
         {

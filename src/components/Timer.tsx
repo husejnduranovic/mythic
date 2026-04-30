@@ -122,11 +122,13 @@ const Timer = ({
           ❄
         </Animated.Text>
       )}
-      <Animated.Text
-        style={[styles.timeText, { opacity: flashAnim, color: barColor }]}
-      >
-        {timeStr}
-      </Animated.Text>
+      <View style={styles.timerFrame}>
+        <Animated.Text
+          style={[styles.timeText, { opacity: flashAnim, color: barColor }]}
+        >
+          {timeStr}
+        </Animated.Text>
+      </View>
       <View style={[styles.barTrack, frozen && styles.barTrackFrozen]}>
         <Animated.View
           style={[
@@ -146,20 +148,43 @@ const Timer = ({
 }
 
 const styles = StyleSheet.create({
-  container: { alignItems: "center", gap: 3 },
-  timeText: { fontSize: 15, fontWeight: "800", letterSpacing: 1 },
+  container: { alignItems: "center", gap: 2 },
+  timerFrame: {
+    backgroundColor: "rgba(0,0,0,0.3)",
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "rgba(232,197,71,0.12)",
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+  },
+  timeText: {
+    fontSize: 16,
+    fontWeight: "900",
+    letterSpacing: 2,
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 6,
+  },
   barTrack: {
     width: 80,
     height: 4,
-    backgroundColor: "rgba(255,255,255,0.15)",
+    backgroundColor: "rgba(255,255,255,0.1)",
     borderRadius: 2,
     overflow: "hidden",
+    borderWidth: 0.5,
+    borderColor: "rgba(232,197,71,0.08)",
   },
   barTrackFrozen: {
-    backgroundColor: "rgba(79,195,247,0.2)",
+    backgroundColor: "rgba(79,195,247,0.15)",
+    borderColor: "rgba(79,195,247,0.3)",
   },
   barFill: { height: "100%", borderRadius: 2 },
-  frozenIcon: { fontSize: 12, position: "absolute", top: -8, right: -8 },
+  frozenIcon: {
+    fontSize: 12,
+    position: "absolute",
+    top: -10,
+    right: -10,
+    zIndex: 2,
+  },
 })
 
 export default Timer

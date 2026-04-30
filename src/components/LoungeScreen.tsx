@@ -2,8 +2,8 @@ import React, { useEffect, useRef, useState } from "react"
 import {
   ActivityIndicator,
   Animated,
+  Easing,
   FlatList,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -37,13 +37,40 @@ const LoungeScreen = ({ onBack, uid, heroName, onPlay }: LoungeScreenProps) => {
   const [error, setError] = useState("")
 
   const fadeAnim = useRef(new Animated.Value(0)).current
+  const slideAnim = useRef(new Animated.Value(20)).current
+  const glowPulse = useRef(new Animated.Value(0.3)).current
 
   useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start()
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 400,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 400,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start()
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowPulse, {
+          toValue: 0.5,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(glowPulse, {
+          toValue: 0.3,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+      ]),
+    ).start()
+
     loadLounge()
   }, [])
 
@@ -90,352 +117,647 @@ const LoungeScreen = ({ onBack, uid, heroName, onPlay }: LoungeScreenProps) => {
   const myScore = scores.find((s) => s.uid === uid)
   const myRank = scores.findIndex((s) => s.uid === uid) + 1
 
+  const Background = () => (
+    <View style={s.bgLayer} pointerEvents="none">
+      <Animated.View style={[s.bgGlow, { opacity: glowPulse }]} />
+      <Text style={[s.bgRune, { top: "8%", left: "4%" }]}>ᚠ</Text>
+      <Text style={[s.bgRune, { top: "12%", right: "6%" }]}>ᚦ</Text>
+      <Text style={[s.bgRune, { bottom: "15%", left: "8%" }]}>ᚱ</Text>
+      <Text style={[s.bgRune, { bottom: "20%", right: "5%" }]}>ᛟ</Text>
+      <Text style={[s.bgBeast, { top: "22%", left: "12%" }]}>🏛</Text>
+      <Text style={[s.bgBeast, { bottom: "25%", right: "10%" }]}>🏆</Text>
+      <View style={s.bgHLine} />
+    </View>
+  )
+
   if (loading)
     return (
-      <View style={styles.containerCenter}>
+      <View style={s.containerCenter}>
+        <Background />
         <ActivityIndicator size="large" color="#E8C547" />
+        <Text style={s.loadText}>Loading tournament...</Text>
       </View>
     )
 
-  // Joined a lounge — show tournament
+  // Joined — tournament view
   if (loungeCode && lounge) {
     return (
-      <Animated.View style={[styles.containerRow, { opacity: fadeAnim }]}>
-        {/* Left — Info + Play */}
-        <View style={styles.leftSection}>
-          <Text style={styles.loungeIcon}>🏛</Text>
-          <Text style={styles.loungeName}>{lounge.name}</Text>
-          <Text style={styles.tournamentLabel}>WEEKLY TOURNAMENT</Text>
-          <View style={styles.timerBox}>
-            <Text style={styles.timerText}>
-              {daysLeft === 0 ? "Last day!" : `${daysLeft} days left`}
-            </Text>
-          </View>
-          {myScore && (
-            <View style={styles.myScoreRow}>
-              <Text style={styles.myRank}>#{myRank}</Text>
-              <Text style={styles.myScoreValue}>
-                {myScore.score.toLocaleString()}
+      <View style={s.containerRow}>
+        <Background />
+
+        <Animated.View
+          style={[
+            s.contentRow,
+            { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
+          ]}
+        >
+          {/* Left — Info + Play */}
+          <View style={s.leftSection}>
+            {/* Header ornament */}
+            <View style={s.headerOrn}>
+              <View style={s.ornLine} />
+              <Text style={s.ornDot}>◆</Text>
+              <View style={s.ornLine} />
+            </View>
+
+            {/* Lounge icon + name */}
+            <View style={s.loungeIconWrap}>
+              <Text style={s.loungeIcon}>🏛</Text>
+            </View>
+            <Text style={s.loungeName}>{lounge.name}</Text>
+
+            {/* Tournament label */}
+            <View style={s.tournamentBadge}>
+              <Text style={s.tournamentLabel}>WEEKLY TOURNAMENT</Text>
+            </View>
+
+            {/* Timer */}
+            <View style={s.timerBox}>
+              <View style={s.timerDot} />
+              <Text style={s.timerText}>
+                {daysLeft === 0 ? "Final day!" : `${daysLeft} days remaining`}
               </Text>
             </View>
-          )}
-          <TouchableOpacity style={styles.goldBtn} onPress={onPlay}>
-            <Text style={styles.goldBtnText}>⚔ Enter Battle</Text>
-          </TouchableOpacity>
-          <Text style={styles.hintText}>Scores count for this tournament</Text>
-        </View>
 
-        {/* Right — Leaderboard */}
-        <View style={styles.rightSection}>
-          <Text style={styles.lbTitle}>⚔ WARRIORS THIS WEEK</Text>
-          {scores.length === 0 ? (
-            <Text style={styles.emptyText}>No scores yet — be the first!</Text>
-          ) : (
-            <FlatList
-              data={scores}
-              keyExtractor={(_, i) => `ls-${i}`}
-              style={styles.list}
-              renderItem={({ item, index }) => (
-                <View
-                  style={[
-                    styles.scoreRow,
-                    item.uid === uid && styles.scoreRowYou,
-                  ]}
-                >
-                  <Text style={styles.rank}>
-                    {index === 0
-                      ? "🥇"
-                      : index === 1
-                        ? "🥈"
-                        : index === 2
-                          ? "🥉"
-                          : `${index + 1}.`}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.playerName,
-                      item.uid === uid && styles.playerNameYou,
-                    ]}
-                  >
-                    {item.heroName}
-                  </Text>
-                  <Text style={styles.playerCombo}>x{item.bestCombo}</Text>
-                  <Text style={styles.playerScore}>
-                    {item.score.toLocaleString()}
+            {/* My position */}
+            {myScore && (
+              <View style={s.myScoreCard}>
+                <Text style={s.myScoreLabel}>YOUR POSITION</Text>
+                <View style={s.myScoreRow}>
+                  <Text style={s.myRank}>#{myRank}</Text>
+                  <View style={s.myScoreDivider} />
+                  <Text style={s.myScoreValue}>
+                    {myScore.score.toLocaleString()}
                   </Text>
                 </View>
-              )}
-            />
-          )}
-        </View>
+              </View>
+            )}
+
+            {/* Play button */}
+            <TouchableOpacity
+              style={s.goldBtn}
+              onPress={onPlay}
+              activeOpacity={0.85}
+            >
+              <Text style={s.goldBtnIcon}>⚔</Text>
+              <Text style={s.goldBtnText}>Enter Battle</Text>
+            </TouchableOpacity>
+            <Text style={s.hintText}>
+              Every battle counts for this tournament
+            </Text>
+          </View>
+
+          {/* Right — Leaderboard */}
+          <View style={s.rightSection}>
+            <View style={s.lbHeader}>
+              <View style={s.ornLine} />
+              <Text style={s.ornDot}>◆</Text>
+              <View style={s.ornLineShort} />
+            </View>
+            <Text style={s.lbTitle}>WARRIORS THIS WEEK</Text>
+
+            {scores.length === 0 ? (
+              <View style={s.emptyWrap}>
+                <Text style={s.emptyIcon}>⚔</Text>
+                <Text style={s.emptyText}>No warriors yet</Text>
+                <Text style={s.emptyHint}>Be the first to battle!</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={scores}
+                keyExtractor={(_, i) => `ls-${i}`}
+                style={s.list}
+                showsVerticalScrollIndicator={false}
+                renderItem={({ item, index }) => (
+                  <View style={[s.scoreRow, item.uid === uid && s.scoreRowYou]}>
+                    <Text style={s.rank}>
+                      {index === 0
+                        ? "🥇"
+                        : index === 1
+                          ? "🥈"
+                          : index === 2
+                            ? "🥉"
+                            : `${index + 1}.`}
+                    </Text>
+                    <View style={s.playerNameCol}>
+                      <Text
+                        style={[
+                          s.playerName,
+                          item.uid === uid && s.playerNameYou,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {item.heroName}
+                      </Text>
+                    </View>
+                    <Text style={s.playerCombo}>x{item.bestCombo}</Text>
+                    <Text style={s.playerScore}>
+                      {item.score.toLocaleString()}
+                    </Text>
+                  </View>
+                )}
+              />
+            )}
+
+            {/* Prize info */}
+            <View style={s.prizeBox}>
+              <Text style={s.prizeIcon}>🏆</Text>
+              <Text style={s.prizeText}>#1 wins the weekly prize</Text>
+            </View>
+          </View>
+        </Animated.View>
 
         {/* Bottom buttons */}
-        <TouchableOpacity style={styles.backBtnAbs} onPress={onBack}>
-          <Text style={styles.backText}>← Return to Castle</Text>
+        <TouchableOpacity style={s.backBtnAbs} onPress={onBack}>
+          <Text style={s.backText}>← Return to Castle</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.leaveBtnAbs} onPress={handleLeave}>
-          <Text style={styles.leaveBtnText}>Leave Tournament</Text>
+        <TouchableOpacity style={s.leaveBtnAbs} onPress={handleLeave}>
+          <Text style={s.leaveBtnText}>🚪 Leave</Text>
         </TouchableOpacity>
-      </Animated.View>
+      </View>
     )
   }
 
-  // Not joined — show join screen
+  // Not joined — join screen
   return (
-    <View style={styles.containerCenter}>
-      <Animated.View style={[styles.joinContent, { opacity: fadeAnim }]}>
-        <Text style={styles.joinIcon}>🏛</Text>
-        <Text style={styles.joinTitle}>LOUNGE TOURNAMENT</Text>
-        <Text style={styles.joinSub}>
-          Enter a lounge code to join their weekly tournament
+    <View style={s.containerCenter}>
+      <Background />
+
+      <Animated.View
+        style={[
+          s.joinContent,
+          { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
+        ]}
+      >
+        {/* Header */}
+        <View style={s.headerOrn}>
+          <View style={s.ornLine} />
+          <Text style={s.ornDot}>◆</Text>
+          <View style={s.ornLine} />
+        </View>
+
+        <View style={s.joinIconWrap}>
+          <Text style={s.joinIconEmoji}>🏛</Text>
+        </View>
+        <Text style={s.joinTitle}>TOURNAMENT</Text>
+        <Text style={s.joinSub}>
+          Enter a lounge code to join their weekly battle
         </Text>
 
         {error !== "" && (
-          <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{error}</Text>
+          <View style={s.errorBox}>
+            <Text style={s.errorIcon}>⚠</Text>
+            <Text style={s.errorText}>{error}</Text>
           </View>
         )}
 
-        <View style={styles.joinCard}>
+        {/* Join card */}
+        <View style={s.joinCard}>
+          <Text style={s.joinCardLabel}>LOUNGE CODE</Text>
           <TextInput
-            style={styles.codeInput}
+            style={s.codeInput}
             value={joinInput}
             onChangeText={(t) => setJoinInput(t.toUpperCase())}
-            placeholder="LOUNGE CODE"
-            placeholderTextColor="rgba(232,197,71,0.25)"
+            placeholder="ENTER CODE"
+            placeholderTextColor="rgba(232,197,71,0.2)"
             autoCapitalize="characters"
             maxLength={20}
           />
           <TouchableOpacity
-            style={[
-              styles.joinBtn,
-              joinInput.length < 3 && styles.joinBtnDisabled,
-            ]}
+            style={[s.joinBtn, joinInput.length < 3 && s.joinBtnDisabled]}
             onPress={handleJoin}
             disabled={joinInput.length < 3}
+            activeOpacity={0.85}
           >
-            <Text style={styles.joinBtnText}>Join Tournament</Text>
+            <Text style={s.joinBtnText}>JOIN TOURNAMENT →</Text>
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.backBtn} onPress={onBack}>
-          <Text style={styles.backText}>← Return to Castle</Text>
+        <TouchableOpacity style={s.backBtn} onPress={onBack}>
+          <Text style={s.backText}>← Return to Castle</Text>
         </TouchableOpacity>
       </Animated.View>
     </View>
   )
 }
 
-const styles = StyleSheet.create({
-  // Joined — horizontal layout
+const s = StyleSheet.create({
+  // Background
+  bgLayer: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
+  bgGlow: {
+    position: "absolute",
+    top: "15%",
+    left: "25%",
+    width: "50%",
+    height: "55%",
+    borderRadius: 250,
+    backgroundColor: "rgba(232,197,71,0.04)",
+  },
+  bgRune: {
+    position: "absolute",
+    fontSize: 22,
+    color: "rgba(232,197,71,0.04)",
+  },
+  bgBeast: {
+    position: "absolute",
+    fontSize: 42,
+    color: "rgba(232,197,71,0.035)",
+  },
+  bgHLine: {
+    position: "absolute",
+    top: "52%",
+    left: 20,
+    right: 20,
+    height: 1,
+    backgroundColor: "rgba(232,197,71,0.03)",
+  },
+
+  // Containers
   containerRow: {
     flex: 1,
-    backgroundColor: "#0F1A12",
+    backgroundColor: "#0B1410",
+    paddingHorizontal: 20,
+  },
+  contentRow: {
+    flex: 1,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 30,
-    gap: 30,
+    gap: 28,
   },
-  leftSection: { alignItems: "center", gap: 14, flex: 1 },
-  rightSection: { flex: 1, maxHeight: 180, paddingTop: 8 },
-
-  // Not joined — centered
   containerCenter: {
     flex: 1,
-    backgroundColor: "#0F1A12",
+    backgroundColor: "#0B1410",
     justifyContent: "center",
     alignItems: "center",
   },
-  joinContent: { alignItems: "center" },
+  loadText: {
+    color: "rgba(232,197,71,0.4)",
+    fontSize: 12,
+    marginTop: 12,
+    letterSpacing: 2,
+  },
 
-  // Lounge info
-  loungeIcon: { fontSize: 28 },
+  // Ornaments
+  headerOrn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 6,
+  },
+  ornLine: { width: 28, height: 1, backgroundColor: "rgba(232,197,71,0.2)" },
+  ornLineShort: {
+    width: 14,
+    height: 1,
+    backgroundColor: "rgba(232,197,71,0.15)",
+  },
+  ornDot: { color: "rgba(232,197,71,0.4)", fontSize: 7 },
+
+  // Left section — tournament info
+  leftSection: { alignItems: "center", gap: 6, flex: 1 },
+
+  loungeIconWrap: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    borderWidth: 1.5,
+    borderColor: "rgba(79,195,247,0.3)",
+    backgroundColor: "rgba(79,195,247,0.05)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loungeIcon: { fontSize: 26 },
   loungeName: {
-    color: "#E8C547",
+    color: "#4FC3F7",
     fontSize: 20,
     fontWeight: "900",
     letterSpacing: 3,
+    textShadowColor: "rgba(79,195,247,0.3)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
+  },
+  tournamentBadge: {
+    backgroundColor: "rgba(232,197,71,0.06)",
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: "rgba(232,197,71,0.1)",
   },
   tournamentLabel: {
-    color: "rgba(232,197,71,0.4)",
-    fontSize: 9,
-    fontWeight: "800",
+    color: "rgba(232,197,71,0.5)",
+    fontSize: 8,
+    fontWeight: "900",
     letterSpacing: 3,
   },
   timerBox: {
-    backgroundColor: "rgba(79,195,247,0.1)",
-    borderRadius: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(79,195,247,0.06)",
+    borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 3,
+    paddingVertical: 4,
     borderWidth: 1,
-    borderColor: "rgba(79,195,247,0.2)",
+    borderColor: "rgba(79,195,247,0.15)",
   },
-  timerText: { color: "#4FC3F7", fontSize: 11, fontWeight: "800" },
+  timerDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#7BED9F",
+  },
+  timerText: {
+    color: "#4FC3F7",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
 
+  myScoreCard: {
+    alignItems: "center",
+    backgroundColor: "rgba(232,197,71,0.04)",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(232,197,71,0.12)",
+    paddingHorizontal: 20,
+    paddingVertical: 6,
+  },
+  myScoreLabel: {
+    color: "rgba(232,197,71,0.4)",
+    fontSize: 7,
+    fontWeight: "900",
+    letterSpacing: 3,
+  },
   myScoreRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginTop: 4,
+    gap: 10,
+    marginTop: 2,
   },
-  myRank: { color: "#E8C547", fontSize: 22, fontWeight: "900" },
-  myScoreValue: { color: "#E8C547", fontSize: 18, fontWeight: "900" },
+  myRank: {
+    color: "#E8C547",
+    fontSize: 24,
+    fontWeight: "900",
+    textShadowColor: "rgba(232,197,71,0.4)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
+  },
+  myScoreDivider: {
+    width: 1,
+    height: 20,
+    backgroundColor: "rgba(232,197,71,0.15)",
+  },
+  myScoreValue: {
+    color: "#E8C547",
+    fontSize: 18,
+    fontWeight: "900",
+  },
 
-  // Leaderboard
+  goldBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#E8C547",
+    paddingHorizontal: 28,
+    paddingVertical: 10,
+    borderRadius: 12,
+    minWidth: 180,
+    shadowColor: "#E8C547",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  goldBtnIcon: { fontSize: 16 },
+  goldBtnText: {
+    color: "#1a1a1a",
+    fontSize: 15,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+  },
+  hintText: {
+    color: "rgba(255,255,255,0.2)",
+    fontSize: 9,
+    fontWeight: "600",
+    letterSpacing: 1,
+  },
+
+  // Right section — leaderboard
+  rightSection: { flex: 1, maxHeight: 220 },
+  lbHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 2,
+  },
   lbTitle: {
-    color: "rgba(232,197,71,0.4)",
+    color: "rgba(232,197,71,0.5)",
     fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 3,
+    fontWeight: "900",
+    letterSpacing: 4,
     marginBottom: 6,
     textAlign: "center",
   },
   list: { flex: 1 },
-  emptyText: {
-    color: "rgba(255,255,255,0.25)",
-    fontSize: 12,
-    textAlign: "center",
-    marginTop: 20,
-  },
+  emptyWrap: { alignItems: "center", gap: 4, marginTop: 20 },
+  emptyIcon: { fontSize: 28 },
+  emptyText: { color: "rgba(232,197,71,0.5)", fontSize: 13, fontWeight: "700" },
+  emptyHint: { color: "rgba(255,255,255,0.2)", fontSize: 10 },
+
   scoreRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 5,
+    paddingVertical: 6,
     paddingHorizontal: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(232,197,71,0.04)",
+    marginBottom: 2,
+    borderRadius: 6,
+    backgroundColor: "rgba(232,197,71,0.02)",
     gap: 8,
   },
   scoreRowYou: {
     backgroundColor: "rgba(232,197,71,0.06)",
-    borderRadius: 6,
-    borderBottomWidth: 0,
+    borderWidth: 1,
+    borderColor: "rgba(232,197,71,0.15)",
   },
   rank: {
     fontSize: 14,
     fontWeight: "800",
-    width: 30,
-    color: "rgba(232,197,71,0.5)",
+    width: 28,
+    color: "rgba(232,197,71,0.45)",
+    textAlign: "center",
   },
+  playerNameCol: { flex: 1 },
   playerName: {
     color: "rgba(255,255,255,0.6)",
     fontSize: 13,
     fontWeight: "700",
-    flex: 1,
   },
   playerNameYou: { color: "#E8C547" },
   playerCombo: {
     color: "rgba(232,197,71,0.35)",
     fontSize: 11,
     fontWeight: "700",
+    width: 35,
+    textAlign: "center",
   },
-  playerScore: { color: "#E8C547", fontSize: 15, fontWeight: "900" },
-
-  // Buttons
-  goldBtn: {
-    backgroundColor: "#E8C547",
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 10,
-    minWidth: 170,
-    alignItems: "center",
-    shadowColor: "#E8C547",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  goldBtnText: {
-    color: "#1a1a1a",
+  playerScore: {
+    color: "#E8C547",
     fontSize: 15,
     fontWeight: "900",
+    width: 75,
+    textAlign: "right",
+  },
+
+  prizeBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 6,
+    backgroundColor: "rgba(232,197,71,0.03)",
+    borderRadius: 6,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: "rgba(232,197,71,0.06)",
+  },
+  prizeIcon: { fontSize: 12 },
+  prizeText: {
+    color: "rgba(232,197,71,0.4)",
+    fontSize: 9,
+    fontWeight: "700",
     letterSpacing: 1,
   },
-  hintText: { color: "rgba(255,255,255,0.2)", fontSize: 9 },
 
+  // Bottom buttons
   backBtnAbs: {
     position: "absolute",
-    bottom: 10,
-    right: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    bottom: 8,
+    right: 18,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
   },
   leaveBtnAbs: {
     position: "absolute",
-    bottom: 10,
-    left: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    bottom: 8,
+    left: 18,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 6,
     borderWidth: 1,
-    borderColor: "rgba(255,100,100,0.15)",
+    borderColor: "rgba(255,100,100,0.2)",
+    backgroundColor: "rgba(255,100,100,0.04)",
   },
   leaveBtnText: {
-    color: "rgba(255,100,100,0.4)",
+    color: "rgba(255,100,100,0.6)",
     fontSize: 10,
-    fontWeight: "700",
-  },
-  backBtn: { paddingVertical: 10, paddingHorizontal: 24, marginTop: 10 },
-  backText: {
-    color: "#E8C547",
-    fontSize: 13,
     fontWeight: "700",
     letterSpacing: 1,
   },
 
   // Join screen
-  joinIcon: { fontSize: 40, marginBottom: 8 },
+  joinContent: { alignItems: "center" },
+  joinIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 2,
+    borderColor: "rgba(79,195,247,0.3)",
+    backgroundColor: "rgba(79,195,247,0.05)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  joinIconEmoji: { fontSize: 30 },
   joinTitle: {
     color: "#E8C547",
     fontSize: 24,
     fontWeight: "900",
-    letterSpacing: 3,
+    letterSpacing: 5,
+    textShadowColor: "rgba(232,197,71,0.3)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 12,
   },
   joinSub: {
-    color: "rgba(255,255,255,0.3)",
-    fontSize: 12,
+    color: "rgba(232,197,71,0.35)",
+    fontSize: 11,
+    fontWeight: "600",
     marginTop: 4,
     marginBottom: 16,
+    letterSpacing: 1,
   },
   errorBox: {
-    backgroundColor: "rgba(255,75,75,0.1)",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(255,75,75,0.08)",
     borderWidth: 1,
-    borderColor: "rgba(255,75,75,0.2)",
+    borderColor: "rgba(255,75,75,0.25)",
     borderRadius: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 6,
-    marginBottom: 10,
+    marginBottom: 12,
   },
-  errorText: { color: "#FF4B4B", fontSize: 12, fontWeight: "700" },
-  joinCard: { alignItems: "center", gap: 10 },
+  errorIcon: { fontSize: 12 },
+  errorText: { color: "#FF6B6B", fontSize: 11, fontWeight: "700" },
+
+  joinCard: {
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(232,197,71,0.03)",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(232,197,71,0.1)",
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+  },
+  joinCardLabel: {
+    color: "rgba(232,197,71,0.5)",
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 4,
+  },
   codeInput: {
     backgroundColor: "rgba(232,197,71,0.06)",
-    borderWidth: 1,
-    borderColor: "rgba(232,197,71,0.2)",
+    borderWidth: 1.5,
+    borderColor: "rgba(232,197,71,0.25)",
     borderRadius: 10,
     paddingHorizontal: 20,
     paddingVertical: 8,
     color: "#E8C547",
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "900",
-    letterSpacing: 4,
+    letterSpacing: 6,
     textAlign: "center",
-    width: 220,
+    width: 230,
   },
   joinBtn: {
     backgroundColor: "#E8C547",
     borderRadius: 10,
     paddingHorizontal: 28,
     paddingVertical: 10,
-    minWidth: 180,
+    minWidth: 200,
     alignItems: "center",
+    shadowColor: "#E8C547",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
-  joinBtnDisabled: { opacity: 0.3 },
+  joinBtnDisabled: { opacity: 0.3, shadowOpacity: 0 },
   joinBtnText: {
     color: "#1a1a1a",
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "900",
+    letterSpacing: 2,
+  },
+
+  backBtn: { paddingVertical: 10, paddingHorizontal: 24, marginTop: 14 },
+  backText: {
+    color: "#E8C547",
+    fontSize: 12,
+    fontWeight: "700",
     letterSpacing: 1,
   },
 })

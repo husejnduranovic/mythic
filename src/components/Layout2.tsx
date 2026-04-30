@@ -7,6 +7,7 @@ interface ILayout2Props {
   cards: ICard[]
   onClick: (index: number) => void
   hintedIndices?: Set<number>
+  bountyIndices?: Set<number>
 }
 
 const isOpen = (cards: ICard[], ...blockers: number[]) =>
@@ -52,7 +53,12 @@ const isOpen = (cards: ICard[], ...blockers: number[]) =>
  */
 
 const Layout2 = React.memo(
-  ({ cards, onClick, hintedIndices = new Set() }: ILayout2Props) => {
+  ({
+    cards,
+    onClick,
+    hintedIndices = new Set(),
+    bountyIndices = new Set(),
+  }: ILayout2Props) => {
     if (cards.length < 30) return null
 
     const C = (i: number, open: boolean) => (
@@ -62,6 +68,7 @@ const Layout2 = React.memo(
         remove={!cards[i].visible}
         onClick={() => onClick(i)}
         hinted={hintedIndices.has(i)}
+        bounty={bountyIndices?.has(i)}
       />
     )
 

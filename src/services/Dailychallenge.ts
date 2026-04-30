@@ -8,6 +8,7 @@ export interface DailyScore {
   bestCombo: number
   clearedPct: number
   playedAt: any
+  gamesPlayed: number
 }
 
 // Check if user already played today's challenge
@@ -92,6 +93,9 @@ export const submitAllTimeScore = async (
   bestCombo: number,
 ): Promise<void> => {
   try {
+    const userDoc = await firestore().collection("users").doc(uid).get()
+    const gamesPlayed = userDoc.data()?.gamesPlayed || 0
+
     const doc = await firestore().collection("allTimeScores").doc(uid).get()
     if (!doc.exists || (doc.data()?.score || 0) < score) {
       await firestore().collection("allTimeScores").doc(uid).set({
@@ -99,7 +103,13 @@ export const submitAllTimeScore = async (
         heroName,
         score,
         bestCombo,
+        gamesPlayed,
         updatedAt: firestore.FieldValue.serverTimestamp(),
+      })
+    } else if (doc.exists()) {
+      // Always update gamesPlayed even if score didn't change
+      await firestore().collection("allTimeScores").doc(uid).update({
+        gamesPlayed,
       })
     }
   } catch (err) {
@@ -115,14 +125,25 @@ export const submitGameScore = async (
   isDaily: boolean,
 ): Promise<void> => {
   try {
+    const userDoc = await firestore().collection("users").doc(uid).get()
+    const gamesPlayed = userDoc.data()?.gamesPlayed || 0
+
     await firestore().collection("gameScores").add({
       uid,
       heroName,
       score,
       bestCombo,
       isDaily,
+      gamesPlayed,
       playedAt: firestore.FieldValue.serverTimestamp(),
     })
+
+    await firestore()
+      .collection("users")
+      .doc(uid)
+      .update({
+        totalScore: firestore.FieldValue.increment(score),
+      })
   } catch (err) {
     console.error("Failed to submit game score:", err)
   }
