@@ -20,6 +20,7 @@ import {
   Lounge,
   LoungeScore,
 } from "../services/LoungeService"
+import ReturnToCastle from "./ReturnToCastle"
 
 interface LoungeScreenProps {
   onBack: () => void
@@ -268,9 +269,8 @@ const LoungeScreen = ({ onBack, uid, heroName, onPlay }: LoungeScreenProps) => {
         </Animated.View>
 
         {/* Bottom buttons */}
-        <TouchableOpacity style={s.backBtnAbs} onPress={onBack}>
-          <Text style={s.backText}>← Return to Castle</Text>
-        </TouchableOpacity>
+
+        <ReturnToCastle onPress={onBack} />
         <TouchableOpacity style={s.leaveBtnAbs} onPress={handleLeave}>
           <Text style={s.leaveBtnText}>🚪 Leave</Text>
         </TouchableOpacity>
@@ -333,9 +333,10 @@ const LoungeScreen = ({ onBack, uid, heroName, onPlay }: LoungeScreenProps) => {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={s.backBtn} onPress={onBack}>
+        {/* <TouchableOpacity style={s.backBtn} onPress={onBack}>
           <Text style={s.backText}>← Return to Castle</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
+        <ReturnToCastle onPress={onBack} />
       </Animated.View>
     </View>
   )

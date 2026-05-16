@@ -20,6 +20,7 @@ import {
   getRoomOnce,
 } from "../services/ArenaService"
 import database from "@react-native-firebase/database"
+import ReturnToCastle from "./ReturnToCastle"
 
 interface ArenaScreenProps {
   onBack: () => void
@@ -315,9 +316,10 @@ const ArenaScreen = ({
             </View>
           </View>
 
-          <TouchableOpacity style={styles.backBtn} onPress={onBack}>
+          {/* <TouchableOpacity style={styles.backBtn} onPress={onBack}>
             <Text style={styles.backText}>← Return to Castle</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
+          <ReturnToCastle onPress={onBack} />
         </Animated.View>
       </View>
     )
@@ -413,9 +415,10 @@ const ArenaScreen = ({
           </View>
         </View>
 
-        <TouchableOpacity style={styles.backBtn} onPress={onBack}>
+        {/* <TouchableOpacity style={styles.backBtn} onPress={onBack}>
           <Text style={styles.backText}>← Return to Castle</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
+        <ReturnToCastle onPress={onBack} />
       </Animated.View>
     </View>
   )
@@ -680,7 +683,6 @@ const styles = StyleSheet.create({
   },
 
   // Players section
-  playersSection: { width: "100%", maxWidth: 450 },
   playersSectionHeader: {
     flexDirection: "row",
     alignItems: "center",

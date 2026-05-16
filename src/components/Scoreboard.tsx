@@ -17,6 +17,7 @@ import {
   getDailyLeaderboard,
 } from "../services/Dailychallenge"
 import { SoundService } from "../services/SoundService"
+import ReturnToCastle from "./ReturnToCastle"
 
 interface ScoreboardProps {
   onBack: () => void
@@ -219,7 +220,17 @@ const Scoreboard = ({ onBack, uid }: ScoreboardProps) => {
             return (
               <View
                 key={`p${di}`}
-                style={[z.podSlot, isFirst && z.podSlotFirst]}
+                style={[
+                  z.podSlot,
+                  isFirst && z.podSlotFirst,
+                  {
+                    backgroundColor: c.bg,
+                    borderRadius: 10,
+                    paddingVertical: 6,
+                    borderWidth: 1,
+                    borderColor: c.border,
+                  },
+                ]}
               >
                 {isFirst && (
                   <Animated.Text style={[z.podCrown, { opacity: crownPulse }]}>
@@ -278,6 +289,12 @@ const Scoreboard = ({ onBack, uid }: ScoreboardProps) => {
                     },
                   ]}
                 >
+                  <View
+                    style={[
+                      z.pedestalShine,
+                      { backgroundColor: c.accent + "08" },
+                    ]}
+                  />
                   <Text
                     style={[
                       z.pedestalNum,
@@ -438,6 +455,8 @@ const Scoreboard = ({ onBack, uid }: ScoreboardProps) => {
           >
             {renderPodium()}
 
+            {myIndex >= 3 && renderYourRank()}
+
             {scores.length > 3 && (
               <View style={z.sep}>
                 <View style={z.sepLine} />
@@ -465,13 +484,13 @@ const Scoreboard = ({ onBack, uid }: ScoreboardProps) => {
         )}
 
         {/* Back */}
-        <TouchableOpacity style={z.backBtn} onPress={onBack}>
-          <Text style={z.backText}>← Return to Castle</Text>
-        </TouchableOpacity>
+        <ReturnToCastle onPress={onBack} />
       </Animated.View>
     </View>
   )
 }
+
+// ─── REPLACE the entire z StyleSheet in Scoreboard.tsx ───
 
 const z = StyleSheet.create({
   container: {
@@ -495,7 +514,7 @@ const z = StyleSheet.create({
   bgRune: {
     position: "absolute",
     fontSize: 22,
-    color: "rgba(232,197,71,0.04)",
+    color: "rgba(232,197,71,0.05)",
   },
   bgLine: {
     position: "absolute",
@@ -512,66 +531,69 @@ const z = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 5,
+    marginBottom: 6,
     gap: 6,
   },
-  hCenter: { flexDirection: "row", alignItems: "center", gap: 6 },
-  hIcon: { fontSize: 16 },
+  hCenter: { flexDirection: "row", alignItems: "center", gap: 8 },
+  hIcon: { fontSize: 18 },
   hTitle: {
     color: "#E8C547",
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "900",
     letterSpacing: 5,
-    textShadowColor: "rgba(232,197,71,0.3)",
+    textShadowColor: "rgba(232,197,71,0.4)",
     textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 12,
+    textShadowRadius: 14,
   },
   hOrn: { flexDirection: "row", alignItems: "center", flex: 1, gap: 4 },
-  hLine: { flex: 1, height: 1, backgroundColor: "rgba(232,197,71,0.12)" },
-  hLineS: { width: 10, height: 1, backgroundColor: "rgba(232,197,71,0.2)" },
-  hDot: { color: "rgba(232,197,71,0.35)", fontSize: 6 },
+  hLine: { flex: 1, height: 1, backgroundColor: "rgba(232,197,71,0.15)" },
+  hLineS: { width: 10, height: 1, backgroundColor: "rgba(232,197,71,0.25)" },
+  hDot: { color: "rgba(232,197,71,0.4)", fontSize: 6 },
 
   // Tabs
   tabs: {
     flexDirection: "row",
-    marginBottom: 5,
+    marginBottom: 6,
     backgroundColor: "rgba(232,197,71,0.03)",
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(232,197,71,0.08)",
-    padding: 2,
+    borderColor: "rgba(232,197,71,0.1)",
+    padding: 3,
   },
   tab: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 5,
-    borderRadius: 6,
-    gap: 5,
+    paddingVertical: 6,
+    borderRadius: 8,
+    gap: 6,
   },
-  tabOn: { backgroundColor: "rgba(232,197,71,0.1)" },
+  tabOn: {
+    backgroundColor: "rgba(232,197,71,0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(232,197,71,0.15)",
+  },
   tabDiv: {
     width: 1,
-    height: 14,
+    height: 16,
     backgroundColor: "rgba(232,197,71,0.1)",
     alignSelf: "center",
   },
-  tabIco: { fontSize: 11 },
+  tabIco: { fontSize: 13 },
   tabTxt: {
     color: "rgba(232,197,71,0.4)",
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "800",
     letterSpacing: 1,
   },
   tabTxtOn: { color: "#E8C547" },
 
-  // Content — split layout
-  contentRow: { flex: 1, flexDirection: "row", gap: 10 },
-  leftCol: { flex: isWide ? 0.45 : 0.5, justifyContent: "flex-start", gap: 6 },
-  rightCol: { flex: isWide ? 0.55 : 0.5 },
+  // Scroll
+  scroll: { flex: 1 },
+  scrollInner: { paddingBottom: 8 },
 
-  // ── YOUR RANK CARD ──
+  // Your rank
   yourRank: {
     flexDirection: "row",
     alignItems: "center",
@@ -580,13 +602,19 @@ const z = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,215,0,0.2)",
     borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 6,
   },
-  yourRankLeft: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1 },
+  yourRankLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flex: 1,
+  },
   yourRankPos: {
     color: "#FFD700",
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: "900",
     textShadowColor: "rgba(255,215,0,0.4)",
     textShadowOffset: { width: 0, height: 0 },
@@ -594,81 +622,85 @@ const z = StyleSheet.create({
   },
   yourRankDivider: {
     width: 1,
-    height: 24,
+    height: 28,
     backgroundColor: "rgba(255,215,0,0.15)",
   },
   yourRankName: {
     color: "#FFD700",
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "900",
     letterSpacing: 1,
   },
   yourRankTitle: {
-    color: "rgba(255,215,0,0.4)",
-    fontSize: 8,
+    color: "rgba(255,215,0,0.45)",
+    fontSize: 9,
     fontWeight: "700",
     letterSpacing: 1,
-    marginTop: 1,
+    marginTop: 2,
   },
   yourRankRight: { alignItems: "flex-end" },
   yourRankScore: {
     color: "#FFD700",
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "900",
     textShadowColor: "rgba(255,215,0,0.3)",
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 6,
   },
   yourRankCombo: {
-    color: "rgba(79,195,247,0.5)",
-    fontSize: 9,
+    color: "rgba(100,200,255,0.5)",
+    fontSize: 10,
     fontWeight: "700",
-    marginTop: 1,
+    marginTop: 2,
   },
 
-  // ── PODIUM ──
-  podiumSection: { alignItems: "center" },
+  // Podium
+  podiumSection: { alignItems: "center", marginBottom: 6 },
   podium: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "flex-end",
-    gap: isWide ? 8 : 4,
+    gap: 6,
     width: "100%",
+    paddingTop: 6,
   },
   podCrown: {
-    fontSize: 16,
+    fontSize: 20,
     marginBottom: -2,
-    textShadowColor: "rgba(255,215,0,0.5)",
+    textShadowColor: "rgba(255,215,0,0.6)",
     textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 8,
+    textShadowRadius: 10,
   },
-
-  podCard: {
-    width: "100%",
+  podSlot: {
+    flex: 1,
     alignItems: "center",
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-    gap: 1,
-  },
-  podCardFirst: {
+    maxWidth: 160,
     paddingVertical: 8,
+    paddingHorizontal: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 2,
   },
-
-  podMeta: { alignItems: "center", marginTop: 1 },
-  podRankText: { fontSize: 7, fontWeight: "700", letterSpacing: 1 },
-
+  podSlotFirst: { marginTop: -8 },
+  podScore: {
+    fontWeight: "900",
+    letterSpacing: 0.5,
+    textShadowOffset: { width: 0, height: 0 },
+    marginBottom: 1,
+  },
+  podName: {
+    fontWeight: "800",
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
   podComboBadge: {
     borderWidth: 1,
-    borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
+    borderRadius: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
     marginTop: 2,
   },
-  podComboText: { fontSize: 8, fontWeight: "900" },
-
-  // Pedestal
+  podComboText: { fontSize: 9, fontWeight: "900" },
   pedestal: {
     width: "90%",
     borderWidth: 1,
@@ -677,43 +709,76 @@ const z = StyleSheet.create({
     borderTopRightRadius: 6,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 3,
+    marginTop: 4,
+  },
+  pedestalShine: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: "50%",
+    borderTopLeftRadius: 5,
+    borderTopRightRadius: 5,
   },
   pedestalNum: { fontWeight: "900", letterSpacing: 2 },
+  podCard: { width: "100%", alignItems: "center" },
+  podCardFirst: {},
+  podMeta: {},
+  podRankText: {},
 
-  // ── ROWS ──
-  scroll: { flex: 1 },
+  // Separator
+  sep: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginVertical: 8,
+    paddingHorizontal: 4,
+  },
+  sepLine: { flex: 1, height: 1, backgroundColor: "rgba(232,197,71,0.08)" },
+  sepDot: { color: "rgba(232,197,71,0.25)", fontSize: 6 },
+  sepText: {
+    color: "rgba(232,197,71,0.3)",
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 3,
+  },
 
+  // Column headers
   colHeaders: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 8,
-    paddingBottom: 3,
+    paddingBottom: 4,
     gap: 6,
   },
   colLabel: {
-    color: "rgba(255,255,255,0.15)",
+    color: "rgba(255,255,255,0.18)",
     fontSize: 7,
     fontWeight: "900",
     letterSpacing: 2,
     textAlign: "center",
   },
 
+  // Rows
   row: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 7,
-    paddingHorizontal: 8,
-    marginBottom: 2,
-    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    marginBottom: 3,
+    borderRadius: 10,
     backgroundColor: "rgba(232,197,71,0.02)",
     borderWidth: 1,
-    borderColor: "rgba(232,197,71,0.04)",
-    gap: 6,
+    borderColor: "rgba(232,197,71,0.06)",
+    gap: 8,
   },
   rowYou: {
-    backgroundColor: "rgba(255,215,0,0.05)",
-    borderColor: "rgba(255,215,0,0.2)",
+    backgroundColor: "rgba(255,215,0,0.06)",
+    borderColor: "rgba(255,215,0,0.22)",
+    shadowColor: "#FFD700",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
   },
   rowPos: {
     color: "rgba(255,255,255,0.3)",
@@ -723,9 +788,9 @@ const z = StyleSheet.create({
     textAlign: "center",
   },
   rowIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: "rgba(232,197,71,0.04)",
     borderWidth: 1,
     borderColor: "rgba(232,197,71,0.1)",
@@ -733,13 +798,13 @@ const z = StyleSheet.create({
     alignItems: "center",
   },
   rowIconYou: {
-    borderColor: "rgba(255,215,0,0.25)",
-    backgroundColor: "rgba(255,215,0,0.06)",
+    borderColor: "rgba(255,215,0,0.3)",
+    backgroundColor: "rgba(255,215,0,0.07)",
   },
   rowInfo: { flex: 1 },
   rowName: {
     color: "rgba(255,255,255,0.75)",
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "800",
     letterSpacing: 0.5,
   },
@@ -751,34 +816,35 @@ const z = StyleSheet.create({
     letterSpacing: 1,
     marginTop: 1,
   },
-
   rowComboBadge: {
-    width: 40,
+    width: 44,
     alignItems: "center",
-    backgroundColor: "rgba(79,195,247,0.06)",
-    borderRadius: 5,
-    paddingVertical: 2,
+    backgroundColor: "rgba(232,197,71,0.06)",
+    borderRadius: 6,
+    paddingVertical: 3,
     borderWidth: 1,
-    borderColor: "rgba(79,195,247,0.12)",
+    borderColor: "rgba(232,197,71,0.15)",
   },
-  rowCombo: { color: "rgba(79,195,247,0.6)", fontSize: 11, fontWeight: "900" },
-
+  rowCombo: {
+    color: "rgba(232,197,71,0.7)",
+    fontSize: 11,
+    fontWeight: "900",
+  },
   rowScore: {
     color: "#E8C547",
     fontSize: 13,
     fontWeight: "900",
-    width: 90,
+    width: 95,
     textAlign: "right",
     letterSpacing: 0.5,
   },
   rowScoreYou: {
     color: "#FFD700",
     fontSize: 14,
-    textShadowColor: "rgba(255,215,0,0.3)",
+    textShadowColor: "rgba(255,215,0,0.35)",
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 6,
   },
-
   noMoreRows: { alignItems: "center", paddingVertical: 16 },
   noMoreText: {
     color: "rgba(255,255,255,0.12)",
@@ -787,28 +853,39 @@ const z = StyleSheet.create({
     letterSpacing: 1,
   },
 
-  // ── Empty / Loading ──
-  empty: { flex: 1, justifyContent: "center", alignItems: "center", gap: 6 },
-  emptyIco: { fontSize: 32 },
-  emptyTxt: { color: "#E8C547", fontSize: 15, fontWeight: "800" },
+  // Empty / Loading
+  empty: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+  },
+  emptyIco: { fontSize: 36 },
+  emptyTxt: {
+    color: "#E8C547",
+    fontSize: 16,
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
   emptyHint: {
-    color: "rgba(255,255,255,0.2)",
-    fontSize: 11,
+    color: "rgba(255,255,255,0.25)",
+    fontSize: 12,
     textAlign: "center",
+    lineHeight: 18,
   },
   loadText: {
-    color: "rgba(232,197,71,0.3)",
-    fontSize: 11,
-    marginTop: 4,
+    color: "rgba(232,197,71,0.35)",
+    fontSize: 12,
+    marginTop: 6,
     letterSpacing: 2,
   },
 
-  // ── Back ──
+  // Back
   backBtn: {
     alignSelf: "center",
-    paddingVertical: 5,
+    paddingVertical: 6,
     paddingHorizontal: 20,
-    marginBottom: 3,
+    marginBottom: 4,
   },
   backText: {
     color: "#E8C547",
@@ -816,41 +893,11 @@ const z = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
   },
-  // Remove these styles: contentRow, leftCol, rightCol, yourRank and all yourRank* styles
 
-  // Add back scroll inner
-  scrollInner: { paddingBottom: 8 },
-
-  // Updated podium — no card boxes
-  podSlot: { flex: 1, alignItems: "center", maxWidth: 140 },
-  podSlotFirst: { marginTop: -4 },
-
-  // Remove podCard and podCardFirst styles entirely
-
-  podScore: {
-    fontWeight: "900",
-    letterSpacing: 0.5,
-    textShadowOffset: { width: 0, height: 0 },
-    marginBottom: 1,
-  },
-  podName: { fontWeight: "800", letterSpacing: 0.5, marginBottom: 2 },
-
-  // Separator
-  sep: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginVertical: 6,
-    paddingHorizontal: 8,
-  },
-  sepLine: { flex: 1, height: 1, backgroundColor: "rgba(232,197,71,0.08)" },
-  sepDot: { color: "rgba(232,197,71,0.2)", fontSize: 5 },
-  sepText: {
-    color: "rgba(232,197,71,0.25)",
-    fontSize: 8,
-    fontWeight: "900",
-    letterSpacing: 3,
-  },
+  // Unused but kept to avoid errors
+  contentRow: {},
+  leftCol: {},
+  rightCol: {},
 })
 
 export default Scoreboard

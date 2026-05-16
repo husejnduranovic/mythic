@@ -12,49 +12,70 @@ const INTRO_KEY = "@mythic_intro_seen"
 
 interface IntroScreenProps {
   onComplete: () => void
+  skipAnimation?: boolean
 }
 
 const TUTORIAL_SLIDES = [
   {
     icon: "🃏",
     title: "Match Cards",
-    desc: "Tap field cards that are +1 or -1 from your open card.\nAce wraps — it matches both 2 and King.",
-    example: "7 → 6 or 8    K → Q or A",
+    desc: "You have one open card at the bottom.\nTap any field card that is one higher or one lower.\n\nAce is special — it connects King and 2.",
+    example: "Open card is 7 → tap 6 or 8",
   },
   {
     icon: "🔥",
-    title: "Build Combos",
-    desc: "Chain matches without drawing from the deck.\nBigger combos = massive point multipliers!\nCombo freezes the timer at milestones.",
+    title: "Combo is Everything",
+    desc: "Every match without drawing from the deck adds to your combo.\n\nHigher combo = more points per card.\nThis is the most important thing in the game.",
     example: "x5 = 4×  ·  x10 = 12×  ·  x20 = 40×",
   },
   {
     icon: "⚡",
-    title: "Wild Cards",
-    desc: "Reach combo x10 to earn a Wild Card.\nHit combo x20 for a second one.\nUse it to match ANY card on the field.",
-    example: "Earned & used per layout — don't hoard!",
+    title: "Never Break Your Combo",
+    desc: "Drawing from the deck resets your combo to zero.\n\nOnly draw when you have no other choice.\nEvery extra match without drawing is worth it.",
+    example: "Match → Match → Match → big points 💰",
   },
   {
-    icon: "⏱",
-    title: "Time & Deck Bonus",
-    desc: "Each layout has a timer. Seconds left = bonus points.\nUnused deck cards also give bonus points.\nPlay fast and smart for maximum spoils!",
-    example: "Time: +50/sec  ·  Deck: +200/card",
+    icon: "🃏",
+    title: "Wild Cards",
+    desc: "Build a combo of 10 to earn a Wild Card.\nA Wild Card matches ANY card on the field.\n\nUse it to keep your combo alive when you're stuck.",
+    example: "Combo x10 = 1 Wild  ·  Combo x20 = 2 Wilds",
+  },
+  {
+    icon: "💰",
+    title: "Bounty Cards",
+    desc: "Two special cards are hidden on every battlefield.\nThey look different from normal cards.\n\nMatch them for 5× points!",
+    example: "Normal card = 500pts  ·  Bounty card = 2500pts",
+  },
+  {
+    icon: "⚡",
+    title: "Carry Your Combo",
+    desc: "When 7 or fewer cards are left on the field\nand your combo is higher than the remaining cards —\nyou can carry your combo to the next battlefield!",
+    example: "x15 combo − 3 cards left = carry x12 🔥",
   },
   {
     icon: "🏔",
     title: "6 Battlefields",
-    desc: "Fight through 6 unique layouts in each run.\nLater layouts give higher point multipliers.\nClear all cards or retreat when time runs out.",
-    example: "L1 = 1×  →  L3 = 2×  →  L6 = 3.5×",
+    desc: "Each run has 6 battlefields.\nLater battlefields give bigger point multipliers.\n\nClear all cards on a field for a massive bonus!",
+    example: "Field 1 = 1×  →  Field 6 = 3.5× points",
   },
   {
-    icon: "⚡",
+    icon: "⚔",
     title: "Glory Hunt",
-    desc: "Activate before layouts 1-4 for double points\nbut only half the time! One charge per game.\nNot available on layouts 5 and 6.",
-    example: "High risk · High reward · Choose wisely",
+    desc: "Before battle you can activate Glory Hunt.\nDouble points — but only half the time!\n\nOne charge per run. Use it on your best layout.",
+    example: "2× points · 50% time · High risk, high reward",
+  },
+  {
+    icon: "🏆",
+    title: "Monthly Prizes",
+    desc: "Every month the top 3 warriors win real money.\nScores reset monthly so everyone starts equal.\n\nPlay daily quests for the best chance to win!",
+    example: "🥇 €50  ·  🥈 €30  ·  🥉 €20",
   },
 ]
 
-const IntroScreen = ({ onComplete }: IntroScreenProps) => {
-  const [phase, setPhase] = useState<"intro" | "tutorial">("intro")
+const IntroScreen = ({
+  onComplete,
+  skipAnimation = false,
+}: IntroScreenProps) => {
   const [slideIndex, setSlideIndex] = useState(0)
 
   const bgOpacity = useRef(new Animated.Value(0)).current
@@ -70,6 +91,10 @@ const IntroScreen = ({ onComplete }: IntroScreenProps) => {
   const tapOpacity = useRef(new Animated.Value(0)).current
   const slideOpacity = useRef(new Animated.Value(1)).current
   const slideSlide = useRef(new Animated.Value(0)).current
+
+  const [phase, setPhase] = useState<"intro" | "tutorial">(
+    skipAnimation ? "tutorial" : "intro",
+  )
 
   useEffect(() => {
     Animated.sequence([

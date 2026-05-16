@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react"
 import {
   ActivityIndicator,
   Animated,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -10,6 +11,7 @@ import {
 } from "react-native"
 import firestore from "@react-native-firebase/firestore"
 import { getUserProfile } from "../services/Dailychallenge"
+import ReturnToCastle from "./ReturnToCastle"
 
 interface ProfileProps {
   onBack: () => void
@@ -63,6 +65,23 @@ const getMilestones = (games: number) => {
   }))
 }
 
+const getStreakColor = (streak: number): string => {
+  if (streak >= 60) return "#E8E8F0" // near white
+  if (streak >= 42) return "#C8C8D8" // light steel
+  if (streak >= 21) return "#A8A8C0" // medium steel
+  if (streak >= 7) return "#9090A8" // steel blue-grey
+  if (streak >= 3) return "#787890" // muted steel
+  return "#606078" // dark steel
+}
+
+const getStreakIcon = (streak: number): string => {
+  if (streak >= 30) return "🔥"
+  if (streak >= 14) return "🔥"
+  if (streak >= 7) return "🔥"
+  if (streak >= 3) return "🔥"
+  return "🕯"
+}
+
 const Profile = ({ onBack, uid, heroName, onNameChange }: ProfileProps) => {
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -74,6 +93,7 @@ const Profile = ({ onBack, uid, heroName, onNameChange }: ProfileProps) => {
   const fadeAnim = useRef(new Animated.Value(0)).current
   const slideAnim = useRef(new Animated.Value(20)).current
   const glowPulse = useRef(new Animated.Value(0.3)).current
+  const streakPulse = useRef(new Animated.Value(0.8)).current
 
   useEffect(() => {
     if (!loading) {
@@ -103,6 +123,21 @@ const Profile = ({ onBack, uid, heroName, onNameChange }: ProfileProps) => {
         Animated.timing(glowPulse, {
           toValue: 0.3,
           duration: 2000,
+          useNativeDriver: true,
+        }),
+      ]),
+    ).start()
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(streakPulse, {
+          toValue: 1,
+          duration: 1200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(streakPulse, {
+          toValue: 0.8,
+          duration: 1200,
           useNativeDriver: true,
         }),
       ]),
@@ -204,6 +239,10 @@ const Profile = ({ onBack, uid, heroName, onNameChange }: ProfileProps) => {
   const rank = getRank(games)
   const nextRank = getNextRank(games)
   const milestones = getMilestones(games)
+  const currentStreak = data.currentStreak || 0
+  const bestStreak = data.bestStreak || 0
+  const streakColor = getStreakColor(currentStreak)
+  const streakIcon = getStreakIcon(currentStreak)
 
   const currentRankMin = rank.min
   const nextRankMin = nextRank.min
@@ -216,7 +255,15 @@ const Profile = ({ onBack, uid, heroName, onNameChange }: ProfileProps) => {
     <View style={styles.container}>
       {/* Background */}
       <View style={styles.bgLayer} pointerEvents="none">
-        <Animated.View style={[styles.bgGlow, { opacity: glowPulse }]} />
+        <Animated.View
+          style={[
+            styles.bgGlow,
+            {
+              opacity: glowPulse,
+              backgroundColor: rank.color + "18",
+            },
+          ]}
+        />
         <Text style={[styles.bgRune, { top: "10%", left: "4%" }]}>ᚠ</Text>
         <Text style={[styles.bgRune, { top: "12%", right: "5%" }]}>ᚦ</Text>
         <Text style={[styles.bgRune, { bottom: "15%", left: "8%" }]}>ᚱ</Text>
@@ -234,16 +281,15 @@ const Profile = ({ onBack, uid, heroName, onNameChange }: ProfileProps) => {
           { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
         ]}
       >
-        {/* LEFT SIDE — Hero identity */}
+        {/* LEFT SIDE */}
         <View style={styles.leftSection}>
-          {/* Ornament */}
           <View style={styles.headerOrn}>
             <View style={styles.headerLine} />
             <Text style={styles.headerDot}>◆</Text>
             <View style={styles.headerLine} />
           </View>
 
-          {/* Avatar ring */}
+          {/* Avatar */}
           <View style={styles.avatarWrap}>
             <View
               style={[
@@ -302,7 +348,7 @@ const Profile = ({ onBack, uid, heroName, onNameChange }: ProfileProps) => {
             <Text style={styles.nameError}>{nameError}</Text>
           )}
 
-          {/* Rank title */}
+          {/* Rank */}
           <View style={styles.rankBadge}>
             <View
               style={[styles.rankBadgeLine, { backgroundColor: rank.color }]}
@@ -328,13 +374,12 @@ const Profile = ({ onBack, uid, heroName, onNameChange }: ProfileProps) => {
                 ]}
               />
             </View>
-            {nextRank.needed > 0 && (
+            {nextRank.needed > 0 ? (
               <Text style={styles.rankProgress}>
                 {nextRank.needed} more to{" "}
                 <Text style={{ color: rank.color }}>{nextRank.name}</Text>
               </Text>
-            )}
-            {nextRank.needed === 0 && (
+            ) : (
               <Text style={[styles.rankProgress, { color: rank.color }]}>
                 Maximum rank achieved
               </Text>
@@ -367,6 +412,154 @@ const Profile = ({ onBack, uid, heroName, onNameChange }: ProfileProps) => {
               </View>
             ))}
           </View>
+
+          {/* ── STREAK ── */}
+          {/* ── STREAK ── */}
+          <View style={styles.streakWrap}>
+            <View style={styles.streakOrnRow}>
+              <View style={styles.streakOrnLine} />
+              <Text style={styles.streakOrnDot}>◆</Text>
+              <View style={styles.streakOrnLine} />
+            </View>
+
+            {/* Main streak display */}
+            <View
+              style={[
+                styles.streakBox,
+                {
+                  borderColor: streakColor + "50",
+                  shadowColor: currentStreak >= 7 ? streakColor : "transparent",
+                },
+              ]}
+            >
+              <View
+                style={[
+                  styles.streakGlow,
+                  { backgroundColor: streakColor + "08" },
+                ]}
+              />
+
+              {/* Left — fire icon, bigger at higher streaks */}
+              <Animated.Text
+                style={[
+                  styles.streakFireIcon,
+                  {
+                    opacity: streakPulse,
+                    fontSize:
+                      currentStreak >= 42
+                        ? 40
+                        : currentStreak >= 21
+                          ? 36
+                          : currentStreak >= 7
+                            ? 32
+                            : 26,
+                  },
+                ]}
+              >
+                {currentStreak >= 1 ? "🔥" : "🕯"}
+              </Animated.Text>
+
+              {/* Center — big number */}
+              <View style={styles.streakCenter}>
+                <Text style={[styles.streakCount, { color: streakColor }]}>
+                  {currentStreak}
+                </Text>
+                <Text style={styles.streakLabel}>DAY STREAK</Text>
+              </View>
+
+              {/* Right — best streak */}
+              <View style={styles.streakBestWrap}>
+                <Text style={styles.streakBestIcon}>🏆</Text>
+                <Text
+                  style={[
+                    styles.streakBestCount,
+                    { color: "rgba(232,197,71,0.7)" },
+                  ]}
+                >
+                  {bestStreak}
+                </Text>
+                <Text style={styles.streakBestLabel}>BEST</Text>
+              </View>
+            </View>
+
+            {/* Milestone track */}
+            <View style={styles.streakTrack}>
+              {[
+                { days: 7, label: "7d", name: "FLAME\nBORN", icon: "🔥" },
+                { days: 21, label: "21d", name: "EMBER\nFORGED", icon: "🌋" },
+                { days: 42, label: "42d", name: "INFERNO\nSWORN", icon: "⚡" },
+                { days: 60, label: "60d", name: "ETERNAL\nFLAME", icon: "♾" },
+              ].map((m, i) => {
+                const reached = bestStreak >= m.days
+                const active = currentStreak >= m.days
+                const milestoneColor = reached
+                  ? streakColor
+                  : "rgba(255,255,255,0.1)"
+                return (
+                  <React.Fragment key={i}>
+                    {i > 0 && (
+                      <View
+                        style={[
+                          styles.streakTrackLine,
+                          {
+                            backgroundColor:
+                              bestStreak >= m.days
+                                ? streakColor + "40"
+                                : "rgba(255,255,255,0.06)",
+                          },
+                        ]}
+                      />
+                    )}
+                    <View style={styles.streakMilestoneWrap}>
+                      <View
+                        style={[
+                          styles.streakMilestoneDot,
+                          reached && {
+                            backgroundColor: streakColor + "20",
+                            borderColor: streakColor,
+                            shadowColor: streakColor,
+                            shadowOffset: { width: 0, height: 0 },
+                            shadowOpacity: active ? 0.6 : 0.2,
+                            shadowRadius: active ? 8 : 4,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.streakMilestoneIcon,
+                            { opacity: reached ? 1 : 0.25 },
+                          ]}
+                        >
+                          {m.icon}
+                        </Text>
+                      </View>
+                      <Text
+                        style={[
+                          styles.streakMilestoneDays,
+                          reached && { color: streakColor },
+                        ]}
+                      >
+                        {m.label}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.streakMilestoneName,
+                          reached && { color: streakColor + "80" },
+                        ]}
+                      >
+                        {m.name}
+                      </Text>
+                    </View>
+                  </React.Fragment>
+                )
+              })}
+            </View>
+
+            {/* Unlock hint */}
+            <Text style={styles.streakUnlockHint}>
+              🔥 Streak milestones unlock exclusive Armory items
+            </Text>
+          </View>
         </View>
 
         {/* Divider */}
@@ -376,9 +569,8 @@ const Profile = ({ onBack, uid, heroName, onNameChange }: ProfileProps) => {
           <View style={styles.vDividerLine} />
         </View>
 
-        {/* RIGHT SIDE — Stats */}
+        {/* RIGHT SIDE */}
         <View style={styles.rightSection}>
-          {/* Section header */}
           <View style={styles.statsHeader}>
             <View style={styles.headerOrn}>
               <View style={styles.headerLine} />
@@ -388,7 +580,6 @@ const Profile = ({ onBack, uid, heroName, onNameChange }: ProfileProps) => {
             <Text style={styles.statsTitle}>BATTLE STATISTICS</Text>
           </View>
 
-          {/* Big stats */}
           <View style={styles.bigStatRow}>
             <View style={styles.bigStat}>
               <Text style={styles.bigStatValue}>
@@ -403,7 +594,6 @@ const Profile = ({ onBack, uid, heroName, onNameChange }: ProfileProps) => {
             </View>
           </View>
 
-          {/* Stats list */}
           <View style={styles.statsList}>
             <View style={styles.statRow}>
               <Text style={styles.statLabel}>🃏 Cards Cleared</Text>
@@ -419,20 +609,21 @@ const Profile = ({ onBack, uid, heroName, onNameChange }: ProfileProps) => {
             <View style={styles.statSep} />
             <View style={styles.statRow}>
               <Text style={styles.statLabel}>📜 Daily Quests</Text>
-              <Text style={styles.statValue}>{data.dailyWins || 0}</Text>
+              <Text style={styles.statValue}>
+                {data.dailyQuestsPlayed || 0}
+              </Text>
             </View>
             <View style={styles.statSep} />
             <View style={styles.statRow}>
-              <Text style={styles.statLabel}>🏆 Win Rate</Text>
+              <Text style={styles.statLabel}>🏆 Avg Score</Text>
               <Text style={styles.statValue}>
                 {games > 0
-                  ? `${Math.round(((data.totalCardsCleared || 0) / (games * 30)) * 100)}%`
-                  : "0%"}
+                  ? Math.round((data.totalScore || 0) / games).toLocaleString()
+                  : "0"}
               </Text>
             </View>
           </View>
 
-          {/* Total score */}
           <View style={styles.totalScoreBox}>
             <View style={styles.totalGlow} />
             <Text style={styles.totalScoreLabel}>LIFETIME SPOILS</Text>
@@ -443,9 +634,7 @@ const Profile = ({ onBack, uid, heroName, onNameChange }: ProfileProps) => {
         </View>
       </Animated.View>
 
-      <TouchableOpacity style={styles.backBtn} onPress={onBack}>
-        <Text style={styles.backText}>← Return to Castle</Text>
-      </TouchableOpacity>
+      <ReturnToCastle onPress={onBack} />
     </View>
   )
 }
@@ -457,16 +646,128 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 24,
+    paddingBottom: 8, // add this
+  },
+  milestoneDot: {
+    width: 16, // was 20
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: "rgba(232,197,71,0.15)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  milestoneCheck: { color: "#0B1410", fontSize: 7, fontWeight: "900" }, // was 9
+  milestoneLabel: {
+    color: "rgba(255,255,255,0.25)",
+    fontSize: 7, // was 9
+    marginTop: 1,
+    fontWeight: "700",
   },
 
-  // Background
-  bgLayer: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+  // Streak section — tighter
+  streakWrap: {
+    width: "100%",
+    alignItems: "center",
+    marginTop: 6, // was 14
+    gap: 6, // was 10
   },
+  streakBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+    backgroundColor: "rgba(20,8,0,0.6)",
+    borderRadius: 10, // was 14
+    borderWidth: 1.5,
+    paddingHorizontal: 12, // was 16
+    paddingVertical: 8, // was 12
+    gap: 6, // was 8
+    overflow: "hidden",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  streakFireIcon: {
+    fontSize: 22, // was dynamic, cap it at 22
+    textShadowColor: "rgba(150,150,180,0.4)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
+  },
+  streakCount: {
+    fontSize: 26, // was 36
+    fontWeight: "900",
+    lineHeight: 30, // was 40
+  },
+  streakLabel: {
+    color: "rgba(255,255,255,0.3)",
+    fontSize: 7, // was 8
+    fontWeight: "900",
+    letterSpacing: 2,
+    marginTop: 1,
+  },
+  streakBestCount: {
+    fontSize: 14, // was 18
+    fontWeight: "900",
+  },
+  streakBestIcon: { fontSize: 11 }, // was 14
+  streakBestLabel: {
+    color: "rgba(255,255,255,0.2)",
+    fontSize: 6, // was 7
+    fontWeight: "900",
+    letterSpacing: 2,
+  },
+
+  // Milestone track — smaller dots
+  streakMilestoneDot: {
+    width: 28, // was 36
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "rgba(255,255,255,0.03)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  streakMilestoneIcon: { fontSize: 13 }, // was 18
+  streakMilestoneDays: {
+    color: "rgba(255,255,255,0.25)",
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+  streakMilestoneName: {
+    color: "rgba(255,255,255,0.15)",
+    fontSize: 6, // was 7
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    textAlign: "center",
+    lineHeight: 8, // was 10
+  },
+  streakUnlockHint: {
+    color: "rgba(150,150,180,0.4)",
+    fontSize: 8, // was 9
+    fontWeight: "700",
+    letterSpacing: 1,
+    textAlign: "center",
+  },
+
+  // content gap tighter
+  content: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10, // was 16
+    width: "100%",
+    maxWidth: 680,
+  },
+
+  // avatarWrap tighter
+  avatarWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4, // was 6
+  },
+  bgLayer: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
   bgGlow: {
     position: "absolute",
     top: "20%",
@@ -474,7 +775,6 @@ const styles = StyleSheet.create({
     width: "50%",
     height: "55%",
     borderRadius: 300,
-    backgroundColor: "rgba(232,197,71,0.04)",
   },
   bgRune: {
     position: "absolute",
@@ -494,47 +794,24 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "rgba(232,197,71,0.03)",
   },
-
   loadingText: {
     color: "rgba(232,197,71,0.4)",
     fontSize: 12,
     marginTop: 14,
     letterSpacing: 2,
   },
-
-  content: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-    width: "100%",
-    maxWidth: 680,
-  },
-
-  // Headers
   headerOrn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     marginBottom: 4,
   },
-  headerLine: {
-    width: 20,
-    height: 1,
-    backgroundColor: "rgba(232,197,71,0.2)",
-  },
-  headerDot: {
-    color: "rgba(232,197,71,0.4)",
-    fontSize: 7,
-  },
+  headerLine: { width: 20, height: 1, backgroundColor: "rgba(232,197,71,0.2)" },
+  headerDot: { color: "rgba(232,197,71,0.4)", fontSize: 7 },
 
-  // LEFT SECTION
+  // LEFT
   leftSection: { flex: 1, alignItems: "center" },
 
-  avatarWrap: {
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 6,
-  },
   avatarGlow: {
     position: "absolute",
     width: 100,
@@ -542,49 +819,36 @@ const styles = StyleSheet.create({
     borderRadius: 50,
   },
   avatarRingOuter: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 60, // was 80
+    height: 60,
+    borderRadius: 30,
     borderWidth: 2,
     borderStyle: "dashed",
     justifyContent: "center",
     alignItems: "center",
   },
   heroAvatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 48, // was 64
+    height: 48,
+    borderRadius: 24,
     backgroundColor: "rgba(232,197,71,0.08)",
     borderWidth: 2,
     justifyContent: "center",
     alignItems: "center",
   },
-  heroAvatarText: { fontSize: 28 },
-
-  nameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
+  heroAvatarText: { fontSize: 22 }, // was 28
+  nameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   heroName: {
     color: "#E8C547",
-    fontSize: 20,
+    fontSize: 17, // was 22
     fontWeight: "900",
-    letterSpacing: 3,
-    textShadowColor: "rgba(232,197,71,0.3)",
+    letterSpacing: 2,
+    textShadowColor: "rgba(232,197,71,0.35)",
     textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 10,
+    textShadowRadius: 12,
   },
-  editIcon: {
-    color: "rgba(232,197,71,0.3)",
-    fontSize: 13,
-  },
-
-  nameEditRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-  },
+  editIcon: { color: "rgba(232,197,71,0.3)", fontSize: 13 },
+  nameEditRow: { flexDirection: "row", alignItems: "center", gap: 5 },
   nameInput: {
     color: "#E8C547",
     fontSize: 16,
@@ -628,83 +892,82 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginTop: 2,
   },
-
-  // Rank badge
   rankBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     marginTop: 4,
   },
-  rankBadgeLine: {
-    width: 16,
-    height: 1,
-  },
-  rankName: {
-    fontSize: 10,
-    fontWeight: "900",
-    letterSpacing: 3,
-  },
+  rankBadgeLine: { width: 16, height: 1 },
+  rankName: { fontSize: 9, fontWeight: "900", letterSpacing: 2 },
+  rankBarOuter: { width: "85%", marginTop: 4, alignItems: "center" }, // was marginTop: 8
 
-  // Progress
-  rankBarOuter: { width: "80%", marginTop: 8, alignItems: "center" },
   rankBarTrack: {
     width: "100%",
-    height: 4,
-    backgroundColor: "rgba(232,197,71,0.06)",
+    height: 4, // was 5
+    backgroundColor: "rgba(232,197,71,0.08)",
     borderRadius: 2,
     overflow: "hidden",
   },
   rankFill: { height: "100%", borderRadius: 2 },
   rankProgress: {
-    color: "rgba(255,255,255,0.25)",
-    fontSize: 9,
-    marginTop: 3,
+    color: "rgba(255,255,255,0.3)",
+    fontSize: 8, // was 10
+    marginTop: 2, // was 4
     textAlign: "center",
     fontWeight: "600",
   },
-
-  // Milestones
-  milestoneRow: { flexDirection: "row", gap: 8, marginTop: 10 },
-  milestoneItem: { alignItems: "center" },
-  milestoneDot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    borderWidth: 1.5,
-    borderColor: "rgba(232,197,71,0.12)",
+  milestoneRow: {
+    flexDirection: "row",
+    gap: 5, // was 6
+    marginTop: 6, // was 12
+    flexWrap: "wrap",
     justifyContent: "center",
-    alignItems: "center",
   },
-  milestoneCheck: { color: "#0B1410", fontSize: 8, fontWeight: "900" },
-  milestoneLabel: { color: "rgba(255,255,255,0.2)", fontSize: 8, marginTop: 2 },
+  milestoneItem: { alignItems: "center", gap: 3 },
 
-  // Divider
-  verticalDivider: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 4,
+  // ── STREAK ──
+
+  streakIcon: { fontSize: 28 },
+
+  streakBest: { alignItems: "center" },
+  streakBestValue: {
+    color: "rgba(232,197,71,0.6)",
+    fontSize: 13,
+    fontWeight: "900",
   },
+  streakMilestones: {
+    flexDirection: "row",
+    gap: 8,
+    justifyContent: "center",
+  },
+  streakMilestoneItem: { alignItems: "center", gap: 3 },
+  streakMilestoneCheck: { color: "#0B1410", fontSize: 8, fontWeight: "900" },
+  streakMilestoneLabel: {
+    color: "rgba(255,255,255,0.2)",
+    fontSize: 8,
+    fontWeight: "700",
+  },
+
+  // DIVIDER
+  verticalDivider: { alignItems: "center", justifyContent: "center", gap: 4 },
   vDividerLine: {
     width: 1,
-    height: 70,
-    backgroundColor: "rgba(232,197,71,0.1)",
+    height: 80,
+    backgroundColor: "rgba(232,197,71,0.15)",
   },
-  vDividerDot: {
-    color: "rgba(232,197,71,0.3)",
-    fontSize: 8,
-  },
+  vDividerDot: { color: "rgba(232,197,71,0.4)", fontSize: 9 },
 
-  // RIGHT SECTION
+  // RIGHT
   rightSection: { flex: 1, gap: 7 },
   statsHeader: { alignItems: "center", marginBottom: 2 },
   statsTitle: {
-    color: "rgba(232,197,71,0.5)",
+    color: "rgba(232,197,71,0.65)",
     fontSize: 10,
     fontWeight: "900",
     letterSpacing: 4,
+    marginBottom: 2,
   },
-
   bigStatRow: {
     flexDirection: "row",
     justifyContent: "space-around",
@@ -718,15 +981,15 @@ const styles = StyleSheet.create({
   bigStat: { alignItems: "center" },
   bigStatValue: {
     color: "#E8C547",
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "900",
-    textShadowColor: "rgba(232,197,71,0.3)",
+    textShadowColor: "rgba(232,197,71,0.35)",
     textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 8,
+    textShadowRadius: 10,
   },
   bigStatLabel: {
-    color: "rgba(232,197,71,0.35)",
-    fontSize: 7,
+    color: "rgba(232,197,71,0.4)",
+    fontSize: 8,
     fontWeight: "800",
     letterSpacing: 2,
     marginTop: 2,
@@ -736,7 +999,6 @@ const styles = StyleSheet.create({
     height: 32,
     backgroundColor: "rgba(232,197,71,0.08)",
   },
-
   statsList: {
     backgroundColor: "rgba(232,197,71,0.02)",
     borderRadius: 8,
@@ -752,20 +1014,25 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   statLabel: {
-    color: "rgba(255,255,255,0.4)",
-    fontSize: 11,
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 12,
     fontWeight: "600",
   },
-  statValue: { color: "#E8C547", fontSize: 14, fontWeight: "900" },
+  statValue: {
+    color: "#E8C547",
+    fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
   statSep: { height: 1, backgroundColor: "rgba(232,197,71,0.03)" },
-
   totalScoreBox: {
     alignItems: "center",
-    backgroundColor: "rgba(232,197,71,0.04)",
-    borderRadius: 10,
+    backgroundColor: "rgba(232,197,71,0.05)",
+    borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: "rgba(232,197,71,0.2)",
-    paddingVertical: 7,
+    borderColor: "rgba(232,197,71,0.25)",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     overflow: "hidden",
   },
   totalGlow: {
@@ -778,31 +1045,60 @@ const styles = StyleSheet.create({
     borderRadius: 40,
   },
   totalScoreLabel: {
-    color: "rgba(232,197,71,0.5)",
+    color: "rgba(232,197,71,0.55)",
     fontSize: 8,
     fontWeight: "900",
-    letterSpacing: 3,
+    letterSpacing: 4,
+    marginBottom: 2,
   },
   totalScoreValue: {
     color: "#E8C547",
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: "900",
-    textShadowColor: "rgba(232,197,71,0.4)",
+    textShadowColor: "rgba(232,197,71,0.5)",
     textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 10,
+    textShadowRadius: 12,
   },
 
-  backBtn: {
-    marginTop: 16,
-    paddingVertical: 8,
-    paddingHorizontal: 24,
+  streakOrnRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    width: "80%",
   },
-  backText: {
-    color: "#E8C547",
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 1,
+  streakOrnLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "rgba(232,197,71,0.1)",
   },
+  streakOrnDot: { color: "rgba(232,197,71,0.3)", fontSize: 6 },
+
+  streakGlow: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+
+  streakCenter: { flex: 1, alignItems: "center" },
+
+  streakBestWrap: { alignItems: "center", gap: 1 },
+
+  streakTrack: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "center",
+    width: "100%",
+    paddingHorizontal: 8,
+  },
+  streakTrackLine: {
+    flex: 1,
+    height: 1.5,
+    marginTop: 18,
+    alignSelf: "flex-start",
+  },
+  streakMilestoneWrap: { alignItems: "center", gap: 4 },
 })
 
 export default Profile

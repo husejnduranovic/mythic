@@ -17,6 +17,7 @@ import Animated, {
   interpolate,
 } from "react-native-reanimated"
 import { useBountyStyle, useCardBackColor } from "../context/ThemeContext"
+import { BACK_ICONS } from "./Armory"
 
 export interface ICard {
   value: string
@@ -44,30 +45,77 @@ interface ICardProps {
   }
 }
 
+// ─── REPLACE THESE CONSTANTS at the top of Card.tsx ───
+
 const SUIT_ICONS: Record<string, string> = {
   hearts: "🐉",
   diamonds: "🦅",
   clubs: "🐺",
   spades: "🐍",
 }
+
+// Deeper, more medieval — still clearly distinct
 const SUIT_COLORS: Record<string, string> = {
-  hearts: "#C0392B",
-  diamonds: "#D4A017",
-  clubs: "#2E86C1",
-  spades: "#27AE60",
+  hearts: "#B02020", // deep crimson (was bright red)
+  diamonds: "#B8860B", // dark gold/amber (was bright yellow)
+  clubs: "#1A5C8A", // deep steel blue (was bright blue)
+  spades: "#1E6B3A", // deep forest green (was bright green)
 }
+
+// Warm parchment base — same for all suits, medieval feel
 const SUIT_BG: Record<string, string> = {
-  hearts: "#FDF5F5",
-  diamonds: "#FDFAF0",
-  clubs: "#F0F6FD",
-  spades: "#F0FDF5",
+  hearts: "#F2E8D5",
+  diamonds: "#F2E8D5",
+  clubs: "#F2E8D5",
+  spades: "#F2E8D5",
 }
+
+// Subtle tint at top — just a whisper of the suit color
 const SUIT_BG_TOP: Record<string, string> = {
-  hearts: "rgba(192,57,43,0.06)",
-  diamonds: "rgba(212,160,23,0.06)",
-  clubs: "rgba(46,134,193,0.06)",
-  spades: "rgba(39,174,96,0.06)",
+  hearts: "rgba(176,32,32,0.05)",
+  diamonds: "rgba(184,134,11,0.05)",
+  clubs: "rgba(26,92,138,0.05)",
+  spades: "rgba(30,107,58,0.05)",
 }
+
+// Pre-computed suit style packs — one object lookup instead of four per card render
+const SUIT_STYLES: Record<
+  string,
+  { icon: string; color: string; bg: string; bgTop: string }
+> = {
+  hearts: {
+    icon: SUIT_ICONS.hearts,
+    color: SUIT_COLORS.hearts,
+    bg: SUIT_BG.hearts,
+    bgTop: SUIT_BG_TOP.hearts,
+  },
+  diamonds: {
+    icon: SUIT_ICONS.diamonds,
+    color: SUIT_COLORS.diamonds,
+    bg: SUIT_BG.diamonds,
+    bgTop: SUIT_BG_TOP.diamonds,
+  },
+  clubs: {
+    icon: SUIT_ICONS.clubs,
+    color: SUIT_COLORS.clubs,
+    bg: SUIT_BG.clubs,
+    bgTop: SUIT_BG_TOP.clubs,
+  },
+  spades: {
+    icon: SUIT_ICONS.spades,
+    color: SUIT_COLORS.spades,
+    bg: SUIT_BG.spades,
+    bgTop: SUIT_BG_TOP.spades,
+  },
+}
+
+const DEFAULT_SUIT_STYLE = {
+  icon: "",
+  color: "#333",
+  bg: "#F8F5EC",
+  bgTop: "rgba(0,0,0,0.03)",
+}
+
 const FACE_TITLES: Record<string, string> = {
   J: "KNIGHT",
   Q: "QUEEN",
@@ -75,21 +123,21 @@ const FACE_TITLES: Record<string, string> = {
   A: "ACE",
 }
 const DEFAULT_BACK_COLOR = "#162A47"
-const BACK_ICONS: Record<string, string> = {
-  "#162A47": "⚔",
-  "#5C1A1A": "🐉",
-  "#1A3524": "🐺",
-  "#4A3A10": "🦅",
-  "#0A0A1A": "🐍",
-  "#3A1A50": "👑",
-  "#4A0A0A": "🌙",
-  "#0A2A4A": "⛈",
-  "#3A3A10": "ᚱ",
-  "#4A3800": "✦",
-  "#2A1040": "👻",
-  "#4A1500": "🔥",
-  "#3D2E0A": "📜",
-}
+// const BACK_ICONS: Record<string, string> = {
+//   "#162A47": "🛡",
+//   "#3A1212": "🐉",
+//   "#1A3524": "🐺",
+//   "#3D3008": "🦅",
+//   "#150D30": "🐍",
+//   "#2A1045": "👑",
+//   "#3A0A18": "🌙",
+//   "#0A1A3D": "🌩",
+//   "#2D2D0A": "📜",
+//   "#3A2800": "⚜️",
+//   "#1A0D30": "👻",
+//   "#3A1500": "🔥",
+//   "#3D2E0A": "📜",
+// }
 const BACK_RUNES = ["ᚠ", "ᚦ", "ᚱ", "ᛟ"]
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window")
@@ -100,47 +148,155 @@ const DECK_W = Math.round(56 * CARD_SCALE)
 const DECK_H = Math.round(78 * CARD_SCALE)
 const CARD_RADIUS = Math.round(10 * CARD_SCALE)
 
-const CardBackView = React.memo(({ color }: { color: string }) => {
-  const icon = BACK_ICONS[color] || "⚔"
-  return (
-    <View
-      style={[
-        styles.cardBack,
-        { backgroundColor: color, borderColor: `${color}EE` },
-      ]}
-    >
-      <View style={styles.backOuterFrame} />
-      <View style={styles.backInnerFrame} />
-      <View style={styles.backCrossH} />
-      <View style={styles.backCrossV} />
-      <View style={styles.backDiagonal1} />
-      <View style={styles.backDiagonal2} />
-      <View style={styles.shield}>
-        <View style={styles.shieldRing}>
-          <View style={styles.shieldInner}>
-            <Text style={styles.shieldIcon}>{icon}</Text>
+// ─── REPLACE CardBackView in Card.tsx ───
+
+const CardBackView = React.memo(
+  ({ color }: { color: string }) => {
+    const icon = BACK_ICONS[color] || "⚔"
+
+    // Derive a lighter version of the card color for borders/accents
+    // We overlay white at low opacity to "lighten" the base color
+    const borderColor = color + "FF" // full opacity base
+    const frameOuter = color // will use with white overlay trick in style
+
+    return (
+      <View
+        style={[
+          styles.cardBack,
+          {
+            backgroundColor: color,
+            borderColor: "rgba(255,255,255,0.18)", // subtle white edge — works on ANY color
+          },
+        ]}
+      >
+        {/* Outer frame — lighter than bg */}
+        <View
+          style={[
+            styles.backOuterFrame,
+            { borderColor: "rgba(255,255,255,0.22)" },
+          ]}
+        />
+        {/* Inner frame — even subtler */}
+        <View
+          style={[
+            styles.backInnerFrame,
+            { borderColor: "rgba(255,255,255,0.12)" },
+          ]}
+        />
+        {/* Cross lines */}
+        <View
+          style={[
+            styles.backCrossH,
+            { backgroundColor: "rgba(255,255,255,0.06)" },
+          ]}
+        />
+        <View
+          style={[
+            styles.backCrossV,
+            { backgroundColor: "rgba(255,255,255,0.06)" },
+          ]}
+        />
+        {/* Diagonals */}
+        <View
+          style={[
+            styles.backDiagonal1,
+            { backgroundColor: "rgba(255,255,255,0.04)" },
+          ]}
+        />
+        <View
+          style={[
+            styles.backDiagonal2,
+            { backgroundColor: "rgba(255,255,255,0.04)" },
+          ]}
+        />
+        {/* Center medallion */}
+        <View
+          style={[
+            styles.shield,
+            {
+              backgroundColor: "rgba(255,255,255,0.07)",
+              borderColor: "rgba(255,255,255,0.25)",
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.shieldRing,
+              { borderColor: "rgba(255,255,255,0.15)" },
+            ]}
+          >
+            <View style={styles.shieldInner}>
+              <Text style={styles.shieldIcon}>{icon}</Text>
+            </View>
           </View>
         </View>
+        {/* Corner runes */}
+        <Text
+          style={[
+            styles.cornerRune,
+            { top: 3, left: 3, color: "rgba(255,255,255,0.35)" },
+          ]}
+        >
+          {BACK_RUNES[0]}
+        </Text>
+        <Text
+          style={[
+            styles.cornerRune,
+            { top: 3, right: 3, color: "rgba(255,255,255,0.35)" },
+          ]}
+        >
+          {BACK_RUNES[1]}
+        </Text>
+        <Text
+          style={[
+            styles.cornerRune,
+            { bottom: 3, left: 3, color: "rgba(255,255,255,0.35)" },
+          ]}
+        >
+          {BACK_RUNES[2]}
+        </Text>
+        <Text
+          style={[
+            styles.cornerRune,
+            { bottom: 3, right: 3, color: "rgba(255,255,255,0.35)" },
+          ]}
+        >
+          {BACK_RUNES[3]}
+        </Text>
+        {/* Edge dots */}
+        <View
+          style={[
+            styles.edgeDot,
+            { top: 3, left: "46%", backgroundColor: "rgba(255,255,255,0.25)" },
+          ]}
+        />
+        <View
+          style={[
+            styles.edgeDot,
+            {
+              bottom: 3,
+              left: "46%",
+              backgroundColor: "rgba(255,255,255,0.25)",
+            },
+          ]}
+        />
+        <View
+          style={[
+            styles.edgeDot,
+            { top: "46%", left: 3, backgroundColor: "rgba(255,255,255,0.25)" },
+          ]}
+        />
+        <View
+          style={[
+            styles.edgeDot,
+            { top: "46%", right: 3, backgroundColor: "rgba(255,255,255,0.25)" },
+          ]}
+        />
       </View>
-      <Text style={[styles.cornerRune, { top: 4, left: 4 }]}>
-        {BACK_RUNES[0]}
-      </Text>
-      <Text style={[styles.cornerRune, { top: 4, right: 4 }]}>
-        {BACK_RUNES[1]}
-      </Text>
-      <Text style={[styles.cornerRune, { bottom: 4, left: 4 }]}>
-        {BACK_RUNES[2]}
-      </Text>
-      <Text style={[styles.cornerRune, { bottom: 4, right: 4 }]}>
-        {BACK_RUNES[3]}
-      </Text>
-      <View style={[styles.edgeDot, { top: 3, left: "48%" }]} />
-      <View style={[styles.edgeDot, { bottom: 3, left: "48%" }]} />
-      <View style={[styles.edgeDot, { top: "48%", left: 3 }]} />
-      <View style={[styles.edgeDot, { top: "48%", right: 3 }]} />
-    </View>
-  )
-})
+    )
+  },
+  (prev, next) => prev.color === next.color,
+)
 
 const BountyCardBack = React.memo(() => {
   const bc = useBountyStyle()
@@ -349,304 +505,318 @@ const BountyCardBack = React.memo(() => {
   )
 })
 
-const CardFace = React.memo(({ card }: { card: ICard }) => {
-  const icon = SUIT_ICONS[card.suit] ?? ""
-  const color = SUIT_COLORS[card.suit] ?? "#333"
-  const bg = SUIT_BG[card.suit] ?? "#F8F5EC"
-  const bgTop = SUIT_BG_TOP[card.suit] ?? "rgba(0,0,0,0.03)"
-  const isFaceCard = ["J", "Q", "K", "A"].includes(card.displayValue)
-  const isAce = card.displayValue === "A"
-  const faceTitle = FACE_TITLES[card.displayValue]
-  return (
-    <View
-      style={[
-        styles.cardFace,
-        {
-          backgroundColor: bg,
-          borderColor: isFaceCard ? color + "60" : color + "40",
-          borderWidth: isFaceCard ? 2 : 1.5,
-        },
-      ]}
-    >
-      <View style={[styles.faceTintTop, { backgroundColor: bgTop }]} />
-      <View style={[styles.cardFaceInner, { borderColor: color + "20" }]} />
-      {isFaceCard && (
-        <View style={[styles.faceCardTrim, { borderColor: color + "18" }]} />
-      )}
-      <Text
+const CardFace = React.memo(
+  ({ card }: { card: ICard }) => {
+    const suitStyle = SUIT_STYLES[card.suit] || DEFAULT_SUIT_STYLE
+    const { icon, color, bg, bgTop } = suitStyle
+    const isFaceCard = ["J", "Q", "K", "A"].includes(card.displayValue)
+    const isAce = card.displayValue === "A"
+    const faceTitle = FACE_TITLES[card.displayValue]
+    return (
+      <View
         style={[
-          styles.watermarkIcon,
+          styles.cardFace,
           {
-            color: color + "0C",
-            fontSize: isAce
-              ? Math.round(50 * CARD_SCALE)
-              : Math.round(40 * CARD_SCALE),
+            backgroundColor: bg,
+            borderColor: isFaceCard ? color + "60" : color + "40",
+            borderWidth: isFaceCard ? 2 : 1.5,
           },
         ]}
       >
-        {icon}
-      </Text>
-      <View
-        style={[styles.faceDividerTop, { backgroundColor: color + "10" }]}
-      />
-      <View
-        style={[styles.faceDividerBottom, { backgroundColor: color + "10" }]}
-      />
-      <View style={styles.cornerGroup}>
+        <View style={[styles.faceTintTop, { backgroundColor: bgTop }]} />
+        <View style={[styles.cardFaceInner, { borderColor: color + "20" }]} />
+        {isFaceCard && (
+          <View style={[styles.faceCardTrim, { borderColor: color + "18" }]} />
+        )}
         <Text
           style={[
-            styles.cornerValue,
+            styles.watermarkIcon,
             {
-              color,
-              fontSize: isFaceCard
-                ? Math.round(11 * CARD_SCALE)
-                : Math.round(10 * CARD_SCALE),
+              color: color + "0C",
+              fontSize: isAce
+                ? Math.round(50 * CARD_SCALE)
+                : Math.round(40 * CARD_SCALE),
             },
           ]}
         >
-          {card.displayValue}
+          {icon}
         </Text>
-        <Text style={styles.cornerIcon}>{icon}</Text>
-      </View>
-      <View style={styles.centerWrap}>
-        {isAce ? (
-          <>
-            <Text
-              style={[
-                styles.centerIcon,
-                { fontSize: Math.round(22 * CARD_SCALE), marginBottom: -2 },
-              ]}
-            >
-              {icon}
-            </Text>
-            <Text
-              style={[
-                styles.centerValue,
-                {
-                  color,
-                  fontSize: Math.round(24 * CARD_SCALE),
-                  lineHeight: Math.round(28 * CARD_SCALE),
-                },
-              ]}
-            >
-              {card.displayValue}
-            </Text>
-          </>
-        ) : (
-          <>
-            <Text
-              style={[
-                styles.centerValue,
-                {
-                  color,
-                  fontSize: isFaceCard
-                    ? Math.round(26 * CARD_SCALE)
-                    : Math.round(28 * CARD_SCALE),
-                  lineHeight: isFaceCard
-                    ? Math.round(30 * CARD_SCALE)
-                    : Math.round(32 * CARD_SCALE),
-                },
-              ]}
-            >
-              {card.displayValue}
-            </Text>
-            <Text
-              style={[
-                styles.centerIcon,
-                { fontSize: Math.round(14 * CARD_SCALE) },
-              ]}
-            >
-              {icon}
-            </Text>
-          </>
-        )}
-        {faceTitle && (
-          <Text style={[styles.faceTitle, { color: color + "40" }]}>
-            {faceTitle}
-          </Text>
-        )}
-      </View>
-      <View style={[styles.cornerGroup, styles.cornerBR]}>
-        <Text
-          style={[
-            styles.cornerValue,
-            {
-              color,
-              fontSize: isFaceCard
-                ? Math.round(11 * CARD_SCALE)
-                : Math.round(10 * CARD_SCALE),
-            },
-          ]}
-        >
-          {card.displayValue}
-        </Text>
-        <Text style={styles.cornerIcon}>{icon}</Text>
-      </View>
-      <View
-        style={[
-          styles.faceCornerDot,
-          { backgroundColor: color + "12", top: 3, right: 4 },
-        ]}
-      />
-      <View
-        style={[
-          styles.faceCornerDot,
-          { backgroundColor: color + "12", bottom: 3, left: 4 },
-        ]}
-      />
-    </View>
-  )
-})
-
-const BountyCardFace = React.memo(({ card }: { card: ICard }) => {
-  const bc = useBountyStyle()
-  const color = bc.textColor
-  const isFaceCard = ["J", "Q", "K", "A"].includes(card.displayValue)
-  const isAce = card.displayValue === "A"
-  const faceTitle = FACE_TITLES[card.displayValue]
-  return (
-    <View
-      style={[
-        styles.cardFace,
-        { backgroundColor: bc.frontBg, borderColor: bc.accent, borderWidth: 2 },
-      ]}
-    >
-      <View
-        style={[styles.faceTintTop, { backgroundColor: bc.accent + "10" }]}
-      />
-      <View style={[styles.cardFaceInner, { borderColor: bc.accent + "40" }]} />
-      {isFaceCard && (
         <View
-          style={[styles.faceCardTrim, { borderColor: bc.accent + "30" }]}
+          style={[styles.faceDividerTop, { backgroundColor: color + "10" }]}
         />
-      )}
-      <Text
+        <View
+          style={[styles.faceDividerBottom, { backgroundColor: color + "10" }]}
+        />
+        <View style={styles.cornerGroup}>
+          <Text
+            style={[
+              styles.cornerValue,
+              {
+                color,
+                fontSize: isFaceCard
+                  ? Math.round(11 * CARD_SCALE)
+                  : Math.round(10 * CARD_SCALE),
+              },
+            ]}
+          >
+            {card.displayValue}
+          </Text>
+          <Text style={styles.cornerIcon}>{icon}</Text>
+        </View>
+        <View style={styles.centerWrap}>
+          {isAce ? (
+            <>
+              <Text
+                style={[
+                  styles.centerIcon,
+                  { fontSize: Math.round(22 * CARD_SCALE), marginBottom: -2 },
+                ]}
+              >
+                {icon}
+              </Text>
+              <Text
+                style={[
+                  styles.centerValue,
+                  {
+                    color,
+                    fontSize: Math.round(24 * CARD_SCALE),
+                    lineHeight: Math.round(28 * CARD_SCALE),
+                  },
+                ]}
+              >
+                {card.displayValue}
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text
+                style={[
+                  styles.centerValue,
+                  {
+                    color,
+                    fontSize: isFaceCard
+                      ? Math.round(26 * CARD_SCALE)
+                      : Math.round(28 * CARD_SCALE),
+                    lineHeight: isFaceCard
+                      ? Math.round(30 * CARD_SCALE)
+                      : Math.round(32 * CARD_SCALE),
+                  },
+                ]}
+              >
+                {card.displayValue}
+              </Text>
+              <Text
+                style={[
+                  styles.centerIcon,
+                  { fontSize: Math.round(14 * CARD_SCALE) },
+                ]}
+              >
+                {icon}
+              </Text>
+            </>
+          )}
+          {faceTitle && (
+            <Text style={[styles.faceTitle, { color: color + "40" }]}>
+              {faceTitle}
+            </Text>
+          )}
+        </View>
+        <View style={[styles.cornerGroup, styles.cornerBR]}>
+          <Text
+            style={[
+              styles.cornerValue,
+              {
+                color,
+                fontSize: isFaceCard
+                  ? Math.round(11 * CARD_SCALE)
+                  : Math.round(10 * CARD_SCALE),
+              },
+            ]}
+          >
+            {card.displayValue}
+          </Text>
+          <Text style={styles.cornerIcon}>{icon}</Text>
+        </View>
+        <View
+          style={[
+            styles.faceCornerDot,
+            { backgroundColor: color + "12", top: 3, right: 4 },
+          ]}
+        />
+        <View
+          style={[
+            styles.faceCornerDot,
+            { backgroundColor: color + "12", bottom: 3, left: 4 },
+          ]}
+        />
+      </View>
+    )
+  },
+  (prev, next) =>
+    prev.card.displayValue === next.card.displayValue &&
+    prev.card.suit === next.card.suit,
+)
+
+const BountyCardFace = React.memo(
+  ({ card }: { card: ICard }) => {
+    const bc = useBountyStyle()
+    const color = bc.textColor
+    const isFaceCard = ["J", "Q", "K", "A"].includes(card.displayValue)
+    const isAce = card.displayValue === "A"
+    const faceTitle = FACE_TITLES[card.displayValue]
+    return (
+      <View
         style={[
-          styles.watermarkIcon,
+          styles.cardFace,
           {
-            color: bc.accent + "1A",
-            fontSize: isAce
-              ? Math.round(50 * CARD_SCALE)
-              : Math.round(40 * CARD_SCALE),
+            backgroundColor: bc.frontBg,
+            borderColor: bc.accent,
+            borderWidth: 2,
           },
         ]}
       >
-        {bc.icon}
-      </Text>
-      <View
-        style={[styles.faceDividerTop, { backgroundColor: bc.accent + "25" }]}
-      />
-      <View
-        style={[
-          styles.faceDividerBottom,
-          { backgroundColor: bc.accent + "25" },
-        ]}
-      />
-      <View style={styles.cornerGroup}>
+        <View
+          style={[styles.faceTintTop, { backgroundColor: bc.accent + "10" }]}
+        />
+        <View
+          style={[styles.cardFaceInner, { borderColor: bc.accent + "40" }]}
+        />
+        {isFaceCard && (
+          <View
+            style={[styles.faceCardTrim, { borderColor: bc.accent + "30" }]}
+          />
+        )}
         <Text
           style={[
-            styles.cornerValue,
+            styles.watermarkIcon,
             {
-              color,
-              fontSize: isFaceCard
-                ? Math.round(11 * CARD_SCALE)
-                : Math.round(10 * CARD_SCALE),
+              color: bc.accent + "1A",
+              fontSize: isAce
+                ? Math.round(50 * CARD_SCALE)
+                : Math.round(40 * CARD_SCALE),
             },
           ]}
         >
-          {card.displayValue}
+          {bc.icon}
         </Text>
-        <Text style={styles.cornerIcon}>{bc.icon}</Text>
-      </View>
-      <View style={styles.centerWrap}>
-        {isAce ? (
-          <>
-            <Text
-              style={[
-                styles.centerIcon,
-                { fontSize: Math.round(22 * CARD_SCALE), marginBottom: -2 },
-              ]}
-            >
-              {bc.icon}
-            </Text>
-            <Text
-              style={[
-                styles.centerValue,
-                {
-                  color,
-                  fontSize: Math.round(24 * CARD_SCALE),
-                  lineHeight: Math.round(28 * CARD_SCALE),
-                },
-              ]}
-            >
-              {card.displayValue}
-            </Text>
-          </>
-        ) : (
-          <>
-            <Text
-              style={[
-                styles.centerValue,
-                {
-                  color,
-                  fontSize: isFaceCard
-                    ? Math.round(26 * CARD_SCALE)
-                    : Math.round(28 * CARD_SCALE),
-                  lineHeight: isFaceCard
-                    ? Math.round(30 * CARD_SCALE)
-                    : Math.round(32 * CARD_SCALE),
-                },
-              ]}
-            >
-              {card.displayValue}
-            </Text>
-            <Text
-              style={[
-                styles.centerIcon,
-                { fontSize: Math.round(14 * CARD_SCALE) },
-              ]}
-            >
-              {bc.icon}
-            </Text>
-          </>
-        )}
-        {faceTitle && (
-          <Text style={[styles.faceTitle, { color: bc.accent + "70" }]}>
-            {faceTitle}
+        <View
+          style={[styles.faceDividerTop, { backgroundColor: bc.accent + "25" }]}
+        />
+        <View
+          style={[
+            styles.faceDividerBottom,
+            { backgroundColor: bc.accent + "25" },
+          ]}
+        />
+        <View style={styles.cornerGroup}>
+          <Text
+            style={[
+              styles.cornerValue,
+              {
+                color,
+                fontSize: isFaceCard
+                  ? Math.round(11 * CARD_SCALE)
+                  : Math.round(10 * CARD_SCALE),
+              },
+            ]}
+          >
+            {card.displayValue}
           </Text>
-        )}
-      </View>
-      <View style={[styles.cornerGroup, styles.cornerBR]}>
-        <Text
+          <Text style={styles.cornerIcon}>{bc.icon}</Text>
+        </View>
+        <View style={styles.centerWrap}>
+          {isAce ? (
+            <>
+              <Text
+                style={[
+                  styles.centerIcon,
+                  { fontSize: Math.round(22 * CARD_SCALE), marginBottom: -2 },
+                ]}
+              >
+                {bc.icon}
+              </Text>
+              <Text
+                style={[
+                  styles.centerValue,
+                  {
+                    color,
+                    fontSize: Math.round(24 * CARD_SCALE),
+                    lineHeight: Math.round(28 * CARD_SCALE),
+                  },
+                ]}
+              >
+                {card.displayValue}
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text
+                style={[
+                  styles.centerValue,
+                  {
+                    color,
+                    fontSize: isFaceCard
+                      ? Math.round(26 * CARD_SCALE)
+                      : Math.round(28 * CARD_SCALE),
+                    lineHeight: isFaceCard
+                      ? Math.round(30 * CARD_SCALE)
+                      : Math.round(32 * CARD_SCALE),
+                  },
+                ]}
+              >
+                {card.displayValue}
+              </Text>
+              <Text
+                style={[
+                  styles.centerIcon,
+                  { fontSize: Math.round(14 * CARD_SCALE) },
+                ]}
+              >
+                {bc.icon}
+              </Text>
+            </>
+          )}
+          {faceTitle && (
+            <Text style={[styles.faceTitle, { color: bc.accent + "70" }]}>
+              {faceTitle}
+            </Text>
+          )}
+        </View>
+        <View style={[styles.cornerGroup, styles.cornerBR]}>
+          <Text
+            style={[
+              styles.cornerValue,
+              {
+                color,
+                fontSize: isFaceCard
+                  ? Math.round(11 * CARD_SCALE)
+                  : Math.round(10 * CARD_SCALE),
+              },
+            ]}
+          >
+            {card.displayValue}
+          </Text>
+          <Text style={styles.cornerIcon}>{bc.icon}</Text>
+        </View>
+        <View
           style={[
-            styles.cornerValue,
-            {
-              color,
-              fontSize: isFaceCard
-                ? Math.round(11 * CARD_SCALE)
-                : Math.round(10 * CARD_SCALE),
-            },
+            styles.faceCornerDot,
+            { backgroundColor: bc.accent + "30", top: 3, right: 4 },
           ]}
-        >
-          {card.displayValue}
-        </Text>
-        <Text style={styles.cornerIcon}>{bc.icon}</Text>
+        />
+        <View
+          style={[
+            styles.faceCornerDot,
+            { backgroundColor: bc.accent + "30", bottom: 3, left: 4 },
+          ]}
+        />
       </View>
-      <View
-        style={[
-          styles.faceCornerDot,
-          { backgroundColor: bc.accent + "30", top: 3, right: 4 },
-        ]}
-      />
-      <View
-        style={[
-          styles.faceCornerDot,
-          { backgroundColor: bc.accent + "30", bottom: 3, left: 4 },
-        ]}
-      />
-    </View>
-  )
-})
+    )
+  },
+  (prev, next) =>
+    prev.card.displayValue === next.card.displayValue &&
+    prev.card.suit === next.card.suit,
+)
 
 const DeckCard = React.memo(
   ({ remaining, backColor }: { remaining: number; backColor: string }) => (
@@ -784,112 +954,138 @@ const HintGlow = () => {
   return <Animated.View style={[styles.hintGlow, style]} pointerEvents="none" />
 }
 
-const Card = React.memo((props: ICardProps) => {
-  const {
-    card,
-    isOpen,
-    onClick,
-    remove,
-    disabled = false,
-    alwaysEnabled = false,
-    remaining,
-    hinted = false,
-    cardBackColor: propBackColor,
-    bounty,
-  } = props
-  const contextBackColor = useCardBackColor()
-  const cardBackColor = propBackColor || contextBackColor || DEFAULT_BACK_COLOR
-  const prevRemove = useRef(remove)
-  const prevIsOpen = useRef(isOpen)
-  const [falling, setFalling] = useState(false)
-  const [gone, setGone] = useState(!!remove)
-  const [flipping, setFlipping] = useState(false)
+const Card = React.memo(
+  (props: ICardProps) => {
+    const {
+      card,
+      isOpen,
+      onClick,
+      remove,
+      disabled = false,
+      alwaysEnabled = false,
+      remaining,
+      hinted = false,
+      cardBackColor: propBackColor,
+      bounty,
+    } = props
+    const contextBackColor = useCardBackColor()
+    const cardBackColor =
+      propBackColor || contextBackColor || DEFAULT_BACK_COLOR
+    const prevRemove = useRef(remove)
+    const prevIsOpen = useRef(isOpen)
+    const [falling, setFalling] = useState(false)
+    const [gone, setGone] = useState(!!remove)
+    const [flipping, setFlipping] = useState(false)
 
-  if (!remove && prevRemove.current) {
-    setFalling(false)
-    setGone(false)
-    setFlipping(false)
-  } else if (remove && !prevRemove.current && !falling && !gone) {
-    setFalling(true)
-  } else if (!remove && gone) {
-    setGone(false)
-  }
-  prevRemove.current = remove
+    if (!remove && prevRemove.current) {
+      setFalling(false)
+      setGone(false)
+      setFlipping(false)
+    } else if (remove && !prevRemove.current && !falling && !gone) {
+      setFalling(true)
+    } else if (!remove && gone) {
+      setGone(false)
+    }
+    prevRemove.current = remove
 
-  if (
-    isOpen &&
-    !prevIsOpen.current &&
-    !remove &&
-    !falling &&
-    !gone &&
-    !flipping &&
-    prevRemove.current === remove
-  ) {
-    setFlipping(true)
-  }
-  prevIsOpen.current = isOpen
+    if (
+      isOpen &&
+      !prevIsOpen.current &&
+      !remove &&
+      !falling &&
+      !gone &&
+      !flipping &&
+      prevRemove.current === remove
+    ) {
+      setFlipping(true)
+    }
+    prevIsOpen.current = isOpen
 
-  if (gone && !alwaysEnabled) return <View style={styles.emptySlot} />
-  if (falling && !alwaysEnabled)
+    if (gone && !alwaysEnabled) return <View style={styles.emptySlot} />
+    if (falling && !alwaysEnabled)
+      return (
+        <View style={styles.touch}>
+          <FallingCard
+            card={card}
+            isOpen={isOpen}
+            backColor={cardBackColor}
+            bounty={bounty}
+            onDone={() => {
+              setFalling(false)
+              setGone(true)
+            }}
+          />
+        </View>
+      )
+    if (flipping && card)
+      return (
+        <View style={[styles.touch, { zIndex: 3 }]}>
+          <FlippingCard
+            card={card}
+            backColor={cardBackColor}
+            bounty={bounty}
+            onDone={() => setFlipping(false)}
+          />
+        </View>
+      )
+
+    const isDeck = remaining !== undefined
+    const isDisabled = !alwaysEnabled && (disabled || !isOpen)
     return (
-      <View style={styles.touch}>
-        <FallingCard
-          card={card}
-          isOpen={isOpen}
-          backColor={cardBackColor}
-          bounty={bounty}
-          onDone={() => {
-            setFalling(false)
-            setGone(true)
-          }}
-        />
-      </View>
-    )
-  if (flipping && card)
-    return (
-      <View style={[styles.touch, { zIndex: 3 }]}>
-        <FlippingCard
-          card={card}
-          backColor={cardBackColor}
-          bounty={bounty}
-          onDone={() => setFlipping(false)}
-        />
-      </View>
-    )
-
-  const isDeck = remaining !== undefined
-  const isDisabled = !alwaysEnabled && (disabled || !isOpen)
-  return (
-    <TouchableOpacity
-      onPress={onClick}
-      disabled={isDisabled}
-      activeOpacity={0.65}
-      delayPressIn={0}
-      delayPressOut={0}
-      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-      style={[
-        isDeck ? styles.touchDeck : styles.touch,
-        { zIndex: isOpen ? 2 : 1 },
-      ]}
-    >
-      <View style={isDeck ? styles.wrapDeck : styles.wrap}>
-        {isDeck ? (
-          <DeckCard remaining={remaining!} backColor={cardBackColor} />
-        ) : isOpen && card ? (
-          bounty ? (
-            <BountyCardFace card={card} />
+      <TouchableOpacity
+        onPress={onClick}
+        disabled={isDisabled}
+        activeOpacity={0.65}
+        delayPressIn={0}
+        delayPressOut={0}
+        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+        style={[
+          isDeck ? styles.touchDeck : styles.touch,
+          { zIndex: isOpen ? 2 : 1 },
+        ]}
+      >
+        <View style={isDeck ? styles.wrapDeck : styles.wrap}>
+          {isDeck ? (
+            <DeckCard remaining={remaining!} backColor={cardBackColor} />
+          ) : isOpen && card ? (
+            bounty ? (
+              <BountyCardFace card={card} />
+            ) : (
+              <CardFace card={card} />
+            )
+          ) : bounty ? (
+            <BountyCardBack />
           ) : (
-            <CardFace card={card} />
-          )
-        ) : bounty ? (
-          <BountyCardBack />
-        ) : (
-          <CardBackView color={cardBackColor} />
-        )}
-      </View>
-    </TouchableOpacity>
-  )
-})
+            <CardBackView color={cardBackColor} />
+          )}
+        </View>
+      </TouchableOpacity>
+    )
+  },
+  (prev, next) => {
+    if (prev.disabled !== next.disabled) return false
+    if (prev.hinted !== next.hinted) return false
+    if (prev.isOpen !== next.isOpen) return false
+    if (prev.remove !== next.remove) return false
+    if (prev.bounty !== next.bounty) return false
+    if (prev.alwaysEnabled !== next.alwaysEnabled) return false
+    if (prev.remaining !== next.remaining) return false
+    if (prev.cardBackColor !== next.cardBackColor) return false
+    // if (prev.onClick !== next.onClick) return false // ← ADD THIS
+
+    const pc = prev.card
+    const nc = next.card
+    if (pc === nc) return true
+    if (!pc || !nc) return pc === nc
+    return (
+      pc.displayValue === nc.displayValue &&
+      pc.suit === nc.suit &&
+      pc.visible === nc.visible
+    )
+  },
+)
+
+// ─── REPLACE the StyleSheet.create({}) in Card.tsx ───
 
 const styles = StyleSheet.create({
   emptySlot: { width: DECK_W, height: DECK_H, margin: 2, padding: 2 },
@@ -899,21 +1095,23 @@ const styles = StyleSheet.create({
     width: CARD_W,
     height: CARD_H,
     borderRadius: CARD_RADIUS,
-    elevation: 3,
+    elevation: 5,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.45, // was 0.25 — deeper shadow for depth
+    shadowRadius: 5, // was 3
   },
   wrapDeck: {
     width: DECK_W,
     height: DECK_H,
     borderRadius: CARD_RADIUS,
-    elevation: 3,
+    elevation: 5,
   },
+
+  // ── Card Face ──
   cardFace: {
     flex: 1,
-    backgroundColor: "#F8F5EC",
+    backgroundColor: "#F2E8D5", // warm parchment — replaces white
     borderRadius: CARD_RADIUS,
     borderWidth: 1.5,
     justifyContent: "center",
@@ -989,7 +1187,7 @@ const styles = StyleSheet.create({
     fontSize: Math.round(28 * CARD_SCALE),
     fontWeight: "900",
     lineHeight: Math.round(32 * CARD_SCALE),
-    textShadowColor: "rgba(0,0,0,0.12)",
+    textShadowColor: "rgba(0,0,0,0.15)",
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },
@@ -1000,10 +1198,12 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     marginTop: 1,
   },
+
+  // ── Card Back ──
   cardBack: {
     flex: 1,
     borderRadius: CARD_RADIUS,
-    borderWidth: 1.5,
+    borderWidth: 1, // was 2
     overflow: "hidden",
     justifyContent: "center",
     alignItems: "center",
@@ -1016,7 +1216,7 @@ const styles = StyleSheet.create({
     bottom: 3,
     borderRadius: Math.max(3, CARD_RADIUS - 3),
     borderWidth: 1,
-    borderColor: "rgba(232,197,71,0.4)",
+    borderColor: "rgba(232,197,71,0.55)", // was 0.4 — more visible
   },
   backInnerFrame: {
     position: "absolute",
@@ -1026,7 +1226,7 @@ const styles = StyleSheet.create({
     bottom: 7,
     borderRadius: Math.max(2, CARD_RADIUS - 6),
     borderWidth: 0.5,
-    borderColor: "rgba(232,197,71,0.2)",
+    borderColor: "rgba(232,197,71,0.3)", // was 0.2
   },
   backCrossH: {
     position: "absolute",
@@ -1034,7 +1234,7 @@ const styles = StyleSheet.create({
     left: 8,
     right: 8,
     height: 0.5,
-    backgroundColor: "rgba(232,197,71,0.06)",
+    backgroundColor: "rgba(232,197,71,0.12)", // was 0.06 — actually visible now
   },
   backCrossV: {
     position: "absolute",
@@ -1042,7 +1242,7 @@ const styles = StyleSheet.create({
     top: 8,
     bottom: 8,
     width: 0.5,
-    backgroundColor: "rgba(232,197,71,0.06)",
+    backgroundColor: "rgba(232,197,71,0.12)",
   },
   backDiagonal1: {
     position: "absolute",
@@ -1050,7 +1250,7 @@ const styles = StyleSheet.create({
     left: -10,
     right: -10,
     height: 0.5,
-    backgroundColor: "rgba(232,197,71,0.06)",
+    backgroundColor: "rgba(232,197,71,0.08)", // was 0.06
     transform: [{ rotate: "30deg" }],
   },
   backDiagonal2: {
@@ -1059,16 +1259,16 @@ const styles = StyleSheet.create({
     left: -10,
     right: -10,
     height: 0.5,
-    backgroundColor: "rgba(232,197,71,0.06)",
+    backgroundColor: "rgba(232,197,71,0.08)",
     transform: [{ rotate: "-30deg" }],
   },
   shield: {
     width: Math.round(32 * CARD_SCALE),
     height: Math.round(32 * CARD_SCALE),
     borderRadius: Math.round(16 * CARD_SCALE),
-    backgroundColor: "rgba(232,197,71,0.08)",
+    backgroundColor: "rgba(232,197,71,0.12)", // was 0.08
     borderWidth: 1.5,
-    borderColor: "rgba(232,197,71,0.3)",
+    borderColor: "rgba(232,197,71,0.5)", // was 0.3 — more defined
     justifyContent: "center",
     alignItems: "center",
   },
@@ -1077,7 +1277,7 @@ const styles = StyleSheet.create({
     height: Math.round(26 * CARD_SCALE),
     borderRadius: Math.round(13 * CARD_SCALE),
     borderWidth: 0.5,
-    borderColor: "rgba(232,197,71,0.2)",
+    borderColor: "rgba(232,197,71,0.3)", // was 0.2
     justifyContent: "center",
     alignItems: "center",
   },
@@ -1090,20 +1290,22 @@ const styles = StyleSheet.create({
   },
   shieldIcon: {
     fontSize: Math.round(12 * CARD_SCALE),
-    color: "rgba(232,197,71,0.75)",
+    color: "rgba(255,255,255,0.80)", // was rgba(232,197,71,0.9)
   },
   cornerRune: {
     position: "absolute",
     fontSize: Math.round(6 * CARD_SCALE),
-    color: "rgba(232,197,71,0.4)",
+    color: "rgba(255,255,255,0.35)", // base — overridden inline above anyway
   },
   edgeDot: {
     position: "absolute",
     width: 2,
     height: 2,
     borderRadius: 1,
-    backgroundColor: "rgba(232,197,71,0.2)",
+    backgroundColor: "rgba(232,197,71,0.35)", // was 0.2
   },
+
+  // ── Deck Card ──
   deckCard: { flex: 1, position: "relative" },
   deckBadge: {
     position: "absolute",
@@ -1117,18 +1319,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 4,
     borderWidth: 2,
-    borderColor: "#162A47",
+    borderColor: "#0B1410", // match game bg — was #162A47
     elevation: 4,
     shadowColor: "#E8C547",
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 4,
+    shadowOpacity: 0.6,
+    shadowRadius: 6,
   },
   deckCount: {
     fontSize: Math.round(12 * CARD_SCALE),
     fontWeight: "900",
     color: "#1a1a1a",
   },
+
+  // ── Hint Glow ──
   hintGlow: {
     position: "absolute",
     top: -4,

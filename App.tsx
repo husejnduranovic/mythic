@@ -5,7 +5,7 @@ import auth from "@react-native-firebase/auth"
 import Game from "./src/components/Game"
 import Scoreboard from "./src/components/Scoreboard"
 import HomeScreen from "./src/components/Homescreen"
-import Armory from "./src/components/Armory"
+import Armory, { migrateArmoryIfNeeded } from "./src/components/Armory"
 import AuthScreen from "./src/components/Authscreen"
 import IntroScreen, { hasSeenIntro } from "./src/components/Introscreen"
 import { SoundService } from "./src/services/SoundService"
@@ -14,6 +14,9 @@ import ArenaScreen from "./src/components/Arenascreen"
 import LoungeScreen from "./src/components/LoungeScreen"
 import { getLoungeInfo, getSavedLoungeCode } from "./src/services/LoungeService"
 import * as SplashScreen from "expo-splash-screen"
+import { firestore } from "./src/services/Firebase"
+import { AppState, View } from "react-native"
+import { getUserProfile } from "./src/services/Dailychallenge"
 
 SplashScreen.preventAutoHideAsync()
 
@@ -44,10 +47,17 @@ export default function App() {
 
   const [showRules, setShowRules] = useState(false)
 
+  const [currentStreak, setCurrentStreak] = useState(0)
+  const [bestStreak, setBestStreak] = useState(0)
+
   useEffect(() => {
     NavigationBar.setVisibilityAsync("hidden")
     NavigationBar.setBehaviorAsync("overlay-swipe")
     SoundService.init()
+  }, [])
+
+  useEffect(() => {
+    migrateArmoryIfNeeded()
   }, [])
 
   useEffect(() => {
@@ -69,8 +79,70 @@ export default function App() {
     }
   }, [introSeen])
 
+  // Add this useEffect after the existing useEffects, before handleLogout:
+  useEffect(() => {
+    if (!user) return
+
+    // Set online when app is active
+    const setOnline = (online: boolean) => {
+      firestore()
+        .collection("users")
+        .doc(user.uid)
+        .update({
+          isOnline: online,
+          lastSeen: firestore.FieldValue.serverTimestamp(),
+        })
+        .catch(() => {})
+    }
+
+    setOnline(true)
+
+    const sub = AppState.addEventListener("change", (state) => {
+      setOnline(state === "active")
+    })
+
+    return () => {
+      sub.remove()
+      setOnline(false)
+    }
+  }, [user])
+
+  const [onlineCount, setOnlineCount] = useState(0)
+
+  useEffect(() => {
+    if (!user) return
+    const unsub = firestore()
+      .collection("users")
+      .where("isOnline", "==", true)
+      .onSnapshot(
+        (snap) => {
+          setOnlineCount(snap.size)
+        },
+        () => {},
+      )
+    return () => unsub()
+  }, [user])
+
+  useEffect(() => {
+    if (!user) return
+    getUserProfile(user.uid).then((data) => {
+      setCurrentStreak(data?.currentStreak || 0)
+      setBestStreak(data?.bestStreak || 0)
+    })
+  }, [user])
+
   const handleLogout = async () => {
     try {
+      if (user) {
+        await firestore()
+          .collection("users")
+          .doc(user.uid)
+          .update({
+            isOnline: false,
+            lastSeen: firestore.FieldValue.serverTimestamp(),
+          })
+          .catch(() => {})
+      }
       await auth().signOut()
       setUser(null)
       setScreen("home")
@@ -102,8 +174,16 @@ export default function App() {
       </>
     )
 
+  // Already exists:
   if (showRules) {
-    return <IntroScreen onComplete={() => setShowRules(false)} />
+    return (
+      <>
+        <StatusBar hidden />
+        <View style={{ flex: 1, backgroundColor: "#0B1410" }}>
+          <IntroScreen onComplete={() => setShowRules(false)} skipAnimation />
+        </View>
+      </>
+    )
   }
 
   if (screen === "daily")
@@ -207,6 +287,10 @@ export default function App() {
         onLounge={() => setScreen("lounge")}
         loungeCode={loungeCode}
         loungeName={loungeName}
+        onlineCount={onlineCount}
+        currentStreak={currentStreak}
+        bestStreak={bestStreak}
+        onHowToPlay={() => setShowRules(true)}
       />
     </>
   )

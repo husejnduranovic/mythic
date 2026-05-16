@@ -10,65 +10,46 @@ interface ILayout9Props {
   bountyIndices?: Set<number>
 }
 
-/**
- * Layout 9 — "Bunches" (32 cards)
- *
- * Three bunches — side bunches have 3 open base cards.
- * No dangling chains. More base cards.
- *
- * BUNCH 1 (left):     BUNCH 2 (center):      BUNCH 3 (right):
- *  [0][1][2]          [9][10][11][12]          [19][20][21]
- *   [3][4]             [13][14][15]             [22][23]
- *    [5]                [16][17]                  [24]
- *  [6][7][8]             [18]                 [25][26][27]
- *
- *               BASE: [28][29][30][31]
- *
- * BUNCH 1 (0-8):
- *   [0]←[3]  [1]←[3,4]  [2]←[4]
- *   [3]←[5]  [4]←[5]
- *   [5]←[6,7,8]     ← keystone: clear any combo of 6,7,8
- *   Actually: [5]←[6,7]  — blocked by left two open cards
- *   [6],[7],[8] = OPEN
- *
- * Wait — with 3 open cards below, blocking needs to make sense.
- * [5] sits centered above [6][7][8], so it's blocked by [7] (directly below)
- * But that's too easy — one card opens keystone.
- * Better: [5]←[6,7] — need to clear both left cards to open keystone
- * [8] is independent open card for matching.
- *
- * BUNCH 1 blocking:
- *   [0]←[3]  [1]←[3,4]  [2]←[4]
- *   [3]←[5]  [4]←[5]
- *   [5]←[6,7]
- *   [6],[7],[8] = OPEN
- *
- * BUNCH 2 (9-18, center):
- *   [9]←[13]  [10]←[13,14]  [11]←[14,15]  [12]←[15]
- *   [13]←[16]  [14]←[16,17]  [15]←[17]
- *   [16]←[18]  [17]←[18]
- *   [18] = OPEN
- *
- * BUNCH 3 (19-27, mirror of bunch 1):
- *   [19]←[22]  [20]←[22,23]  [21]←[23]
- *   [22]←[24]  [23]←[24]
- *   [24]←[25,26]
- *   [25],[26],[27] = OPEN
- *
- * BASE (28-31): 4 cards, all OPEN
- *
- * Open: 6,7,8,18,25,26,27,28,29,30,31 = 11 open cards
- *
- * Strategy:
- * - Side bunches: 3 open base cards give more matching options
- *   Clear [6]+[7] → keystone [5] opens → [3]+[4] open → top row cascades
- * - Center bunch: deepest (4 rows), single keystone [18]
- * - Three independent areas + base = always have options
- * - 32 cards = good length game
- */
-
 const isOpen = (cards: ICard[], ...blockers: number[]) =>
   blockers.every((i) => !cards[i]?.visible)
+
+/**
+ * Layout 5 — "Cross of Clans" (32 cards)
+ *
+ * Four layered plus-cross clusters across the screen.
+ *
+ * Each cluster (8 cards):
+ *       [TOP]            ← blocked by middle row
+ *    [M][M][M]           ← middle row, blocked by deep row
+ *    [D][D][D]           ← deep row, OPEN
+ *       [BOT]            ← blocked by deep row
+ *
+ * Cluster A: 0-7      Cluster B: 8-15      Cluster C: 16-23      Cluster D: 24-31
+ *
+ * Per-cluster indices (cluster A example):
+ *   [0] = top         blocked by [1,2,3]
+ *   [1][2][3] = mid   blocked by [4,5,6]
+ *   [4][5][6] = deep  OPEN
+ *   [7] = bottom      blocked by [4,5,6]
+ *
+ * Cascade per cluster:
+ *   3 deep cards open at start
+ *   Clear all 3 → top AND bottom open simultaneously (4 new openings total)
+ *     Wait — middle row [1,2,3] also opens at same time as bottom
+ *   Re-reading: after deep cleared, [1,2,3] open AND [7] opens (4 cards revealed)
+ *   Clear all 3 middle → [0] (top) opens
+ *
+ * Total cluster cascade: 3 → 4 → 1 = 8 cards
+ *
+ * Open at start: 4 clusters × 3 deep cards = 12 entry points
+ *
+ * Strategy:
+ *   - Real choice: which of 4 clusters to attack first
+ *   - Real choice within a cluster: order to clear the 3 deep cards
+ *   - Big payoff: clearing 3 deep opens 4 cards at once
+ *   - Wild on a deep card = kills one shared blocker, partial opening
+ *   - No base row safety net — every match must come from a cluster
+ */
 
 const Layout9 = React.memo(
   ({
@@ -90,104 +71,60 @@ const Layout9 = React.memo(
       />
     )
 
-    return (
-      <View style={styles.container}>
-        <View style={styles.topSection}>
-          {/* Bunch 1 — left */}
-          <View style={styles.bunch}>
-            <View style={styles.bunchInner}>
-              <View style={[styles.absRow, { top: 0 }]}>
-                <View style={styles.row}>
-                  {C(0, isOpen(cards, 3))}
-                  {C(1, isOpen(cards, 3, 4))}
-                  {C(2, isOpen(cards, 4))}
-                </View>
-              </View>
-              <View style={[styles.absRow, { top: 32 }]}>
-                <View style={styles.row}>
-                  {C(3, isOpen(cards, 5))}
-                  {C(4, isOpen(cards, 5))}
-                </View>
-              </View>
-              <View style={[styles.absRow, { top: 64 }]}>
-                <View style={styles.row}>{C(5, isOpen(cards, 6, 7))}</View>
-              </View>
-              <View style={[styles.absRow, { top: 96 }]}>
-                <View style={styles.row}>
-                  {C(6, true)}
-                  {C(7, true)}
-                  {C(8, true)}
-                </View>
+    // One plus-cluster — takes the starting index, renders the 8-card cross
+    const Cluster = (base: number) => {
+      const top = base + 0
+      const m1 = base + 1
+      const m2 = base + 2
+      const m3 = base + 3
+      const d1 = base + 4
+      const d2 = base + 5
+      const d3 = base + 6
+      const bot = base + 7
+
+      return (
+        <View style={styles.cluster}>
+          <View style={styles.clusterInner}>
+            {/* Top */}
+            <View style={[styles.absRow, { top: 0 }]}>
+              <View style={styles.row}>
+                {C(top, isOpen(cards, m1, m2, m3))}
               </View>
             </View>
-          </View>
-
-          {/* Bunch 2 — center */}
-          <View style={styles.bunchCenter}>
-            <View style={styles.bunchCenterInner}>
-              <View style={[styles.absRow, { top: 0 }]}>
-                <View style={styles.row}>
-                  {C(9, isOpen(cards, 13))}
-                  {C(10, isOpen(cards, 13, 14))}
-                  {C(11, isOpen(cards, 14, 15))}
-                  {C(12, isOpen(cards, 15))}
-                </View>
-              </View>
-              <View style={[styles.absRow, { top: 32 }]}>
-                <View style={styles.row}>
-                  {C(13, isOpen(cards, 16))}
-                  {C(14, isOpen(cards, 16, 17))}
-                  {C(15, isOpen(cards, 17))}
-                </View>
-              </View>
-              <View style={[styles.absRow, { top: 64 }]}>
-                <View style={styles.row}>
-                  {C(16, isOpen(cards, 18))}
-                  {C(17, isOpen(cards, 18))}
-                </View>
-              </View>
-              <View style={[styles.absRow, { top: 96 }]}>
-                <View style={styles.row}>{C(18, true)}</View>
+            {/* Middle row */}
+            <View style={[styles.absRow, { top: 60 }]}>
+              <View style={styles.tripleRow}>
+                {C(m1, isOpen(cards, d1, d2, d3))}
+                {C(m2, isOpen(cards, d1, d2, d3))}
+                {C(m3, isOpen(cards, d1, d2, d3))}
               </View>
             </View>
-          </View>
-
-          {/* Bunch 3 — right (mirror) */}
-          <View style={styles.bunch}>
-            <View style={styles.bunchInner}>
-              <View style={[styles.absRow, { top: 0 }]}>
-                <View style={styles.row}>
-                  {C(19, isOpen(cards, 22))}
-                  {C(20, isOpen(cards, 22, 23))}
-                  {C(21, isOpen(cards, 23))}
-                </View>
+            {/* Deep row — OPEN */}
+            <View style={[styles.absRow, { top: 120 }]}>
+              <View style={styles.tripleRow}>
+                {C(d1, true)}
+                {C(d2, true)}
+                {C(d3, true)}
               </View>
-              <View style={[styles.absRow, { top: 32 }]}>
-                <View style={styles.row}>
-                  {C(22, isOpen(cards, 24))}
-                  {C(23, isOpen(cards, 24))}
-                </View>
-              </View>
-              <View style={[styles.absRow, { top: 64 }]}>
-                <View style={styles.row}>{C(24, isOpen(cards, 25, 26))}</View>
-              </View>
-              <View style={[styles.absRow, { top: 96 }]}>
-                <View style={styles.row}>
-                  {C(25, true)}
-                  {C(26, true)}
-                  {C(27, true)}
-                </View>
+            </View>
+            {/* Bottom */}
+            <View style={[styles.absRow, { top: 180 }]}>
+              <View style={styles.row}>
+                {C(bot, isOpen(cards, d1, d2, d3))}
               </View>
             </View>
           </View>
         </View>
+      )
+    }
 
-        {/* Base */}
-        <View style={styles.baseRow}>
-          {C(28, true)}
-          {C(29, true)}
-          {C(30, true)}
-          {C(31, true)}
+    return (
+      <View style={styles.container}>
+        <View style={styles.row4}>
+          {Cluster(0)}
+          {Cluster(8)}
+          {Cluster(16)}
+          {Cluster(24)}
         </View>
       </View>
     )
@@ -197,24 +134,39 @@ const Layout9 = React.memo(
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "space-between",
     paddingHorizontal: 4,
-    paddingTop: 2,
+    paddingTop: 4,
+    paddingBottom: 4,
   },
-  topSection: {
+  row4: {
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 4,
+  },
+  cluster: {
+    width: "23%",
+    alignItems: "center",
+  },
+  clusterInner: {
+    height: 260,
+    width: "100%",
+    alignItems: "center",
+  },
+  tripleRow: {
     flexDirection: "row",
     justifyContent: "center",
-    alignItems: "flex-start",
-    flex: 1,
-    gap: 6,
+    gap: 4,
   },
-  bunch: { width: "28%", alignItems: "center" },
-  bunchInner: { height: 140, width: "100%", alignItems: "center" },
-  bunchCenter: { width: "34%", alignItems: "center" },
-  bunchCenterInner: { height: 140, width: "100%", alignItems: "center" },
-  absRow: { position: "absolute", width: "100%" },
-  row: { flexDirection: "row", justifyContent: "center" },
-  baseRow: { flexDirection: "row", justifyContent: "center", paddingBottom: 2 },
+  absRow: {
+    position: "absolute",
+    width: "100%",
+  },
+  row: {
+    flexDirection: "row",
+    justifyContent: "center",
+  },
 })
 
 export default Layout9

@@ -27,6 +27,8 @@ import {
   getSelectedTheme,
   incrementGamesPlayed,
   ThemeConfig,
+  WAR_TABLE_CONFIG,
+  WILD_STYLE_CONFIG,
 } from "./Armory"
 import {
   hasPlayedToday,
@@ -56,9 +58,19 @@ import Layout5 from "./Layout5"
 import Layout7 from "./Layout7"
 import Layout9 from "./Layout9"
 import Layout8 from "./Layout8"
+import AsyncStorage from "@react-native-async-storage/async-storage"
+import ReturnToCastle from "./ReturnToCastle"
+import Reanimated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSequence,
+  runOnJS,
+} from "react-native-reanimated"
+import PersonalBestBanner from "./PersonalBestBanner"
 
 interface GameProps {
-  onHome?: () => void
+  onHome: () => void
   dailyMode?: boolean
   uid?: string
   heroName?: string
@@ -71,36 +83,13 @@ const LEVEL_CONFIG: Record<
   { fieldCards: number; deckStart: number; time: number; layout: number }
 > = {
   1: { fieldCards: 29, deckStart: 29, time: 75, layout: 1 },
-  2: { fieldCards: 30, deckStart: 30, time: 85, layout: 2 },
+  2: { fieldCards: 32, deckStart: 32, time: 85, layout: 9 },
+  // 2: { fieldCards: 30, deckStart: 30, time: 85, layout: 2 },
   3: { fieldCards: 30, deckStart: 30, time: 80, layout: 7 },
   4: { fieldCards: 32, deckStart: 32, time: 80, layout: 8 },
-  5: { fieldCards: 32, deckStart: 32, time: 85, layout: 9 },
+  5: { fieldCards: 30, deckStart: 30, time: 285, layout: 2 },
+  // 5: { fieldCards: 32, deckStart: 32, time: 85, layout: 9 },
   6: { fieldCards: 28, deckStart: 28, time: 75, layout: 5 },
-}
-
-const WILD_STYLE_CONFIG: Record<
-  string,
-  { color: string; accent: string; icon: string }
-> = {
-  classic: { color: "#1A0F05", accent: "#E8C547", icon: "⚡" },
-  frost: { color: "#0A1525", accent: "#90CAF9", icon: "❄️" },
-  venom: { color: "#0A1A0A", accent: "#4ADE80", icon: "🐍" },
-  inferno: { color: "#2A0A00", accent: "#FF6B35", icon: "🔥" },
-  arcane: { color: "#1A0A2A", accent: "#C084FC", icon: "🔮" },
-  divine: { color: "#2A1A00", accent: "#FFD700", icon: "👑" },
-  void: { color: "#050505", accent: "#8B5CF6", icon: "🌑" },
-  dragon: { color: "#2A0500", accent: "#FF4444", icon: "🐉" },
-}
-
-const WAR_TABLE_CONFIG: Record<string, { color: string; accent: string }> = {
-  classic: { color: "#18120E", accent: "#8B7355" },
-  iron: { color: "#12141A", accent: "#78909C" },
-  marble: { color: "#1A1A1A", accent: "#E0E0E0" },
-  crimson: { color: "#1A0808", accent: "#C0392B" },
-  gold: { color: "#1A1505", accent: "#FFD700" },
-  obsidian: { color: "#0A0A0A", accent: "#424242" },
-  jade: { color: "#0A1A10", accent: "#4CAF50" },
-  celestial: { color: "#0A0A20", accent: "#7DD3FC" },
 }
 
 const TOTAL_LEVELS = Object.keys(LEVEL_CONFIG).length
@@ -108,6 +97,24 @@ const BASE_CARD_VALUE = 500
 const SECOND_CARD_COMBO = 2
 const WILD_COMBO_THRESHOLD = 10
 const WILD_SECOND_THRESHOLD = 20
+
+// ─── Combo Insurance ───
+// Triggers once per layout on layouts 4 & 5, only when combo is x10+
+// Cushion, not crutch — preserves the cliff math while saving worthy runs
+const INSURANCE_LAYOUTS = new Set([4, 5])
+const INSURANCE_MIN_COMBO = 10
+
+// Combo tier the insurance resets you to. Snapped to real multiplier tiers
+// so the post-save value is always meaningful, not a number between cliffs.
+const getInsuranceReset = (combo: number): number => {
+  if (combo >= 100) return 50
+  if (combo >= 70) return 40
+  if (combo >= 45) return 25
+  if (combo >= 25) return 15
+  if (combo >= 15) return 10
+  if (combo >= 10) return 5
+  return 0 // below threshold, no save
+}
 
 const COMBO_MILESTONES: Record<
   number,
@@ -120,9 +127,32 @@ const COMBO_MILESTONES: Record<
   25: { text: "RAMPAGE!", color: "#FF00FF", icon: "⚡" },
   30: { text: "BEYOND MYTHIC!", color: "#FFFFFF", icon: "💀" },
   35: { text: "TRANSCENDENT!", color: "#00FFFF", icon: "🌀" },
+  40: { text: "KILLING SPREA!", color: "#FFD700", icon: "⚡" },
+  45: { text: "UNSTOPPABLE!", color: "#FF1493", icon: "🔥" },
+  50: { text: "DIVINE!", color: "#7DF9FF", icon: "👁" },
+  60: { text: "ETERNAL!", color: "#FFD700", icon: "♾" },
+  70: { text: "ASCENDED!", color: "#FFFFFF", icon: "✦" },
+  // New — for the real players
+  80: { text: "WARLORD!", color: "#FF8C00", icon: "🔱" },
+  90: { text: "CONQUEROR!", color: "#E040FB", icon: "☠️" },
+  100: { text: "MYTHIC PEAK!", color: "#E8C547", icon: "🏔" },
+  110: { text: "OVERLORD!", color: "#FF1744", icon: "👹" },
+  120: { text: "IMMORTAL!", color: "#00E5FF", icon: "💎" },
+  130: { text: "MASTER OF PEAKS!", color: "#FFFFFF", icon: "⚜️" },
 }
 
 const getComboMultiplier = (c: number) => {
+  if (c >= 130) return 1200
+  if (c >= 120) return 1050
+  if (c >= 110) return 900
+  if (c >= 100) return 750
+  if (c >= 90) return 620
+  if (c >= 80) return 500 // current 70 cap becomes 80
+  if (c >= 70) return 420
+  if (c >= 60) return 350
+  if (c >= 50) return 250
+  if (c >= 45) return 200
+  if (c >= 40) return 175
   if (c >= 35) return 150
   if (c >= 30) return 100
   if (c >= 25) return 65
@@ -603,17 +633,19 @@ const s = StyleSheet.create({
     alignItems: "center",
     zIndex: 2,
   },
-  cornerIcon: { color: "rgba(232,197,71,0.25)", fontSize: 10 },
+  // Corner ornaments — more visible
+  cornerIcon: { color: "rgba(232,197,71,0.4)", fontSize: 10 }, // was 0.25
 
   // Edge ornaments
   edgeOrn: {
     position: "absolute",
-    color: "rgba(232,197,71,0.12)",
+    color: "rgba(232,197,71,0.22)", // was 0.12
     fontSize: 8,
     zIndex: 2,
   },
 
   // Center rings
+  // Rings — more visible
   ringOuter: {
     position: "absolute",
     top: "16%",
@@ -622,6 +654,7 @@ const s = StyleSheet.create({
     height: "62%",
     borderRadius: 9999,
     borderWidth: 1,
+    opacity: 0.35, // add this — was just borderColor opacity doing the work
   },
   ringInner: {
     position: "absolute",
@@ -632,6 +665,7 @@ const s = StyleSheet.create({
     borderRadius: 9999,
     borderWidth: 1,
     borderStyle: "dashed",
+    opacity: 0.25,
   },
 
   // Emblem
@@ -656,16 +690,16 @@ const s = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  emblemIcon: { fontSize: 14, color: "rgba(232,197,71,0.12)" },
+  emblemIcon: { fontSize: 14, color: "rgba(232,197,71,0.25)" }, // was 0.12
 
-  // Cross lines
+  // Cross lines — slightly more visible
   crossH: {
     position: "absolute",
     top: "48%",
     left: "12%",
     width: "76%",
     height: 1,
-    backgroundColor: "rgba(232,197,71,0.03)",
+    backgroundColor: "rgba(232,197,71,0.06)", // was 0.03
   },
   crossV: {
     position: "absolute",
@@ -673,7 +707,7 @@ const s = StyleSheet.create({
     top: "10%",
     width: 1,
     height: "68%",
-    backgroundColor: "rgba(232,197,71,0.03)",
+    backgroundColor: "rgba(232,197,71,0.06)", // was 0.03
   },
   diagA: {
     position: "absolute",
@@ -707,12 +741,13 @@ const s = StyleSheet.create({
     alignItems: "center",
     overflow: "hidden",
   },
-  flagIcon: { fontSize: 16, opacity: 0.12 },
+  // Banners — more visible
+  flagIcon: { fontSize: 16, opacity: 0.22 }, // was 0.12
   flagStripe: { position: "absolute", bottom: 0, left: 0, right: 0, height: 3 },
 
   // Weapon racks
   weaponRack: { position: "absolute", alignItems: "center", gap: 2 },
-  weaponEmoji: { fontSize: 14, opacity: 0.08 },
+  weaponEmoji: { fontSize: 14, opacity: 0.14 }, // was 0.08
   weaponBar: { width: 18, height: 1, backgroundColor: "rgba(232,197,71,0.06)" },
 
   // Ghost cards
@@ -722,8 +757,8 @@ const s = StyleSheet.create({
     height: 26,
     borderRadius: 3,
     borderWidth: 1,
-    borderColor: "rgba(232,197,71,0.035)",
-    backgroundColor: "rgba(232,197,71,0.012)",
+    borderColor: "rgba(232,197,71,0.07)", // was 0.035
+    backgroundColor: "rgba(232,197,71,0.025)", // was 0.012
   },
 
   // Torch
@@ -734,14 +769,16 @@ const s = StyleSheet.create({
     borderRadius: 35,
     backgroundColor: "rgba(255,200,80,0.03)",
   },
-  torch: { position: "absolute", fontSize: 14, opacity: 0.18 },
+  // Torch — more visible
+  torch: { position: "absolute", fontSize: 14, opacity: 0.28 }, // was 0.18
 
-  // Runes
-  rune: { position: "absolute", color: "rgba(232,197,71,0.055)" },
+  // Runes — more visible
+  rune: { position: "absolute", color: "rgba(232,197,71,0.1)" }, // was 0.055
 
   // Chains
   chain: { position: "absolute" },
-  chainText: { color: "rgba(232,197,71,0.055)", fontSize: 6, letterSpacing: 1 },
+  // Chains — more visible
+  chainText: { color: "rgba(232,197,71,0.1)", fontSize: 6, letterSpacing: 1 },
 
   // Scratches
   scratch: {
@@ -790,36 +827,41 @@ const s = StyleSheet.create({
 // This file contains the new components and their styles
 // The wall section in the main render should use these
 
-// New battlements — ornate with gold accents
-export const Battlements = React.memo(() => (
+// ─── REPLACE Battlements component ───
+
+export const Battlements = React.memo(({ color }: { color: string }) => (
   <View style={bs.battlements}>
     {Array.from({ length: 22 }).map((_, i) => (
-      <View key={i} style={i % 2 === 0 ? bs.merlon : bs.crenel} />
+      <View
+        key={i}
+        style={[
+          i % 2 === 0 ? bs.merlon : bs.crenel,
+          i % 2 === 0 && { backgroundColor: color },
+        ]}
+      />
     ))}
-    {/* Gold accent line under battlements */}
-    <View style={bs.goldLine} />
+    <View style={[bs.goldLine, { backgroundColor: "rgba(232,197,71,0.18)" }]} />
   </View>
 ))
 
 // New wall texture — more detailed surface
 export const WallTexture = React.memo(() => (
   <View style={bs.wallTexture} pointerEvents="none">
-    {/* Horizontal grain lines */}
-    <View style={[bs.grainLine, { top: "25%" }]} />
-    <View style={[bs.grainLine, { top: "50%" }]} />
-    <View style={[bs.grainLine, { top: "75%" }]} />
-    {/* Subtle dot pattern */}
-    {Array.from({ length: 8 }).map((_, i) => (
+    <View style={[bs.grainLine, { top: "20%" }]} />
+    <View style={[bs.grainLine, { top: "45%" }]} />
+    <View style={[bs.grainLine, { top: "70%" }]} />
+    <View style={[bs.grainLine, { top: "90%" }]} />
+    {Array.from({ length: 6 }).map((_, i) => (
       <View
         key={i}
         style={[
           bs.textureDot,
           {
-            top: `${(i * 31 + 15) % 80}%`,
-            left: `${(i * 23 + 8) % 90}%`,
-            width: 1.5 + (i % 2),
-            height: 1.5 + (i % 2),
-            opacity: 0.03 + (i % 3) * 0.01,
+            top: `${(i * 37 + 15) % 80}%`,
+            left: `${(i * 29 + 8) % 90}%`,
+            width: 2,
+            height: 2,
+            opacity: 0.04 + (i % 2) * 0.02,
           },
         ]}
       />
@@ -827,47 +869,44 @@ export const WallTexture = React.memo(() => (
   </View>
 ))
 
-// Styles for bottom bar
+// ─── REPLACE bottomBarStyles and bs StyleSheet ───
+
 export const bottomBarStyles = StyleSheet.create({
-  // Wall container
   wallContainer: { width: "100%" },
 
-  // Wall — dark premium base
   wall: {
     width: "100%",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 5,
-    backgroundColor: "#14100C",
+    borderTopWidth: 2,
+    borderTopColor: "rgba(255,255,255,0.06)",
     overflow: "hidden",
   },
-
-  // Daily wall variant
   wallDaily: {
-    backgroundColor: "#18140E",
-    borderTopColor: "rgba(232,197,71,0.15)",
+    borderTopColor: "rgba(232,197,71,0.2)",
   },
 
-  // Sections
   leftSection: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     zIndex: 2,
   },
+
+  // SPOILS box — more prominent now
   spoilsBox: {
     justifyContent: "center",
-    backgroundColor: "rgba(232,197,71,0.03)",
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    backgroundColor: "rgba(0,0,0,0.25)",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderWidth: 1,
-    borderColor: "rgba(232,197,71,0.06)",
+    borderColor: "rgba(232,197,71,0.12)",
   },
 
-  // Center active cards area
   centerCards: {
     flexDirection: "row",
     gap: 4,
@@ -897,28 +936,28 @@ export const bottomBarStyles = StyleSheet.create({
     shadowRadius: 10,
   },
 
-  // Right section — timer + combo
   rightBox: {
     alignItems: "flex-end",
     gap: 2,
-    minWidth: 72,
+    minWidth: 75,
     zIndex: 2,
+    height: 52,
+    justifyContent: "center",
   },
 
-  // Labels
   label: {
-    color: "rgba(232,197,71,0.55)",
-    fontSize: 7,
+    color: "rgba(232,197,71,0.6)",
+    fontSize: 8,
     fontWeight: "900",
     letterSpacing: 3,
   },
   scoreValue: {
     color: "#E8C547",
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "900",
-    textShadowColor: "rgba(232,197,71,0.4)",
+    textShadowColor: "rgba(232,197,71,0.5)",
     textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 8,
+    textShadowRadius: 10,
   },
   comboValue: {
     fontSize: 18,
@@ -927,21 +966,28 @@ export const bottomBarStyles = StyleSheet.create({
   },
 })
 
-// Internal styles for battlements/texture
 const bs = StyleSheet.create({
   battlements: {
     flexDirection: "row",
     justifyContent: "center",
     position: "relative",
+    // Shadow below battlements into the bar
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 4,
   },
   merlon: {
-    width: 12,
-    height: 5,
+    width: 13,
+    height: 7,
     backgroundColor: "#14100C",
+    borderTopLeftRadius: 2,
+    borderTopRightRadius: 2,
   },
   crenel: {
-    width: 8,
-    height: 5,
+    width: 9,
+    height: 7,
     backgroundColor: "transparent",
   },
   goldLine: {
@@ -950,7 +996,6 @@ const bs = StyleSheet.create({
     left: 0,
     right: 0,
     height: 1,
-    backgroundColor: "rgba(232,197,71,0.1)",
   },
 
   wallTexture: {
@@ -965,12 +1010,12 @@ const bs = StyleSheet.create({
     left: 0,
     right: 0,
     height: 1,
-    backgroundColor: "rgba(232,197,71,0.02)",
+    backgroundColor: "rgba(255,255,255,0.025)", // white grain, works on any color
   },
   textureDot: {
     position: "absolute",
     borderRadius: 2,
-    backgroundColor: "rgba(232,197,71,0.05)",
+    backgroundColor: "rgba(255,255,255,0.03)",
   },
 })
 
@@ -1024,16 +1069,21 @@ const Game = ({
   const [milestoneText, setMilestoneText] = useState("")
   const [milestoneIcon, setMilestoneIcon] = useState("")
   const [milestoneColor, setMilestoneColor] = useState("#fff")
-  const milestoneOpacity = useRef(new Animated.Value(0)).current
-  const milestoneScale = useRef(new Animated.Value(0.5)).current
+
+  const milestoneOpacity = useSharedValue(0)
+  const milestoneScale = useSharedValue(0.5)
+
   const levelCompleteRef = useRef(false)
   const autoAdvanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const pointsOpacity = useRef(new Animated.Value(0)).current
-  const pointsMove = useRef(new Animated.Value(0)).current
+
+  // Migrated to Reanimated — run on UI thread
+  const pointsOpacity = useSharedValue(0)
+  const pointsMove = useSharedValue(0)
+  const comboPulse = useSharedValue(1)
+  const scorePulse = useSharedValue(1)
   const [showPoints, setShowPoints] = useState(false)
   const [lastPoints, setLastPoints] = useState(0)
-  const comboPulse = useRef(new Animated.Value(1)).current
-  const scorePulse = useRef(new Animated.Value(1)).current
+
   const deckScale = useRef(new Animated.Value(1)).current
   const [timerFrozen, setTimerFrozen] = useState(false)
   const freezeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -1054,7 +1104,57 @@ const Game = ({
 
   const gloryActiveRef = useRef(false)
 
+  // Refs mirror state so handleCardPress can have a stable reference
+  const cardsRef = useRef<ICard[]>([])
+  const currentIndexRef = useRef(0)
+  const secondCardRef = useRef<number | null>(null)
+  const comboRef = useRef(0)
+  const wildActiveRef = useRef(false)
+  const bountyIndicesRef = useRef<Set<number>>(new Set())
+  const levelRef = useRef(1)
+  const deckIndexRef = useRef(0)
+  const freeDrawAvailableRef = useRef(true)
+
   const [bountyIndices, setBountyIndices] = useState<Set<number>>(new Set())
+
+  const [carryCombo, setCarryCombo] = useState(0)
+
+  const [isPersonalBest, setIsPersonalBest] = useState(false)
+  const [previousBest, setPreviousBest] = useState(0)
+
+  const [bestComboEver, setBestComboEver] = useState(0)
+  const personalBestComboShownRef = useRef(false)
+
+  // Tracks which layouts have already burned their insurance charge this run.
+  // Reset on game restart (handlePlayAgain) and on level entry (initLevel for fresh runs).
+  const insuranceUsedRef = useRef<Set<number>>(new Set())
+
+  // Drives the shield flash animation when insurance triggers.
+  const insuranceFlash = useSharedValue(0)
+
+  const insuranceFlashStyle = useAnimatedStyle(() => ({
+    opacity: insuranceFlash.value,
+    transform: [{ scale: 0.8 + insuranceFlash.value * 0.4 }],
+  }))
+
+  // Reanimated styles for hot-path animations — must be at component top level
+  const comboPulseStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: comboPulse.value }],
+  }))
+
+  const scorePulseStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scorePulse.value }],
+  }))
+
+  const pointsPopupStyle = useAnimatedStyle(() => ({
+    opacity: pointsOpacity.value,
+    transform: [{ translateY: pointsMove.value }],
+  }))
+
+  const milestoneStyle = useAnimatedStyle(() => ({
+    opacity: milestoneOpacity.value,
+    transform: [{ scale: milestoneScale.value }],
+  }))
 
   useEffect(() => {
     if (!arenaMode || !betweenLevels || arenaPlayers.length === 0) return
@@ -1065,6 +1165,19 @@ const Game = ({
       setArenaCountdown(3)
     }
   }, [arenaPlayers, betweenLevels, level, arenaMode])
+
+  // Sync state to refs so stable callbacks can read latest values
+  useEffect(() => {
+    cardsRef.current = cards
+    currentIndexRef.current = currentIndex
+    secondCardRef.current = secondCard
+    comboRef.current = combo
+    wildActiveRef.current = wildActive
+    bountyIndicesRef.current = bountyIndices
+    levelRef.current = level
+    deckIndexRef.current = deckIndex
+    freeDrawAvailableRef.current = freeDrawAvailable
+  })
 
   useEffect(() => {
     if (arenaCountdown === null) return
@@ -1134,14 +1247,55 @@ const Game = ({
           })
           .catch(() => {})
 
+        // Check if this is a new PERSONAL best
+        firestore()
+          .collection("users")
+          .doc(uid)
+          .get()
+          .then((doc) => {
+            const prevBest = doc.exists() ? doc.data()?.bestScore || 0 : 0
+            // Only show personal-best celebration if score beats it AND it's not an all-time record
+            // (all-time record already shows its own celebration)
+            if (score > prevBest && prevBest > 0) {
+              setPreviousBest(prevBest)
+              setIsPersonalBest(true)
+            }
+          })
+          .catch(() => {})
+
         submitGameScore(uid, heroName, score, bestCombo, dailyMode)
         submitAllTimeScore(uid, heroName, score, bestCombo)
-        getSavedLoungeCode().then((code) => {
-          if (code && uid && heroName) {
-            submitLoungeScore(code, uid, heroName, score, bestCombo)
-          }
-        })
+        getSavedLoungeCode()
+          .then((code) => {
+            if (code && uid && heroName) {
+              submitLoungeScore(code, uid, heroName, score, bestCombo).catch(
+                () => {
+                  // Silent fail — lounge submission is non-critical, main score already saved
+                },
+              )
+            }
+          })
+          .catch(() => {})
         updateUserProfile(uid, score, bestCombo, totalCleared)
+        firestore()
+          .collection("users")
+          .doc(uid)
+          .get()
+          .then((doc) => {
+            if (doc.exists()) {
+              const totalGames = doc.data()?.totalGames || 0
+              AsyncStorage.setItem(
+                "@mythic_games_played",
+                totalGames.toString(),
+              )
+              firestore()
+                .collection("allTimeScores")
+                .doc(uid)
+                .update({ gamesPlayed: totalGames })
+                .catch(() => {})
+            }
+          })
+          .catch(() => {})
         if (dailyMode) {
           submitDailyScore(uid, heroName, score, bestCombo, clearPct)
           firestore()
@@ -1172,12 +1326,33 @@ const Game = ({
         saveScore(score, bestCombo)
         incrementGamesPlayed()
       }
+      if (bestCombo > bestComboEver) {
+        AsyncStorage.setItem("@mythic_best_combo_ever", bestCombo.toString())
+      }
     }
   }, [gameOver])
 
   useEffect(() => {
+    AsyncStorage.getItem("@mythic_best_combo_ever").then((val) => {
+      if (val) setBestComboEver(parseInt(val))
+    })
+  }, [])
+
+  useEffect(() => {
     if (combo > 0) {
       if (combo > bestCombo) setBestCombo(combo)
+      // Personal best combo milestone — fires once per run when player beats their lifetime best
+      if (
+        combo > bestComboEver &&
+        bestComboEver > 0 &&
+        !personalBestComboShownRef.current &&
+        combo >= 10 // don't fire for trivial new "records" early in a player's life
+      ) {
+        personalBestComboShownRef.current = true
+        setBestComboEver(combo)
+        AsyncStorage.setItem("@mythic_best_combo_ever", combo.toString())
+        showMilestone(`NEW BEST COMBO x${combo}!`, "#FFD700", "👑")
+      }
       if (combo >= 10) {
         comboGlowOpacity.setValue(0.8)
         Animated.timing(comboGlowOpacity, {
@@ -1188,36 +1363,35 @@ const Game = ({
       } else {
         comboGlowOpacity.setValue(0)
       }
-      Animated.sequence([
-        Animated.timing(comboPulse, {
-          toValue: 1.4,
-          duration: 80,
-          useNativeDriver: true,
-        }),
-        Animated.timing(comboPulse, {
-          toValue: 1,
-          duration: 80,
-          useNativeDriver: true,
-        }),
-      ]).start()
-      const m = COMBO_MILESTONES[combo]
+      comboPulse.value = withSequence(
+        withTiming(1.4, { duration: 80 }),
+        withTiming(1, { duration: 80 }),
+      )
+
+      const newMatches = combo - comboBaseRef.current
+
+      // Milestones based on new matches
+      const m = COMBO_MILESTONES[newMatches]
       if (m) showMilestone(m.text, m.color, m.icon)
+
       // Freeze timer on combo milestones
-      if (combo === 5) freezeTimerForCombo(3)
-      else if (combo === 10) freezeTimerForCombo(5)
-      else if (combo === 15) freezeTimerForCombo(3)
-      else if (combo === 20) freezeTimerForCombo(5)
-      else if (combo === 25) freezeTimerForCombo(3)
-      else if (combo === 30) freezeTimerForCombo(5)
+      if (newMatches === 5) freezeTimerForCombo(3)
+      else if (newMatches === 10) freezeTimerForCombo(5)
+      else if (newMatches === 15) freezeTimerForCombo(3)
+      else if (newMatches === 20) freezeTimerForCombo(5)
+      else if (newMatches === 25) freezeTimerForCombo(3)
+      else if (newMatches === 30) freezeTimerForCombo(5)
+
+      // Wild cards based on new matches only
       if (
-        combo >= WILD_SECOND_THRESHOLD &&
+        newMatches >= WILD_SECOND_THRESHOLD &&
         wildFirstEarned &&
         !wildSecondEarned
       ) {
         setWildCount((c) => Math.min(c + 1, 2))
         setWildSecondEarned(true)
         showMilestone("2nd WILD!", "#FF4757", "🃏🃏")
-      } else if (combo >= WILD_COMBO_THRESHOLD && !wildFirstEarned) {
+      } else if (newMatches >= WILD_COMBO_THRESHOLD && !wildFirstEarned) {
         setWildCount(1)
         setWildFirstEarned(true)
         showMilestone("WILD CARD!", "#E8C547", "🃏")
@@ -1242,50 +1416,25 @@ const Game = ({
       ).start()
     } else wildPulse.setValue(1)
   }, [wildActive])
+
   useEffect(() => {
-    if (score > 0)
-      Animated.sequence([
-        Animated.timing(scorePulse, {
-          toValue: 1.15,
-          duration: 60,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scorePulse, {
-          toValue: 1,
-          duration: 100,
-          useNativeDriver: true,
-        }),
-      ]).start()
+    if (score > 0) {
+      scorePulse.value = withSequence(
+        withTiming(1.15, { duration: 60 }),
+        withTiming(1, { duration: 100 }),
+      )
+    }
   }, [score])
 
   const showMilestone = (text: string, color: string, icon: string) => {
     setMilestoneText(text)
     setMilestoneColor(color)
     setMilestoneIcon(icon)
-    milestoneOpacity.setValue(0)
-    milestoneScale.setValue(0.85)
-
-    Animated.parallel([
-      Animated.timing(milestoneOpacity, {
-        toValue: 1,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-      Animated.spring(milestoneScale, {
-        toValue: 1,
-        friction: 8,
-        tension: 120,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      setTimeout(() => {
-        Animated.timing(milestoneOpacity, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }).start()
-      }, 600)
-    })
+    milestoneOpacity.value = 1
+    milestoneScale.value = 1
+    setTimeout(() => {
+      milestoneOpacity.value = withTiming(0, { duration: 250 })
+    }, 400)
   }
 
   const freezeTimerForCombo = (seconds: number) => {
@@ -1313,6 +1462,8 @@ const Game = ({
   const bountyConfig =
     BOUNTY_STYLE_CONFIG[theme.bountyStyle || "classic"] ||
     BOUNTY_STYLE_CONFIG.classic
+
+  const [freeDrawAvailable, setFreeDrawAvailable] = useState(true)
 
   const advanceLevel = useCallback(() => {
     if (levelCompleteRef.current) return
@@ -1344,6 +1495,11 @@ const Game = ({
       const perfectBonus = Math.round(50000 * layoutMultiplier * gloryMult)
       setScore((s) => s + perfectBonus)
       showMilestone("PERFECT CLEAR!", "#7BED9F", "✨")
+
+      // Auto-carry combo on perfect clear
+      if (level < TOTAL_LEVELS) {
+        setCarryCombo(combo)
+      }
     }
 
     SoundService.playLevelComplete()
@@ -1371,18 +1527,39 @@ const Game = ({
     setArenaCountdown(null)
     setGloryActive(false)
     gloryActiveRef.current = false
-    setWildCount(0)
-    setWildFirstEarned(false)
-    setWildSecondEarned(false)
+    // setWildCount(0)
+    // setWildFirstEarned(false)
+    // setWildSecondEarned(false)
     setBountyIndices(new Set())
+    setWildActive(false)
+    setWildPlacing(false)
+    setWildPendingIndex(null)
     setBetweenLevels(true)
   }, [cards, config.fieldCards])
+
+  const handleAbandonLayout = () => {
+    const remainingCards = cards
+      .slice(0, config.fieldCards)
+      .filter((c) => c.visible).length
+    const carried = combo - remainingCards
+    if (carried <= 0 || levelCompleteRef.current) return
+    setCarryCombo(carried)
+    // setCarryWilds(wildCount)
+    setWildActive(false)
+    setWildPlacing(false)
+    setWildPendingIndex(null)
+    showMilestone(`COMBO x${carried} CARRIED!`, "#FF8C00", "⚡")
+    SoundService.playFreeze()
+    advanceLevel()
+  }
+
+  const comboBaseRef = useRef(0)
 
   const initLevel = useCallback(() => {
     if (alreadyPlayed) return
     setLoading(true)
+    setFreeDrawAvailable(true)
     setWildActive(false)
-    // setGloryActive(false)
     setReady(false)
     levelCompleteRef.current = false
     if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current)
@@ -1399,7 +1576,19 @@ const Game = ({
     setBountyIndices(new Set(shuffledIndices.slice(0, 2)))
     setCurrentIndex(config.deckStart)
     setDeckIndex(config.deckStart + 1)
-    setCombo(0)
+
+    if (carryCombo > 0) {
+      setCombo(carryCombo)
+      comboBaseRef.current = carryCombo
+      setCarryCombo(0)
+    } else {
+      setCombo(0)
+      comboBaseRef.current = 0
+    }
+    setWildCount(0)
+    setWildFirstEarned(false)
+    setWildSecondEarned(false)
+
     setSecondCard(null)
     setShowHints(false)
     setWildActive(false)
@@ -1411,7 +1600,14 @@ const Game = ({
       SoundService.playShuffle()
       setTimeout(() => setReady(true), 50)
     }, 20)
-  }, [level, config.fieldCards, config.deckStart, dailyMode, alreadyPlayed])
+  }, [
+    level,
+    config.fieldCards,
+    config.deckStart,
+    dailyMode,
+    alreadyPlayed,
+    carryCombo,
+  ])
 
   useEffect(() => {
     if (!alreadyPlayed && !preBattle) initLevel()
@@ -1430,6 +1626,7 @@ const Game = ({
   }, [cards, ready])
   useEffect(() => {
     if (!ready || !cards.length || levelCompleteRef.current) return
+    if (wildActive || wildPlacing) return
     if (deckIndex < cards.length) return
     const hv = cards.slice(0, config.fieldCards).some((c) => c.visible)
     if (!hv) {
@@ -1473,84 +1670,87 @@ const Game = ({
     requestAnimationFrame(() => {
       setLastPoints(pts)
       setShowPoints(true)
-      pointsOpacity.setValue(1)
-      pointsMove.setValue(0)
-      Animated.parallel([
-        Animated.timing(pointsOpacity, {
-          toValue: 0,
-          duration: 600,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pointsMove, {
-          toValue: -35,
-          duration: 600,
-          useNativeDriver: true,
-        }),
-      ]).start(() => setShowPoints(false))
+      pointsOpacity.value = 1
+      pointsMove.value = 0
+      pointsOpacity.value = withTiming(0, { duration: 400 })
+      pointsMove.value = withTiming(-25, { duration: 400 }, (finished) => {
+        if (finished) {
+          runOnJS(setShowPoints)(false)
+        }
+      })
     })
   }
 
   const [wildPlacing, setWildPlacing] = useState(false)
   const [wildPendingIndex, setWildPendingIndex] = useState<number | null>(null)
 
-  const handleCardPress = useCallback(
-    (index: number) => {
-      setCards((prev) => {
-        const cur = prev[currentIndex]
-        const tapped = prev[index]
-        if (!cur || !tapped) return prev
-        const isW = wildActive
-        const mc = isCardMatch(cur, tapped)
-        const ms = secondCard !== null && isCardMatch(prev[secondCard], tapped)
-        if (!mc && !ms && !isW) return prev
-        if (autoAdvanceTimer.current) {
-          clearTimeout(autoAdvanceTimer.current)
-          autoAdvanceTimer.current = null
-        }
-        const nc = combo + 1
-        const layoutMultiplier = 1 + (level - 1) * 0.5 // L1=1x, L2=1.5x, L3=2x, L4=2.5x, L5=3x
-        const gloryMultiplier = gloryActive ? 2 : 1
-        const isBounty = bountyIndices.has(index)
-        const bountyMultiplier = isBounty ? 5 : 1
-        const pts = Math.round(
-          BASE_CARD_VALUE *
-            getComboMultiplier(nc) *
-            layoutMultiplier *
-            gloryMultiplier *
-            bountyMultiplier,
-        )
-        if (isBounty) {
-          showMilestone("BOUNTY!", "#FFD700", "💰")
-        }
-        SoundService.playMatch(nc)
-        showPointsAnimation(pts)
-        const u = [...prev]
-        u[index] = { ...u[index], visible: false }
-        setCombo(nc)
-        setScore((s) => s + pts)
-        setShowHints(false)
-        // In handleCardPress, replace the wild (isW) branch:
-        if (isW) {
-          setWildActive(false)
-          if (secondCard !== null) {
-            // Two active cards — need user to pick placement
-            setWildPendingIndex(index) // store which field card was matched
-            setWildPlacing(true) // trigger placement UI
-          } else {
-            // Only one active card — auto place
-            setTimerFrozen(false)
-            setCurrentIndex(index)
-          }
-        } else if (mc) {
-          if (nc >= SECOND_CARD_COMBO && secondCard === null)
-            setSecondCard(currentIndex)
-          setCurrentIndex(index)
-        } else setSecondCard(index)
-        return u
-      })
-    },
-    [currentIndex, secondCard, combo, wildActive, gloryActive, bountyIndices],
-  )
+  const handleCardPress = useCallback((index: number) => {
+    const cards = cardsRef.current
+    const currentIndex = currentIndexRef.current
+    const secondCard = secondCardRef.current
+    const combo = comboRef.current
+    const wildActive = wildActiveRef.current
+    const bountyIndices = bountyIndicesRef.current
+    const level = levelRef.current
+
+    const cur = cards[currentIndex]
+    const tapped = cards[index]
+    if (!cur || !tapped) return
+
+    const isW = wildActive
+    const mc = isCardMatch(cur, tapped)
+    const ms = secondCard !== null && isCardMatch(cards[secondCard], tapped)
+    if (!mc && !ms && !isW) return
+
+    if (autoAdvanceTimer.current) {
+      clearTimeout(autoAdvanceTimer.current)
+      autoAdvanceTimer.current = null
+    }
+
+    const nc = combo + 1
+    const layoutMultiplier = 1 + (level - 1) * 0.5
+    const gloryMultiplier = gloryActiveRef.current ? 2 : 1
+    const isBounty = bountyIndices.has(index)
+    const bountyMultiplier = isBounty ? 5 : 1
+    const pts = Math.round(
+      BASE_CARD_VALUE *
+        getComboMultiplier(nc) *
+        layoutMultiplier *
+        gloryMultiplier *
+        bountyMultiplier,
+    )
+
+    if (isBounty) showMilestone("BOUNTY!", "#FFD700", "💰")
+    SoundService.playMatch(nc)
+    showPointsAnimation(pts)
+
+    setCards((prev) => {
+      const u = [...prev]
+      u[index] = { ...u[index], visible: false }
+      return u
+    })
+    setCombo(nc)
+    setScore((s) => s + pts)
+    setShowHints(false)
+
+    if (isW) {
+      setWildActive(false)
+      if (secondCard !== null) {
+        setWildPendingIndex(index)
+        setWildPlacing(true)
+      } else {
+        setTimerFrozen(false)
+        setCurrentIndex(index)
+      }
+    } else if (mc) {
+      if (nc >= SECOND_CARD_COMBO && secondCard === null) {
+        setSecondCard(currentIndex)
+      }
+      setCurrentIndex(index)
+    } else {
+      setSecondCard(index)
+    }
+  }, []) // ← empty deps, stable forever
 
   const activateGloryHunt = () => {
     if (gloryCharges <= 0) return
@@ -1561,6 +1761,11 @@ const Game = ({
   }
 
   const handleDeckPress = useCallback(() => {
+    const cards = cardsRef.current
+    const deckIndex = deckIndexRef.current
+    const level = levelRef.current
+    const combo = comboRef.current
+
     if (deckIndex >= cards.length) return
     if (autoAdvanceTimer.current) {
       clearTimeout(autoAdvanceTimer.current)
@@ -1579,38 +1784,47 @@ const Game = ({
         useNativeDriver: true,
       }),
     ]).start()
+
+    const insuranceEligible =
+      INSURANCE_LAYOUTS.has(level) &&
+      !insuranceUsedRef.current.has(level) &&
+      combo >= INSURANCE_MIN_COMBO
+
+    let nextCombo = 0
+    let nextComboBase = 0
+
+    if (insuranceEligible) {
+      const resetTo = getInsuranceReset(combo)
+      if (resetTo > 0) {
+        insuranceUsedRef.current.add(level)
+        nextCombo = resetTo
+        nextComboBase = resetTo
+        insuranceFlash.value = withSequence(
+          withTiming(1, { duration: 120 }),
+          withTiming(0, { duration: 380 }),
+        )
+        showMilestone(`COMBO SAVED · x${resetTo}`, "#7BED9F", "🛡")
+        SoundService.playFreeze()
+      }
+    }
+
     setCurrentIndex(deckIndex)
     setDeckIndex((i) => i + 1)
-    setCombo(0)
+    setCombo(nextCombo)
+    comboBaseRef.current = nextComboBase
+    setWildFirstEarned(false)
+    setWildSecondEarned(false)
     setTimerFrozen(false)
     if (freezeTimer.current) clearTimeout(freezeTimer.current)
     setSecondCard(null)
     setShowHints(false)
     setWildActive(false)
-  }, [deckIndex, cards.length])
-
-  const [wildSelecting, setWildSelecting] = useState(false)
-
-  const handleWildSelectFirst = () => {
-    // Wild replaces first card — second card stays
-    setWildSelecting(false)
-    setWildActive(true)
-    // currentIndex stays, secondCard stays
-  }
-
-  const handleWildSelectSecond = () => {
-    // Wild replaces second card — first card stays
-    setCurrentIndex(secondCard!)
-    setSecondCard(currentIndex) // ← keep old first as second
-    setWildSelecting(false)
-    setWildActive(true)
-  }
+  }, []) // ← stable
 
   const handleWildPlaceFirst = () => {
     SoundService.playDeckDraw()
-    // New card replaces first slot, old first becomes second stays
-    setSecondCard(currentIndex)
     setCurrentIndex(wildPendingIndex!)
+    // secondCard stays unchanged
     setWildPlacing(false)
     setWildPendingIndex(null)
     setTimerFrozen(false)
@@ -1618,9 +1832,8 @@ const Game = ({
 
   const handleWildPlaceSecond = () => {
     SoundService.playDeckDraw()
-    // New card replaces second slot, first stays
     setSecondCard(wildPendingIndex!)
-    setCurrentIndex(currentIndex) // stays
+    // currentIndex stays unchanged
     setWildPlacing(false)
     setWildPendingIndex(null)
     setTimerFrozen(false)
@@ -1642,6 +1855,8 @@ const Game = ({
       return
     }
     setScore(0)
+    // setCarryWilds(0)
+    setFreeDrawAvailable(true)
     setBestCombo(0)
     setTotalCleared(0)
     setTotalFieldCards(0)
@@ -1658,6 +1873,10 @@ const Game = ({
     setGloryCharges(1)
     setGloryActive(false)
     setBountyIndices(new Set())
+    setIsPersonalBest(false)
+    setPreviousBest(0)
+    personalBestComboShownRef.current = false
+    insuranceUsedRef.current = new Set()
   }
   const handleBackPress = () => {
     setShowQuitConfirm(true)
@@ -1676,11 +1895,73 @@ const Game = ({
 
   const [wantsRematch, setWantsRematch] = useState(false)
 
-  const handleArenaRematch = async () => {
-    if (!arenaMode || !roomCode || !uid || wantsRematch) return
-    setWantsRematch(true)
-    await setPlayerRematch(roomCode, uid)
-  }
+  const handleFreeDraw = useCallback(() => {
+    const cards = cardsRef.current
+    const deckIndex = deckIndexRef.current
+    const freeDrawAvailable = freeDrawAvailableRef.current
+
+    if (!freeDrawAvailable || deckIndex >= cards.length) return
+    if (autoAdvanceTimer.current) {
+      clearTimeout(autoAdvanceTimer.current)
+      autoAdvanceTimer.current = null
+    }
+    setFreeDrawAvailable(false)
+    SoundService.playDeckDraw()
+    Animated.sequence([
+      Animated.timing(deckScale, {
+        toValue: 0.9,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(deckScale, {
+        toValue: 1,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+    ]).start()
+    setCurrentIndex(deckIndex)
+    setDeckIndex((i) => i + 1)
+    setSecondCard(null)
+    setShowHints(false)
+    setWildActive(false)
+    showMilestone("FREE DRAW!", "#4FC3F7", "🃏")
+  }, []) // ← stable
+
+  // Render Battlefield once per battlefield theme change. Score/combo/timer
+  // updates won't re-walk its 50+ child elements.
+  const battlefieldMemo = useMemo(
+    () => <Battlefield battlefieldId={theme.battlefield} />,
+    [theme.battlefield],
+  )
+  // Carry combo button — only shows when ≤7 field cards remain and combo > remaining.
+  // Memoized to avoid filtering the full card array on every state change.
+  const carryButtonData = useMemo(() => {
+    const fieldRemaining = cards
+      .slice(0, config.fieldCards)
+      .filter((c) => c.visible).length
+    const carried = combo - fieldRemaining
+    const shouldShow =
+      carried > 0 &&
+      fieldRemaining <= 7 &&
+      !betweenLevels &&
+      !gameOver &&
+      level < TOTAL_LEVELS
+    return { shouldShow, carried }
+  }, [cards, config.fieldCards, combo, betweenLevels, gameOver, level])
+
+  const wildProgressData = useMemo(() => {
+    if (wildSecondEarned) return null
+    const newMatches = combo - comboBaseRef.current
+    const target = wildFirstEarned
+      ? WILD_SECOND_THRESHOLD
+      : WILD_COMBO_THRESHOLD
+    const remaining = target - newMatches
+    if (remaining <= 0) return null
+    return {
+      progress: Math.min((newMatches / target) * 100, 100),
+      remaining,
+    }
+  }, [combo, wildFirstEarned, wildSecondEarned])
 
   useEffect(() => {
     if (!arenaMode || !roomCode || !uid) return
@@ -1740,6 +2021,14 @@ const Game = ({
     return () => stateRef.off("value", onState)
   }, [arenaMode, roomCode, gameOver, wantsRematch])
 
+  // Combo tint color — memoized so the inline style object stays referentially
+  // stable across renders that don't change the combo tier.
+  const comboTintColor = useMemo(() => {
+    if (combo >= 25) return "rgba(160,40,210,0.08)"
+    if (combo >= 15) return "rgba(230,60,60,0.07)"
+    return "rgba(255,200,50,0.05)"
+  }, [combo])
+
   const remaining = cards.length - deckIndex
   const hintedIndices = useMemo(() => {
     const s = new Set<number>()
@@ -1793,9 +2082,16 @@ const Game = ({
   if (alreadyPlayed)
     return (
       <View
-        style={[styles.center, { backgroundColor: theme.battlefieldColor }]}
+        style={[
+          styles.center,
+          {
+            backgroundColor: theme.battlefieldColor,
+            position: "relative", // add this
+            overflow: "hidden",
+          },
+        ]}
       >
-        <Battlefield battlefieldId={theme.battlefield} />
+        {battlefieldMemo}
         <Text style={styles.dailyBadgeIcon}>📜</Text>
         <Text style={styles.gameTitle}>QUEST COMPLETE</Text>
         <Text style={styles.partialText}>
@@ -1810,11 +2106,14 @@ const Game = ({
         <Text style={styles.partialText}>
           Come back tomorrow for a new quest!
         </Text>
-        <TouchableOpacity style={styles.goldBtn} onPress={onHome}>
+        {/* <TouchableOpacity style={styles.goldBtn} onPress={onHome}>
           <Text style={styles.goldBtnText}>🏰 Return to Castle</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
+        <ReturnToCastle onPress={onHome} />
       </View>
     )
+
+  // ─── REPLACE preBattle return block ───
 
   if (preBattle && level === 1 && !alreadyPlayed)
     return (
@@ -1826,46 +2125,89 @@ const Game = ({
             flexDirection: "row",
             paddingHorizontal: 24,
             gap: 20,
+            position: "relative",
+            overflow: "hidden",
           },
         ]}
       >
-        <Battlefield battlefieldId={theme.battlefield} />
+        {battlefieldMemo}
 
         {/* Left — Title + Info */}
-        <View
-          style={{
-            flex: 1,
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 6,
-          }}
-        >
-          <Text style={{ fontSize: 42 }}>⚔</Text>
-          <Text style={styles.gameTitle}>PREPARE</Text>
-          <Text style={styles.gameTitle}>FOR BATTLE</Text>
-          <View style={styles.divider} />
-          <Text style={styles.partialText}>
-            {dailyMode ? "Daily Quest" : `${TOTAL_LEVELS} battlefields await`}
+        <View style={styles.preBattleLeft}>
+          {/* Top ornament */}
+          <View style={styles.screenOrnRow}>
+            <View style={styles.screenOrnLine} />
+            <Text style={styles.screenOrnDot}>◆</Text>
+            <View style={styles.screenOrnLine} />
+          </View>
+
+          {/* Main icon — much bigger, with ring */}
+          <View style={styles.preBattleIconWrap}>
+            <View style={styles.preBattleIconRingOuter} />
+            <View style={styles.preBattleIconRingInner} />
+            <Text style={styles.preBattleIcon}>⚔️</Text>
+          </View>
+
+          {/* Title */}
+          <Text style={styles.preBattleTitle}>
+            {dailyMode ? "DAILY QUEST" : "PREPARE FOR BATTLE"}
           </Text>
 
-          {/* Layout preview — progress dots */}
-          <View style={styles.progressRow}>
-            {Array.from({ length: TOTAL_LEVELS }).map((_, i) => (
-              <View key={i} style={styles.progressDot} />
-            ))}
+          <View style={styles.screenOrnRow}>
+            <View style={styles.screenOrnLine} />
+            <Text style={styles.screenOrnRune}>ᚠ</Text>
+            <View style={styles.screenOrnLine} />
+            <Text style={styles.screenOrnRune}>ᚦ</Text>
+            <View style={styles.screenOrnLine} />
+          </View>
+
+          <Text style={styles.preBattleSub}>
+            {dailyMode
+              ? "One attempt · Seeded deck · Glory awaits"
+              : `${TOTAL_LEVELS} battlefields await your conquest`}
+          </Text>
+
+          {/* Progress dots — with level numbers */}
+          {!dailyMode && (
+            <View style={styles.preBattleLevels}>
+              {Array.from({ length: TOTAL_LEVELS }).map((_, i) => (
+                <View key={i} style={styles.preBattleLevel}>
+                  <View style={styles.progressDot}>
+                    <Text style={styles.preBattleLevelNum}>{i + 1}</Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.preBattleLevelLine,
+                      i === TOTAL_LEVELS - 1 && { opacity: 0 },
+                    ]}
+                  />
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* Bottom ornament */}
+          <View style={styles.screenOrnRow}>
+            <View style={styles.screenOrnLine} />
+            <Text style={styles.screenOrnDot}>◆</Text>
+            <View style={styles.screenOrnLine} />
           </View>
         </View>
 
         {/* Right — Glory Hunt + Enter */}
-        <View
-          style={{
-            flex: 1,
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 10,
-          }}
-        >
-          {/* Glory Hunt option */}
+        <View style={styles.preBattleRight}>
+          {/* Daily mode badge */}
+          {dailyMode && (
+            <View style={styles.dailyQuestBadge}>
+              <Text style={styles.dailyQuestIcon}>📜</Text>
+              <View>
+                <Text style={styles.dailyQuestLabel}>DAILY QUEST</Text>
+                <Text style={styles.dailyQuestSub}>Resets at midnight</Text>
+              </View>
+            </View>
+          )}
+
+          {/* Glory Hunt */}
           {!dailyMode && gloryCharges > 0 && (
             <TouchableOpacity
               style={[styles.gloryBtn, gloryActive && styles.gloryBtnActive]}
@@ -1887,24 +2229,38 @@ const Game = ({
             </TouchableOpacity>
           )}
 
-          {gloryActive && !gloryCharges && (
+          {/* {gloryActive && !gloryCharges && (
             <View style={styles.gloryBonusBox}>
               <Text style={styles.gloryBonusText}>⚡ GLORY HUNT READY</Text>
             </View>
-          )}
+          )} */}
 
+          {/* Enter battle */}
           <TouchableOpacity
             style={styles.goldBtn}
-            onPress={() => setPreBattle(false)}
+            onPress={() => {
+              setPreBattle(false)
+              // Track battle start
+              if (uid) {
+                firestore()
+                  .collection("users")
+                  .doc(uid)
+                  .update({
+                    battlesStarted: firestore.FieldValue.increment(1),
+                    lastBattleAt: firestore.FieldValue.serverTimestamp(),
+                  })
+                  .catch(() => {})
+              }
+            }}
           >
-            <Text style={styles.goldBtnText}>
-              {gloryActive ? "⚡ Begin Glory Hunt" : "⚔ Enter Battle"}
+            <Text
+              style={[styles.goldBtnText, gloryActive && { color: "#fff" }]}
+            >
+              {gloryActive ? "⚡ BEGIN GLORY HUNT" : "⚔ ENTER BATTLE"}
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.ghostBtn} onPress={onHome}>
-            <Text style={styles.ghostBtnText}>🏰 Return to Castle</Text>
-          </TouchableOpacity>
+          <ReturnToCastle onPress={onHome} />
         </View>
       </View>
     )
@@ -1913,18 +2269,31 @@ const Game = ({
       <View
         style={[styles.center, { backgroundColor: theme.battlefieldColor }]}
       >
-        <Battlefield battlefieldId={theme.battlefield} />
+        {battlefieldMemo}
         <Text style={styles.loadText}>
           ⚔ {dailyMode ? "Preparing daily quest..." : "Preparing the field..."}
         </Text>
       </View>
     )
 
+  // ─── REPLACE gameOver return block ───
+
   if (gameOver) {
     const clearPct =
       totalFieldCards > 0
         ? Math.round((totalCleared / totalFieldCards) * 100)
         : 0
+
+    const isVictory = clearPct >= 80
+    const isMidBattle = clearPct >= 50
+    const outcomeIcon = isVictory ? "👑" : isMidBattle ? "⚔️" : "🛡"
+    const outcomeTitle = dailyMode
+      ? "QUEST COMPLETE"
+      : isVictory
+        ? "VICTORY"
+        : isMidBattle
+          ? "BATTLE OVER"
+          : "RETREAT"
 
     return (
       <View
@@ -1935,20 +2304,18 @@ const Game = ({
             flexDirection: "row",
             paddingHorizontal: 24,
             gap: 20,
+            position: "relative", // add this
+            overflow: "hidden",
           },
         ]}
       >
-        <Battlefield battlefieldId={theme.battlefield} />
+        {isPersonalBest && !isAllTimeRecord && (
+          <PersonalBestBanner newScore={score} previousBest={previousBest} />
+        )}
+        {battlefieldMemo}
 
-        {/* Left — Score + Stats */}
-        <View
-          style={{
-            flex: 1,
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 4,
-          }}
-        >
+        {/* Left — Result + Score */}
+        <View style={styles.gameOverLeft}>
           {isAllTimeRecord ? (
             <View style={styles.recordBanner}>
               <Text style={styles.recordStars}>✦ ✦ ✦ ✦ ✦</Text>
@@ -1959,17 +2326,28 @@ const Game = ({
             </View>
           ) : (
             <>
-              <Text style={{ fontSize: 36 }}>
-                {clearPct >= 80 ? "👑" : clearPct >= 50 ? "⚔" : "🛡"}
-              </Text>
-              <Text style={styles.gameTitle}>
-                {dailyMode
-                  ? "QUEST COMPLETE"
-                  : clearPct >= 80
-                    ? "VICTORY"
-                    : clearPct >= 50
-                      ? "BATTLE OVER"
-                      : "RETREAT"}
+              {/* Outcome icon with ring — much bigger */}
+              <View style={styles.outcomeIconWrap}>
+                <View
+                  style={[
+                    styles.outcomeIconRing,
+                    {
+                      borderColor: isVictory
+                        ? "rgba(255,215,0,0.3)"
+                        : isMidBattle
+                          ? "rgba(232,197,71,0.2)"
+                          : "rgba(255,255,255,0.1)",
+                    },
+                  ]}
+                />
+                <Text style={styles.outcomeIcon}>{outcomeIcon}</Text>
+              </View>
+
+              {/* Title */}
+              <Text
+                style={[styles.gameTitle, isVictory && styles.gameTitleVictory]}
+              >
+                {outcomeTitle}
               </Text>
             </>
           )}
@@ -1979,16 +2357,11 @@ const Game = ({
           {/* Rank */}
           {!arenaMode &&
             uid &&
-            (dailyMode ? (
-              dailyRank !== null ? (
-                <Text style={styles.rankText}>
-                  #{dailyRank} in today's quest
-                </Text>
-              ) : (
-                <Text style={styles.rankLoading}>Calculating rank...</Text>
-              )
-            ) : rank !== null ? (
-              <Text style={styles.rankText}>#{rank} among all warriors</Text>
+            (dailyRank !== null || rank !== null ? (
+              <Text style={styles.rankText}>
+                #{dailyMode ? dailyRank : rank}{" "}
+                {dailyMode ? "in today's quest" : "among all warriors"}
+              </Text>
             ) : (
               <Text style={styles.rankLoading}>Calculating rank...</Text>
             ))}
@@ -2007,6 +2380,11 @@ const Game = ({
               <Text style={styles.statValue}>x{bestCombo}</Text>
               <Text style={styles.statLabel}>BEST COMBO</Text>
             </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statBox}>
+              <Text style={styles.statValue}>{totalCleared}</Text>
+              <Text style={styles.statLabel}>CARDS</Text>
+            </View>
           </View>
 
           {!arenaMode && uid && (
@@ -2018,15 +2396,8 @@ const Game = ({
           )}
         </View>
 
-        {/* Right — Rankings + Buttons */}
-        <View
-          style={{
-            flex: 1,
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-          }}
-        >
+        {/* Right — Buttons + Arena */}
+        <View style={styles.gameOverRight}>
           {/* Arena final rankings */}
           {arenaMode && arenaPlayers.length > 0 && (
             <View style={styles.arenaBoard}>
@@ -2067,26 +2438,32 @@ const Game = ({
             </View>
           )}
 
-          {/* Buttons */}
-          <TouchableOpacity style={styles.goldBtn} onPress={handlePlayAgain}>
-            <Text style={styles.goldBtnText}>
-              {dailyMode ? "🏰 Return to Castle" : "⚔ Battle Again"}
-            </Text>
-          </TouchableOpacity>
-
-          {!dailyMode && (
-            <TouchableOpacity
-              style={styles.ghostBtn}
-              onPress={arenaMode ? handleConfirmQuit : onHome}
-            >
-              <Text style={styles.ghostBtnText}>🏰 Return to Castle</Text>
+          {/* Play again / return */}
+          {!arenaMode && (
+            <TouchableOpacity style={styles.goldBtn} onPress={handlePlayAgain}>
+              <Text style={styles.goldBtnText}>
+                {dailyMode ? "⚔ BATTLE AGAIN" : "⚔ BATTLE AGAIN"}
+              </Text>
             </TouchableOpacity>
           )}
 
+          {arenaMode && (
+            <TouchableOpacity
+              style={styles.goldBtn}
+              onPress={handleConfirmQuit}
+            >
+              <Text style={styles.goldBtnText}>🏰 Return to Castle</Text>
+            </TouchableOpacity>
+          )}
+
+          {!arenaMode && <ReturnToCastle onPress={onHome} />}
+
           {!dailyMode && !arenaMode && (
-            <Text style={styles.partialText}>
-              Check Hall of Glory for rankings
-            </Text>
+            <View style={styles.hallHint}>
+              <Text style={styles.hallHintText}>
+                ⚔ Check Hall of Glory for rankings
+              </Text>
+            </View>
           )}
         </View>
 
@@ -2112,14 +2489,17 @@ const Game = ({
         style={[
           styles.center,
           {
+            flex: 1,
             backgroundColor: theme.battlefieldColor,
             flexDirection: "row",
             paddingHorizontal: 24,
             gap: 20,
+            position: "relative", // add this
+            overflow: "hidden",
           },
         ]}
       >
-        <Battlefield battlefieldId={theme.battlefield} />
+        {battlefieldMemo}
 
         {/* Left — Result + Score */}
         <View
@@ -2154,11 +2534,89 @@ const Game = ({
             <Text style={styles.spoilsCardValue}>{score.toLocaleString()}</Text>
           </View>
 
-          {gloryActive && (
+          {/* {gloryActive && (
             <View style={styles.gloryBonusBox}>
-              <Text style={styles.gloryBonusText}>⚡ GLORY HUNT — 2x</Text>
+              <Text style={{ fontSize: 16 }}>⚡</Text>
+              <Text style={styles.gloryBonusText}>GLORY HUNT ACTIVE · 2×</Text>
+              <Text style={{ fontSize: 16 }}>⚡</Text>
             </View>
-          )}
+          )} */}
+
+          {/* Consolidated achievement banner — shows the single most exciting thing
+    that happened this layout, prioritized */}
+          {(() => {
+            const cleared = cards
+              .slice(0, config.fieldCards)
+              .every((c) => !c.visible)
+            // Priority: Perfect Clear > Carry Combo > Glory Hunt
+            if (cleared) {
+              return (
+                <View
+                  style={[styles.achievementBanner, styles.achievementPerfect]}
+                >
+                  <Text style={{ fontSize: 18 }}>✨</Text>
+                  <View style={styles.achievementCenter}>
+                    <Text style={styles.achievementTitle}>PERFECT CLEAR</Text>
+                    <Text style={styles.achievementSub}>
+                      +50,000 spoils bonus
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 18 }}>✨</Text>
+                </View>
+              )
+            }
+            if (carryCombo > 0) {
+              return (
+                <View
+                  style={[styles.achievementBanner, styles.achievementCarry]}
+                >
+                  <Text style={{ fontSize: 18 }}>⚡</Text>
+                  <View style={styles.achievementCenter}>
+                    <Text
+                      style={[styles.achievementTitle, { color: "#7BED9F" }]}
+                    >
+                      COMBO CARRIED
+                    </Text>
+                    <Text
+                      style={[
+                        styles.achievementSub,
+                        { color: "rgba(123,237,159,0.6)" },
+                      ]}
+                    >
+                      x{carryCombo} ready for next battlefield
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 18 }}>⚡</Text>
+                </View>
+              )
+            }
+            if (gloryActive) {
+              return (
+                <View
+                  style={[styles.achievementBanner, styles.achievementGlory]}
+                >
+                  <Text style={{ fontSize: 18 }}>⚡</Text>
+                  <View style={styles.achievementCenter}>
+                    <Text
+                      style={[styles.achievementTitle, { color: "#FF8C00" }]}
+                    >
+                      GLORY HUNT ACTIVE
+                    </Text>
+                    <Text
+                      style={[
+                        styles.achievementSub,
+                        { color: "rgba(255,140,0,0.6)" },
+                      ]}
+                    >
+                      2× spoils until end of run
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 18 }}>⚡</Text>
+                </View>
+              )
+            }
+            return null
+          })()}
 
           {/* Progress dots */}
           <View style={styles.progressRow}>
@@ -2253,11 +2711,23 @@ const Game = ({
             </TouchableOpacity>
           )}
 
-          {gloryActive && (
-            <View style={styles.gloryBonusBox}>
-              <Text style={styles.gloryBonusText}>⚡ GLORY HUNT READY</Text>
+          {/* {gloryActive && (
+            <View
+              style={[
+                styles.gloryBonusBox,
+                {
+                  borderColor: "#FF8C00",
+                  backgroundColor: "rgba(255,140,0,0.12)",
+                },
+              ]}
+            >
+              <Text style={{ fontSize: 18 }}>⚡</Text>
+              <Text style={[styles.gloryBonusText, { fontSize: 14 }]}>
+                GLORY HUNT READY
+              </Text>
+              <Text style={{ fontSize: 18 }}>⚡</Text>
             </View>
-          )}
+          )} */}
 
           {/* Next Battle / Arena */}
           {arenaMode ? (
@@ -2308,9 +2778,16 @@ const Game = ({
   if (paused)
     return (
       <View
-        style={[styles.center, { backgroundColor: theme.battlefieldColor }]}
+        style={[
+          styles.center,
+          {
+            backgroundColor: theme.battlefieldColor,
+            position: "relative", // add this
+            overflow: "hidden",
+          },
+        ]}
       >
-        <Battlefield battlefieldId={theme.battlefield} />
+        {battlefieldMemo}
         <Text style={styles.gameTitle}>⏸ PAUSED</Text>
         <Text style={styles.pauseScore}>{score.toLocaleString()}</Text>
         <TouchableOpacity
@@ -2351,21 +2828,13 @@ const Game = ({
             { backgroundColor: dailyMode ? "#0F0A05" : theme.battlefieldColor },
           ]}
         >
-          <Battlefield battlefieldId={theme.battlefield} />
+          {battlefieldMemo}
           {combo >= 10 && (
             <Animated.View
               pointerEvents="none"
               style={[
                 StyleSheet.absoluteFillObject,
-                {
-                  backgroundColor:
-                    combo >= 25
-                      ? "rgba(200,50,255,0.12)"
-                      : combo >= 15
-                        ? "rgba(255,70,70,0.1)"
-                        : "rgba(255,200,50,0.06)",
-                  opacity: comboGlowOpacity,
-                },
+                { backgroundColor: comboTintColor, opacity: comboGlowOpacity },
               ]}
             />
           )}
@@ -2376,7 +2845,13 @@ const Game = ({
           >
             <Text style={styles.backBtnText}>✕</Text>
           </TouchableOpacity>
-
+          {/* Combo insurance shield flash — tiny, brief, no text */}
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.insuranceFlash, insuranceFlashStyle]}
+          >
+            <Text style={styles.insuranceFlashIcon}>🛡</Text>
+          </Animated.View>
           {wildActive && (
             <Animated.View
               style={[
@@ -2422,7 +2897,6 @@ const Game = ({
               <Text style={styles.gloryBadgeText}>⚡ GLORY HUNT · 2X</Text>
             </View>
           )}
-
           <View style={styles.field}>
             {ready ? (
               <LayoutEntrance key={layoutKey} layoutKey={layoutKey}>
@@ -2430,7 +2904,6 @@ const Game = ({
               </LayoutEntrance>
             ) : null}
           </View>
-
           {wildPlacing && (
             <View style={styles.wildSelectBanner}>
               <Text style={styles.wildSelectBannerText}>
@@ -2438,9 +2911,8 @@ const Game = ({
               </Text>
             </View>
           )}
-
           <View style={styles.wallContainer}>
-            <Battlements />
+            <Battlements color={tableConfig.color} />
             <View
               style={[
                 styles.wall,
@@ -2462,17 +2934,37 @@ const Game = ({
                     cardBackColor={dailyMode ? "#3D2E0A" : theme.cardBackColor}
                   />
                 </Animated.View>
+                {freeDrawAvailable &&
+                  remaining > 0 &&
+                  !betweenLevels &&
+                  !gameOver && (
+                    <TouchableOpacity
+                      style={styles.freeDrawBtn}
+                      onPress={handleFreeDraw}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.freeDrawText}>FREE DRAW</Text>
+                    </TouchableOpacity>
+                  )}
                 <View style={styles.spoilsBox}>
                   <Text style={styles.label}>SPOILS</Text>
-                  <Animated.Text
-                    style={[
-                      styles.scoreValue,
-                      { transform: [{ scale: scorePulse }] },
-                    ]}
-                  >
+                  <Reanimated.Text style={[styles.scoreValue, scorePulseStyle]}>
                     {score.toLocaleString()}
-                  </Animated.Text>
+                  </Reanimated.Text>
                 </View>
+                {carryButtonData.shouldShow ? (
+                  <TouchableOpacity
+                    style={styles.carryBtn}
+                    onPress={handleAbandonLayout}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.carryBtnIcon}>⚡</Text>
+                    <Text style={styles.carryBtnText}>
+                      x{carryButtonData.carried}
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+                {/* carry combo button stays here */}
               </View>
               <View style={styles.centerCards}>
                 <View
@@ -2630,7 +3122,7 @@ const Game = ({
                   }}
                 />
                 <View style={styles.comboWrap}>
-                  <Text style={styles.label}>COMBO</Text>
+                  {/* <Text style={styles.label}>COMBO</Text> */}
                   <View style={styles.comboRow}>
                     {combo >= 3 && (
                       <View
@@ -2643,45 +3135,40 @@ const Game = ({
                         ]}
                       />
                     )}
-                    <Animated.Text
+                    <Reanimated.Text
                       style={[
                         styles.comboValue,
+                        comboPulseStyle,
                         {
-                          transform: [{ scale: comboPulse }],
                           color: comboColor,
                           fontSize:
                             combo >= 25
-                              ? 28
+                              ? 20
                               : combo >= 15
-                                ? 24
+                                ? 19
                                 : combo >= 10
-                                  ? 22
-                                  : 18,
+                                  ? 18
+                                  : 17,
                           textShadowColor:
                             combo >= 10 ? comboColor : "transparent",
                           textShadowOffset: { width: 0, height: 0 },
                           textShadowRadius:
                             combo >= 25
-                              ? 24
+                              ? 20
                               : combo >= 15
-                                ? 16
+                                ? 14
                                 : combo >= 10
-                                  ? 10
+                                  ? 8
                                   : 0,
                         },
                       ]}
                     >
                       x{combo}
-                    </Animated.Text>
+                    </Reanimated.Text>
                   </View>
                   {combo >= 5 && (
                     <Text
-                      style={[
-                        styles.comboTitle,
-                        {
-                          color: comboColor + "80",
-                        },
-                      ]}
+                      style={[styles.comboTitle, { color: comboColor + "90" }]}
                     >
                       {combo >= 30
                         ? "MYTHIC"
@@ -2696,21 +3183,29 @@ const Game = ({
                                 : "WORTHY"}
                     </Text>
                   )}
+                  {/* Wild card progress */}
+                  {wildProgressData && (
+                    <View style={styles.wildProgress}>
+                      <Text style={styles.wildProgressIcon}>🃏</Text>
+                      <View style={styles.wildProgressTrack}>
+                        <View
+                          style={[
+                            styles.wildProgressFill,
+                            { width: `${wildProgressData.progress}%` },
+                          ]}
+                        />
+                      </View>
+                      <Text style={styles.wildProgressText}>
+                        {wildProgressData.remaining}
+                      </Text>
+                    </View>
+                  )}
                 </View>
               </View>
             </View>
           </View>
-
           {showPoints && (
-            <Animated.View
-              style={[
-                styles.pointsPopup,
-                {
-                  opacity: pointsOpacity,
-                  transform: [{ translateY: pointsMove }],
-                },
-              ]}
-            >
+            <Reanimated.View style={[styles.pointsPopup, pointsPopupStyle]}>
               <Text
                 style={[
                   styles.pointsText,
@@ -2761,14 +3256,13 @@ const Game = ({
                           : "WORTHY"}
                 </Text>
               )}
-            </Animated.View>
+            </Reanimated.View>
           )}
-          <Animated.View
+          <Reanimated.View
             style={[
               styles.milestone,
+              milestoneStyle,
               {
-                opacity: milestoneOpacity,
-                transform: [{ scale: milestoneScale }],
                 borderColor: milestoneColor + "30",
                 shadowColor: milestoneColor,
               },
@@ -2811,92 +3305,86 @@ const Game = ({
                 x{combo} COMBO
               </Text>
             </View>
-          </Animated.View>
+          </Reanimated.View>
           {showQuitConfirm && (
             <View style={styles.quitOverlay}>
               <View style={styles.quitCard}>
-                {/* Top ornament */}
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 8,
-                    marginBottom: 2,
-                  }}
-                >
-                  <View
-                    style={{
-                      width: 30,
-                      height: 1,
-                      backgroundColor: "rgba(192,57,43,0.3)",
-                    }}
-                  />
-                  <Text style={{ color: "rgba(192,57,43,0.4)", fontSize: 8 }}>
-                    ◆
-                  </Text>
-                  <View
-                    style={{
-                      width: 30,
-                      height: 1,
-                      backgroundColor: "rgba(192,57,43,0.3)",
-                    }}
-                  />
+                {/* Animated glow behind card — atmospheric */}
+                <View style={styles.quitGlow} />
+
+                {/* Top rune row */}
+                <View style={styles.quitRuneRow}>
+                  <Text style={styles.quitRune}>ᚠ</Text>
+                  <View style={styles.quitOrnLine} />
+                  <Text style={styles.quitRune}>ᚦ</Text>
+                  <View style={styles.quitOrnLine} />
+                  <Text style={styles.quitRune}>ᚱ</Text>
                 </View>
-                <Text style={styles.quitTitle}>Abandon Battle?</Text>
-                <Text style={styles.quitSub}>
-                  {dailyMode
-                    ? "You will lose your daily attempt!"
-                    : "Your progress on this run will be lost."}
+
+                {/* Main icon — skull on crossed swords */}
+                <View style={styles.quitIconWrap}>
+                  <Text style={styles.quitIconBehind}>⚔️</Text>
+                  <Text style={styles.quitIconFront}>💀</Text>
+                </View>
+
+                {/* Title */}
+                <Text style={styles.quitTitle}>RETREAT?</Text>
+                <Text style={styles.quitSubtitle}>
+                  Your battle will be abandoned
                 </Text>
-                <View
-                  style={{
-                    width: 60,
-                    height: 1,
-                    backgroundColor: "rgba(232,197,71,0.1)",
-                    marginVertical: 2,
-                  }}
-                />
-                <Text style={styles.quitScore}>
-                  Current spoils: {score.toLocaleString()}
-                </Text>
+
+                <View style={styles.quitDivider} />
+
+                {/* Warning for daily */}
+                {dailyMode && (
+                  <View style={styles.quitWarningBox}>
+                    <Text style={styles.quitWarningIcon}>⚠️</Text>
+                    <Text style={styles.quitWarningText}>
+                      Daily attempt will be lost!
+                    </Text>
+                  </View>
+                )}
+
+                {/* Score at stake */}
+                {score > 0 && (
+                  <View style={styles.quitScoreBox}>
+                    <Text style={styles.quitScoreLabel}>⚔ SPOILS AT STAKE</Text>
+                    <Text style={styles.quitScoreValue}>
+                      {score.toLocaleString()}
+                    </Text>
+                  </View>
+                )}
+
+                <View style={styles.quitDivider} />
+
+                {/* Keep fighting — primary */}
                 <TouchableOpacity
-                  style={styles.goldBtn}
+                  style={styles.quitFightBtn}
                   onPress={handleResumeFromQuit}
+                  activeOpacity={0.85}
                 >
-                  <Text style={styles.goldBtnText}>⚔ Keep Fighting</Text>
+                  <Text style={styles.quitFightIcon}>⚔️</Text>
+                  <Text style={styles.quitFightText}>KEEP FIGHTING</Text>
+                  <Text style={styles.quitFightIcon}>⚔️</Text>
                 </TouchableOpacity>
+
+                {/* Retreat — secondary */}
                 <TouchableOpacity
-                  style={styles.quitBtn}
+                  style={styles.quitLeaveBtn}
                   onPress={handleConfirmQuit}
+                  activeOpacity={0.85}
                 >
-                  <Text style={styles.quitBtnText}>🚪 Leave Battle</Text>
+                  <Text style={styles.quitLeaveIcon}>🏰</Text>
+                  <Text style={styles.quitLeaveText}>Retreat to Castle</Text>
                 </TouchableOpacity>
-                {/* Bottom ornament */}
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 8,
-                    marginTop: 4,
-                  }}
-                >
-                  <View
-                    style={{
-                      width: 20,
-                      height: 1,
-                      backgroundColor: "rgba(192,57,43,0.2)",
-                    }}
-                  />
-                  <Text style={{ color: "rgba(192,57,43,0.3)", fontSize: 6 }}>
-                    ◆
-                  </Text>
-                  <View
-                    style={{
-                      width: 20,
-                      height: 1,
-                      backgroundColor: "rgba(192,57,43,0.2)",
-                    }}
-                  />
+
+                {/* Bottom rune row */}
+                <View style={styles.quitRuneRow}>
+                  <Text style={styles.quitRune}>ᛟ</Text>
+                  <View style={styles.quitOrnLine} />
+                  <Text style={styles.quitRuneDot}>◆</Text>
+                  <View style={styles.quitOrnLine} />
+                  <Text style={styles.quitRune}>ᛏ</Text>
                 </View>
               </View>
             </View>
@@ -2916,6 +3404,405 @@ const styles = StyleSheet.create({
   // ─────────────────────────────────────
   container: { flex: 1 },
   field: { flex: 1, width: "100%", justifyContent: "center" },
+
+  // ─── ADD these to Game.tsx styles ───
+
+  // Shared ornament row
+  screenOrnRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    width: "100%",
+  },
+  screenOrnLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "rgba(232,197,71,0.1)",
+  },
+  screenOrnDot: {
+    color: "rgba(232,197,71,0.3)",
+    fontSize: 7,
+  },
+  screenOrnRune: {
+    color: "rgba(232,197,71,0.25)",
+    fontSize: 12,
+  },
+
+  // ── PRE-BATTLE ──
+  preBattleLeft: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+  preBattleRight: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+  },
+  preBattleIconWrap: {
+    width: 100,
+    height: 100,
+    justifyContent: "center",
+    alignItems: "center",
+    marginVertical: 4,
+  },
+  preBattleIconRingOuter: {
+    position: "absolute",
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 1,
+    borderColor: "rgba(232,197,71,0.15)",
+    borderStyle: "dashed",
+  },
+  preBattleIconRingInner: {
+    position: "absolute",
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 1,
+    borderColor: "rgba(232,197,71,0.2)",
+  },
+  preBattleIcon: {
+    fontSize: 52,
+    textShadowColor: "rgba(232,197,71,0.3)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 20,
+  },
+  preBattleTitle: {
+    color: "#E8C547",
+    fontSize: 26,
+    fontWeight: "900",
+    letterSpacing: 5,
+    textAlign: "center",
+    textShadowColor: "rgba(232,197,71,0.4)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 16,
+  },
+  preBattleSub: {
+    color: "rgba(255,255,255,0.3)",
+    fontSize: 12,
+    fontWeight: "600",
+    textAlign: "center",
+    letterSpacing: 1,
+    lineHeight: 18,
+  },
+  preBattleLevels: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 4,
+  },
+  preBattleLevel: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  preBattleLevelNum: {
+    color: "rgba(232,197,71,0.5)",
+    fontSize: 8,
+    fontWeight: "900",
+  },
+  preBattleLevelLine: {
+    width: 12,
+    height: 1,
+    backgroundColor: "rgba(232,197,71,0.1)",
+  },
+
+  // Daily quest badge
+  dailyQuestBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "rgba(232,197,71,0.05)",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(232,197,71,0.15)",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    width: "100%",
+  },
+  dailyQuestIcon: { fontSize: 22 },
+  dailyQuestLabel: {
+    color: "#E8C547",
+    fontSize: 12,
+    fontWeight: "900",
+    letterSpacing: 2,
+  },
+  dailyQuestSub: {
+    color: "rgba(232,197,71,0.4)",
+    fontSize: 9,
+    fontWeight: "600",
+    marginTop: 1,
+  },
+
+  // Glory enter button variant
+  gloryEnterBtn: {
+    backgroundColor: "#FF8C00",
+    borderColor: "#CC6600",
+    shadowColor: "#FF8C00",
+  },
+
+  // ── GAME OVER ──
+  gameOverLeft: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  gameOverRight: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+  outcomeIconWrap: {
+    width: 110,
+    height: 110,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  outcomeIconRing: {
+    position: "absolute",
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    borderWidth: 1.5,
+  },
+  outcomeIcon: {
+    fontSize: 64,
+    textShadowColor: "rgba(232,197,71,0.4)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 20,
+  },
+  gameTitleVictory: {
+    color: "#FFD700",
+    textShadowColor: "rgba(255,215,0,0.5)",
+    fontSize: 34,
+  },
+  hallHint: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  hallHintText: {
+    color: "rgba(232,197,71,0.25)",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1,
+    textAlign: "center",
+  },
+
+  // Stats row — add a third stat box
+  statsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+    marginVertical: 4,
+    backgroundColor: "rgba(232,197,71,0.03)",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(232,197,71,0.1)",
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+  },
+  statValue: {
+    color: "#E8C547",
+    fontSize: 20, // was 22 — slightly smaller to fit 3 stats
+    fontWeight: "900",
+    textShadowColor: "rgba(232,197,71,0.3)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 6,
+  },
+
+  // ─── REPLACE all quit* styles ───
+
+  quitOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.92)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000,
+  },
+  quitCard: {
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#0D0907",
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: "rgba(232,197,71,0.25)",
+    paddingHorizontal: 36,
+    paddingVertical: 28,
+    minWidth: 300,
+    maxWidth: 340,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.9,
+    shadowRadius: 30,
+    elevation: 30,
+    overflow: "hidden",
+  },
+  quitGlow: {
+    position: "absolute",
+    top: -40,
+    left: "20%",
+    width: "60%",
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "rgba(232,197,71,0.04)",
+  },
+  quitRuneRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    width: "100%",
+  },
+  quitOrnLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "rgba(232,197,71,0.1)",
+  },
+  quitRune: {
+    color: "rgba(232,197,71,0.3)",
+    fontSize: 14,
+    fontWeight: "400",
+  },
+  quitRuneDot: {
+    color: "rgba(232,197,71,0.2)",
+    fontSize: 7,
+  },
+  quitIconWrap: {
+    position: "relative",
+    width: 72,
+    height: 72,
+    justifyContent: "center",
+    alignItems: "center",
+    marginVertical: 4,
+  },
+  quitIconBehind: {
+    position: "absolute",
+    fontSize: 52,
+    opacity: 0.25,
+    transform: [{ rotate: "0deg" }],
+  },
+  quitIconFront: {
+    fontSize: 44,
+    zIndex: 2,
+  },
+  quitTitle: {
+    color: "#E8C547",
+    fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 8,
+    textShadowColor: "rgba(232,197,71,0.4)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 16,
+  },
+  quitSubtitle: {
+    color: "rgba(255,255,255,0.25)",
+    fontSize: 8,
+    fontWeight: "600",
+    letterSpacing: 1,
+    marginTop: -4,
+  },
+  quitDivider: {
+    width: "70%",
+    height: 1,
+    backgroundColor: "rgba(232,197,71,0.08)",
+  },
+  quitWarningBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(255,80,80,0.07)",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,80,80,0.2)",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    width: "100%",
+  },
+  quitWarningIcon: { fontSize: 16 },
+  quitWarningText: {
+    color: "rgba(255,120,120,0.8)",
+    fontSize: 8,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  quitScoreBox: {
+    alignItems: "center",
+    backgroundColor: "rgba(232,197,71,0.04)",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(232,197,71,0.12)",
+    paddingHorizontal: 28,
+    paddingVertical: 10,
+    width: "100%",
+  },
+  quitScoreLabel: {
+    color: "rgba(232,197,71,0.45)",
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 4,
+    marginBottom: 2,
+  },
+  quitScoreValue: {
+    color: "#E8C547",
+    fontSize: 20,
+    fontWeight: "900",
+    textShadowColor: "rgba(232,197,71,0.5)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 12,
+  },
+  quitFightBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    backgroundColor: "#E8C547",
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 12,
+    width: "100%",
+    borderWidth: 1.5,
+    borderColor: "#D4A017",
+    shadowColor: "#E8C547",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  quitFightIcon: { fontSize: 12 },
+  quitFightText: {
+    color: "#1a1a1a",
+    fontSize: 12,
+    fontWeight: "900",
+    letterSpacing: 3,
+  },
+  quitLeaveBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    paddingHorizontal: 28,
+    paddingVertical: 12,
+    borderRadius: 12,
+    width: "100%",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "rgba(255,255,255,0.03)",
+  },
+  quitLeaveIcon: { fontSize: 16 },
+  quitLeaveText: {
+    color: "rgba(255,255,255,0.4)",
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 2,
+  },
 
   // ─────────────────────────────────────
   //  BATTLEFIELD BACKGROUND — Atmospheric
@@ -3272,27 +4159,8 @@ const styles = StyleSheet.create({
   },
 
   // ── Stats row (CLEARED + COMBO) ──
-  statsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 20,
-    marginVertical: 4,
-    backgroundColor: "rgba(232,197,71,0.03)",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(232,197,71,0.1)",
-    paddingHorizontal: 24,
-    paddingVertical: 8,
-  },
   statBox: { alignItems: "center" },
-  statValue: {
-    color: "#E8C547",
-    fontSize: 22,
-    fontWeight: "900",
-    textShadowColor: "rgba(232,197,71,0.3)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 6,
-  },
+
   statLabel: {
     color: "rgba(232,197,71,0.45)",
     fontSize: 8,
@@ -3315,14 +4183,14 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   bannerEdge: {
-    width: 28,
+    width: 36, // was 28
     height: 2,
     backgroundColor: "#E8C547",
     borderRadius: 1,
     shadowColor: "#E8C547",
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 4,
+    shadowOpacity: 0.6,
+    shadowRadius: 6,
   },
   bannerBody: {
     paddingHorizontal: 18,
@@ -3330,42 +4198,42 @@ const styles = StyleSheet.create({
   },
   bannerTitle: {
     color: "#E8C547",
-    fontSize: 24,
+    fontSize: 28, // was 24
     fontWeight: "900",
-    letterSpacing: 5,
-    textShadowColor: "rgba(232,197,71,0.4)",
+    letterSpacing: 6,
+    textShadowColor: "rgba(232,197,71,0.5)",
     textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 15,
+    textShadowRadius: 20,
   },
   bannerSub: {
-    color: "rgba(255,255,255,0.3)",
+    color: "rgba(255,255,255,0.35)",
     fontSize: 11,
     fontWeight: "600",
-    letterSpacing: 2,
+    letterSpacing: 3,
   },
 
   // Progress dots
   progressRow: { flexDirection: "row", gap: 10, marginVertical: 8 },
   progressDot: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    width: 22, // was 18
+    height: 22,
+    borderRadius: 11,
     borderWidth: 1.5,
-    borderColor: "rgba(232,197,71,0.12)",
+    borderColor: "rgba(232,197,71,0.15)",
     justifyContent: "center",
     alignItems: "center",
   },
   progressDotFilled: {
-    backgroundColor: "rgba(232,197,71,0.12)",
+    backgroundColor: "rgba(232,197,71,0.15)",
     borderColor: "#E8C547",
     shadowColor: "#E8C547",
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 4,
+    shadowOpacity: 0.5,
+    shadowRadius: 6,
   },
   progressCheck: {
     color: "#E8C547",
-    fontSize: 9,
+    fontSize: 11, // was 9
     fontWeight: "900",
   },
 
@@ -3619,74 +4487,88 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
-    backgroundColor: "rgba(255,140,0,0.08)",
+    backgroundColor: "rgba(255,140,0,0.1)",
     borderWidth: 1.5,
-    borderColor: "rgba(255,140,0,0.3)",
+    borderColor: "rgba(255,140,0,0.4)",
     borderRadius: 10,
     paddingHorizontal: 20,
     paddingVertical: 10,
     minWidth: 220,
   },
   gloryBtnActive: {
-    backgroundColor: "rgba(255,140,0,0.15)",
-    borderColor: "rgba(255,140,0,0.5)",
+    backgroundColor: "rgba(255,140,0,0.18)",
+    borderColor: "#FF8C00",
     shadowColor: "#FF8C00",
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  gloryBtnIcon: {
-    fontSize: 18,
-  },
+  gloryBtnIcon: { fontSize: 20 },
   gloryBtnText: {
     color: "#FF8C00",
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "900",
     letterSpacing: 1.5,
   },
   gloryBtnSub: {
     color: "rgba(255,140,0,0.5)",
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: "700",
     letterSpacing: 1,
+    marginTop: 1,
   },
 
   // Glory Hunt badge during gameplay
+  // Glory badge during gameplay — top right
   gloryBadge: {
     position: "absolute",
     top: 4,
     right: 8,
     zIndex: 100,
-    backgroundColor: "rgba(255,140,0,0.12)",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "rgba(255,140,0,0.15)",
     borderRadius: 8,
     paddingHorizontal: 10,
-    paddingVertical: 3,
+    paddingVertical: 4,
     borderWidth: 1,
-    borderColor: "rgba(255,140,0,0.3)",
+    borderColor: "rgba(255,140,0,0.4)",
+    shadowColor: "#FF8C00",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
   },
   gloryBadgeText: {
     color: "#FF8C00",
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: "900",
     letterSpacing: 2,
   },
 
   // Glory Hunt bonus indicator on between-levels
   gloryBonusBox: {
+    flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255,140,0,0.06)",
-    paddingHorizontal: 16,
-    paddingVertical: 5,
+    gap: 8,
+    backgroundColor: "rgba(255,140,0,0.08)",
     borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "rgba(255,140,0,0.15)",
+    borderWidth: 1.5,
+    borderColor: "rgba(255,140,0,0.35)",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    width: "100%",
+    minWidth: 220, // consistent width
+    // NO elevation, NO shadowColor here
   },
   gloryBonusText: {
     color: "#FF8C00",
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "900",
     letterSpacing: 2,
+    flex: 1,
+    textAlign: "center",
   },
 
   wildBarBtn: {
@@ -3793,6 +4675,8 @@ const styles = StyleSheet.create({
   // ── Combo Display — Bottom bar ──
   comboWrap: {
     alignItems: "flex-end",
+    height: 30,
+    justifyContent: "center",
   },
   comboRow: {
     flexDirection: "row",
@@ -3820,7 +4704,7 @@ const styles = StyleSheet.create({
   // ── Milestone Popup — Dramatic banner ──
   milestone: {
     position: "absolute",
-    top: "30%",
+    top: 50,
     alignSelf: "center",
     zIndex: 999,
     elevation: 999,
@@ -3868,48 +4752,13 @@ const styles = StyleSheet.create({
   // ═══════════════════════════════════════════
   //  ██  QUIT DIALOG — Dramatic Medieval  ██
   // ═══════════════════════════════════════════
-  quitOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0,0,0,0.85)",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 1000,
-  },
-  quitCard: {
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: "#0D0A08",
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: "rgba(192,57,43,0.3)",
-    paddingHorizontal: 36,
-    paddingVertical: 24,
-    minWidth: 280,
-    shadowColor: "#C0392B",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: 10,
-  },
   quitIcon: {
     fontSize: 42,
     marginBottom: 4,
   },
-  quitTitle: {
-    color: "#C0392B",
-    fontSize: 24,
-    fontWeight: "900",
-    letterSpacing: 3,
-    textShadowColor: "rgba(192,57,43,0.4)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 12,
-  },
+
   quitSub: {
-    color: "rgba(255,255,255,0.35)",
+    color: "rgba(255,255,255,0.3)",
     fontSize: 13,
     fontWeight: "600",
     textAlign: "center",
@@ -3927,12 +4776,12 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     minWidth: 220,
     alignItems: "center",
-    borderWidth: 1.5,
-    borderColor: "rgba(192,57,43,0.35)",
-    backgroundColor: "rgba(192,57,43,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(255,255,255,0.04)",
   },
   quitBtnText: {
-    color: "rgba(192,57,43,0.8)",
+    color: "rgba(255,255,255,0.5)",
     fontSize: 14,
     fontWeight: "800",
     letterSpacing: 1.5,
@@ -3966,7 +4815,7 @@ const styles = StyleSheet.create({
   nextBattleBtn: {
     backgroundColor: "#E8C547",
     paddingHorizontal: 32,
-    paddingVertical: 12,
+    paddingVertical: 13, // was 12
     borderRadius: 10,
     minWidth: 220,
     alignItems: "center",
@@ -3984,29 +4833,34 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: 2,
   },
+  // Spoils card — more prominent
   spoilsCard: {
     alignItems: "center",
-    backgroundColor: "rgba(232,197,71,0.04)",
-    borderRadius: 12,
+    backgroundColor: "rgba(232,197,71,0.05)",
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(232,197,71,0.12)",
-    paddingHorizontal: 24,
-    paddingVertical: 8,
+    borderColor: "rgba(232,197,71,0.15)",
+    paddingHorizontal: 32,
+    paddingVertical: 10,
     marginVertical: 2,
+    shadowColor: "#E8C547",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
   },
   spoilsCardLabel: {
     color: "rgba(232,197,71,0.5)",
     fontSize: 8,
     fontWeight: "900",
-    letterSpacing: 4,
+    letterSpacing: 5,
   },
   spoilsCardValue: {
     color: "#E8C547",
-    fontSize: 28,
+    fontSize: 32, // was 28
     fontWeight: "900",
-    textShadowColor: "rgba(232,197,71,0.4)",
+    textShadowColor: "rgba(232,197,71,0.5)",
     textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 10,
+    textShadowRadius: 12,
   },
   wildSelectBanner: {
     position: "absolute",
@@ -4030,6 +4884,193 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "900",
     letterSpacing: 3,
+  },
+  abandonBtn: {
+    position: "absolute",
+    top: 16,
+    left: 42,
+    zIndex: 100,
+    backgroundColor: "rgba(255,140,0,0.12)",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: "rgba(255,140,0,0.3)",
+  },
+  abandonBtnText: {
+    color: "#FF8C00",
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 2,
+  },
+  // Carry combo box — needs to feel exciting, different from glory
+  carryComboBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "rgba(123,237,159,0.06)",
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: "rgba(123,237,159,0.3)",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    width: "100%",
+  },
+  carryComboText: {
+    color: "#7BED9F",
+    fontSize: 13,
+    fontWeight: "900",
+    letterSpacing: 2,
+  },
+  carryBtn: {
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.15)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 5,
+  },
+  carryBtnIcon: {
+    fontSize: 11,
+    color: "rgba(232,197,71,0.6)",
+  },
+  carryBtnText: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 12,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+  wildProgress: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    marginTop: 2,
+  },
+  wildProgressIcon: {
+    fontSize: 8,
+  },
+  wildProgressTrack: {
+    width: 36,
+    height: 3,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderRadius: 2,
+    overflow: "hidden",
+  },
+  wildProgressFill: {
+    height: "100%",
+    backgroundColor: "rgba(232,197,71,0.5)",
+    borderRadius: 2,
+  },
+  wildProgressText: {
+    color: "rgba(255,255,255,0.3)",
+    fontSize: 8,
+    fontWeight: "800",
+  },
+  freeDrawBtn: {
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.15)",
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  freeDrawText: {
+    color: "rgba(255,255,255,0.6)",
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+  freeDrawIcon: {
+    fontSize: 10,
+  },
+  insuranceFlash: {
+    position: "absolute",
+    bottom: 70,
+    right: 24,
+    zIndex: 200,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(123,237,159,0.18)",
+    borderWidth: 1.5,
+    borderColor: "rgba(123,237,159,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#7BED9F",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 12,
+    elevation: 10,
+    opacity: 0, // ← ADD THIS
+  },
+  insuranceFlashIcon: {
+    fontSize: 20,
+    color: "#7BED9F",
+  },
+  achievementBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    width: "100%",
+    marginVertical: 2,
+  },
+  achievementPerfect: {
+    backgroundColor: "rgba(255,215,0,0.08)",
+    borderColor: "rgba(255,215,0,0.4)",
+    shadowColor: "#FFD700",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  achievementCarry: {
+    backgroundColor: "rgba(123,237,159,0.07)",
+    borderColor: "rgba(123,237,159,0.35)",
+    shadowColor: "#7BED9F",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  achievementGlory: {
+    backgroundColor: "rgba(255,140,0,0.07)",
+    borderColor: "rgba(255,140,0,0.35)",
+    shadowColor: "#FF8C00",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  achievementCenter: {
+    alignItems: "center",
+  },
+  achievementTitle: {
+    color: "#FFD700",
+    fontSize: 13,
+    fontWeight: "900",
+    letterSpacing: 3,
+    textShadowColor: "rgba(255,215,0,0.4)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
+  },
+  achievementSub: {
+    color: "rgba(255,215,0,0.55)",
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+    marginTop: 2,
   },
 })
 

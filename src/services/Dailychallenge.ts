@@ -1,5 +1,6 @@
 import firestore from "@react-native-firebase/firestore"
-import { getTodayString } from "./CardService"
+import { getTodayString, getYesterdayString } from "./CardService"
+import AsyncStorage from "@react-native-async-storage/async-storage"
 
 export interface DailyScore {
   uid: string
@@ -49,6 +50,13 @@ export const submitDailyScore = async (
       date: today,
       playedAt: firestore.FieldValue.serverTimestamp(),
     })
+    // Increment daily quests count on user profile
+    await firestore()
+      .collection("users")
+      .doc(uid)
+      .update({
+        dailyQuestsPlayed: firestore.FieldValue.increment(1),
+      })
   } catch (err) {
     console.error("Failed to submit daily score:", err)
   }
@@ -160,17 +168,40 @@ export const updateUserProfile = async (
     const doc = await ref.get()
     const data = doc.data() || {}
 
+    // Streak logic
+    const today = getTodayString() // reuse your existing helper
+    const lastPlayed = data.lastPlayedDate || null
+
+    let currentStreak = data.currentStreak || 0
+    let bestStreak = data.bestStreak || 0
+
+    if (lastPlayed === today) {
+      // Already played today — don't change streak
+    } else if (lastPlayed === getYesterdayString()) {
+      // Consecutive day — increment
+      currentStreak = currentStreak + 1
+    } else {
+      // Missed a day or first game ever — reset
+      currentStreak = 1
+    }
+
+    bestStreak = Math.max(bestStreak, currentStreak)
+
     await ref.set(
       {
-        ...data,
         bestScore: Math.max(data.bestScore || 0, score),
         bestCombo: Math.max(data.bestCombo || 0, bestCombo),
         totalGames: (data.totalGames || 0) + 1,
         totalCardsCleared: (data.totalCardsCleared || 0) + cardsCleared,
+        totalScore: (data.totalScore || 0) + score,
         lastPlayedAt: firestore.FieldValue.serverTimestamp(),
+        lastPlayedDate: today,
+        currentStreak,
+        bestStreak,
       },
       { merge: true },
     )
+    await AsyncStorage.setItem("@mythic_best_streak", bestStreak.toString())
   } catch (err) {
     console.error("Failed to update user profile:", err)
   }

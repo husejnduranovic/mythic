@@ -9,6 +9,7 @@ import {
 } from "react-native"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import { SoundService } from "../services/SoundService"
+import ReturnToCastle from "./ReturnToCastle"
 
 interface ArmoryProps {
   onBack: () => void
@@ -24,443 +25,396 @@ export interface ThemeConfig {
   bountyStyle?: string
 }
 
-const CARD_BACKS = [
+export const BACK_ICONS: Record<string, string> = {
+  "#1A1410": "🛡", // oak_shield
+  "#0E1A2E": "⚔", // steel_bastion
+  "#2A0E0A": "🏠", // hearthwood
+  "#0C2218": "🐺", // wolf_sigil
+  "#3D0D0D": "🐉", // dragon_crest
+  "#2A1C00": "🦅", // eagle_pennant
+  "#1E0A3C": "👑", // royal_banner
+  "#1A0500": "🔥", // flame_sworn (7-day streak)
+}
+
+export const WILD_STYLE_CONFIG: Record<
+  string,
+  { color: string; accent: string; icon: string }
+> = {
+  spark: { color: "#1C1200", accent: "#FFD700", icon: "⚡" },
+  steel: { color: "#1A1A1E", accent: "#C0C8D0", icon: "⚔" },
+  frost: { color: "#061C2A", accent: "#66DDFF", icon: "❄️" },
+  venom: { color: "#081A08", accent: "#44FF66", icon: "☠️" },
+  storm: { color: "#110820", accent: "#AA66FF", icon: "🌩" },
+  inferno_bolt: { color: "#1E0400", accent: "#FF4400", icon: "🔥" }, // 42-day streak
+}
+
+export const WAR_TABLE_CONFIG: Record<
+  string,
+  { color: string; accent: string }
+> = {
+  oak_plank: { color: "#2A1C0E", accent: "#B89968" },
+  iron_banded: { color: "#15181C", accent: "#8899AA" },
+  crimson_velvet: { color: "#200810", accent: "#CC3344" },
+  marble: { color: "#1E1E1E", accent: "#D8D8D8" },
+  royal_gold: { color: "#1C1600", accent: "#CCA800" },
+  obsidian: { color: "#0A0A0C", accent: "#5566AA" },
+}
+
+const CARD_BACKS: {
+  id: string
+  name: string
+  icon: string
+  color: string
+  accent: string
+  unlockReq: number
+  streakReq?: number
+  unlockLabel?: string
+}[] = [
   {
-    id: "classic",
-    name: "Classic Shield",
+    id: "oak_shield",
+    name: "Oak Shield",
     icon: "🛡",
-    color: "#162A47",
-    accent: "#4A6FA5",
+    color: "#1A1410",
+    accent: "#B89968",
     unlockReq: 0,
   },
   {
-    id: "crimson",
-    name: "Dragon Fire",
-    icon: "🐉",
-    color: "#5C1A1A",
-    accent: "#E84545",
+    id: "steel_bastion",
+    name: "Steel Bastion",
+    icon: "⚔",
+    color: "#0E1A2E",
+    accent: "#6B9FD4",
     unlockReq: 0,
   },
   {
-    id: "forest",
-    name: "Wolf Den",
+    id: "hearthwood",
+    name: "Hearthwood",
+    icon: "🏠",
+    color: "#2A0E0A",
+    accent: "#D47755",
+    unlockReq: 0,
+  },
+  {
+    id: "wolf_sigil",
+    name: "Wolf Sigil",
     icon: "🐺",
-    color: "#1A3524",
-    accent: "#4CAF50",
-    unlockReq: 5,
-    unlockLabel: "5 battles",
+    color: "#0C2218",
+    accent: "#4DCC6A",
+    unlockReq: 3,
+    unlockLabel: "3 battles",
   },
   {
-    id: "golden",
-    name: "Eagle's Crest",
-    icon: "🦅",
-    color: "#4A3A10",
-    accent: "#FFB800",
+    id: "dragon_crest",
+    name: "Dragon Crest",
+    icon: "🐉",
+    color: "#3D0D0D",
+    accent: "#FF4422",
     unlockReq: 10,
     unlockLabel: "10 battles",
   },
   {
-    id: "midnight",
-    name: "Serpent Shadow",
-    icon: "🐍",
-    color: "#0A0A1A",
-    accent: "#6B4EC7",
-    unlockReq: 20,
-    unlockLabel: "20 battles",
-  },
-  {
-    id: "royal",
-    name: "Royal Purple",
-    icon: "👑",
-    color: "#3A1A50",
-    accent: "#C084FC",
-    unlockReq: 35,
-    unlockLabel: "35 battles",
-  },
-  {
-    id: "blood",
-    name: "Blood Moon",
-    icon: "🌙",
-    color: "#4A0A0A",
-    accent: "#FF6B6B",
-    unlockReq: 50,
-    unlockLabel: "50 battles",
-  },
-  {
-    id: "storm",
-    name: "Storm Caller",
-    icon: "⛈",
-    color: "#0A2A4A",
-    accent: "#4FC3F7",
-    unlockReq: 75,
-    unlockLabel: "75 battles",
-  },
-  {
-    id: "ancient",
-    name: "Ancient Runes",
-    icon: "ᚱ",
-    color: "#3A3A10",
-    accent: "#D4AF37",
-    unlockReq: 100,
-    unlockLabel: "100 battles",
-  },
-  {
-    id: "mythic",
-    name: "Mythic Gold",
-    icon: "✦",
-    color: "#4A3800",
-    accent: "#FFD700",
-    unlockReq: 150,
-    unlockLabel: "150 battles",
-  },
-  {
-    id: "phantom",
-    name: "Phantom Veil",
-    icon: "👻",
-    color: "#2A1040",
-    accent: "#B388FF",
-    unlockReq: 200,
-    unlockLabel: "200 battles",
-  },
-  {
-    id: "inferno",
-    name: "Inferno Core",
-    icon: "🔥",
-    color: "#4A1500",
-    accent: "#FF6D00",
-    unlockReq: 300,
-    unlockLabel: "300 battles",
-  },
-]
-
-const BATTLEFIELDS = [
-  {
-    id: "forest",
-    name: "Dark Forest",
-    icon: "🌲",
-    color: "#0F1A12",
-    accent: "#4CAF50",
-    unlockReq: 0,
-  },
-  {
-    id: "dungeon",
-    name: "Stone Dungeon",
-    icon: "🏰",
-    color: "#1A1510",
-    accent: "#A89078",
-    unlockReq: 0,
-  },
-  {
-    id: "ocean",
-    name: "Deep Abyss",
-    icon: "🌊",
-    color: "#081520",
-    accent: "#4FC3F7",
-    unlockReq: 8,
-    unlockLabel: "8 battles",
-  },
-  {
-    id: "volcano",
-    name: "Dragon's Lair",
-    icon: "🌋",
-    color: "#200A0A",
-    accent: "#FF4444",
-    unlockReq: 15,
-    unlockLabel: "15 battles",
-  },
-  {
-    id: "frost",
-    name: "Frozen Peaks",
-    icon: "❄️",
-    color: "#0A1520",
-    accent: "#90CAF9",
+    id: "eagle_pennant",
+    name: "Eagle Pennant",
+    icon: "🦅",
+    color: "#2A1C00",
+    accent: "#F0A500",
     unlockReq: 25,
     unlockLabel: "25 battles",
   },
   {
-    id: "void",
-    name: "The Void",
-    icon: "🌑",
-    color: "#050508",
-    accent: "#8B5CF6",
-    unlockReq: 40,
-    unlockLabel: "40 battles",
-  },
-  {
-    id: "swamp",
-    name: "Cursed Swamp",
-    icon: "🐸",
-    color: "#0A1A08",
-    accent: "#84CC16",
+    id: "royal_banner",
+    name: "Royal Banner",
+    icon: "👑",
+    color: "#1E0A3C",
+    accent: "#C87DFF",
     unlockReq: 60,
     unlockLabel: "60 battles",
   },
   {
-    id: "temple",
-    name: "Lost Temple",
-    icon: "🏛",
-    color: "#1A1510",
-    accent: "#E8C547",
-    unlockReq: 80,
-    unlockLabel: "80 battles",
-  },
-  {
-    id: "shadow",
-    name: "Shadow Realm",
-    icon: "🌘",
-    color: "#08080F",
-    accent: "#9061F9",
-    unlockReq: 120,
-    unlockLabel: "120 battles",
-  },
-  {
-    id: "celestial",
-    name: "Celestial Hall",
-    icon: "⭐",
-    color: "#10102A",
-    accent: "#7DD3FC",
-    unlockReq: 160,
-    unlockLabel: "160 battles",
-  },
-  {
-    id: "crimson",
-    name: "Crimson Throne",
-    icon: "💀",
-    color: "#200510",
-    accent: "#F43F5E",
-    unlockReq: 220,
-    unlockLabel: "220 battles",
-  },
-  {
-    id: "eternal",
-    name: "Eternal Flame",
-    icon: "♾",
-    color: "#201000",
-    accent: "#FB923C",
-    unlockReq: 300,
-    unlockLabel: "300 battles",
+    id: "flame_sworn",
+    name: "Flame Sworn",
+    icon: "🔥",
+    color: "#1A0500",
+    accent: "#FF6600",
+    unlockReq: 0,
+    streakReq: 7,
+    unlockLabel: "7 day streak",
   },
 ]
 
-const WILD_STYLES = [
+const BATTLEFIELDS: {
+  id: string
+  name: string
+  icon: string
+  color: string
+  accent: string
+  unlockReq: number
+  streakReq?: number
+  unlockLabel?: string
+}[] = [
   {
-    id: "classic",
-    name: "Lightning",
+    id: "training_yard",
+    name: "Training Yard",
+    icon: "🏟",
+    color: "#1A1408",
+    accent: "#B89968",
+    unlockReq: 0,
+  },
+  {
+    id: "stone_keep",
+    name: "Stone Keep",
+    icon: "🏰",
+    color: "#1C1C20",
+    accent: "#A8B0BC",
+    unlockReq: 0,
+  },
+  {
+    id: "forest_camp",
+    name: "Forest Camp",
+    icon: "🌲",
+    color: "#0A1F10",
+    accent: "#4DCC6A",
+    unlockReq: 0,
+  },
+  {
+    id: "mountain_pass",
+    name: "Mountain Pass",
+    icon: "🏔",
+    color: "#0C1E2C",
+    accent: "#88DDFF",
+    unlockReq: 3,
+    unlockLabel: "3 battles",
+  },
+  {
+    id: "coastal_hold",
+    name: "Coastal Hold",
+    icon: "🌊",
+    color: "#060F28",
+    accent: "#2299FF",
+    unlockReq: 10,
+    unlockLabel: "10 battles",
+  },
+  {
+    id: "volcanic_rise",
+    name: "Volcanic Rise",
+    icon: "🌋",
+    color: "#2A0A00",
+    accent: "#FF4400",
+    unlockReq: 25,
+    unlockLabel: "25 battles",
+  },
+  {
+    id: "royal_hall",
+    name: "Royal Hall",
+    icon: "🏛",
+    color: "#1E1400",
+    accent: "#DDAA33",
+    unlockReq: 60,
+    unlockLabel: "60 battles",
+  },
+  {
+    id: "ember_court",
+    name: "Ember Court",
+    icon: "🔥",
+    color: "#1A0600",
+    accent: "#FF5500",
+    unlockReq: 0,
+    streakReq: 21,
+    unlockLabel: "21 day streak",
+  },
+]
+
+const WILD_STYLES: {
+  id: string
+  name: string
+  icon: string
+  color: string
+  accent: string
+  unlockReq: number
+  streakReq?: number
+  unlockLabel?: string
+}[] = [
+  {
+    id: "spark",
+    name: "Spark",
     icon: "⚡",
-    color: "#1A0F05",
-    accent: "#E8C547",
+    color: "#1C1200",
+    accent: "#FFD700",
+    unlockReq: 0,
+  },
+  {
+    id: "steel",
+    name: "Steel Clash",
+    icon: "⚔",
+    color: "#1A1A1E",
+    accent: "#C0C8D0",
     unlockReq: 0,
   },
   {
     id: "frost",
     name: "Frost Strike",
     icon: "❄️",
-    color: "#0A1525",
-    accent: "#90CAF9",
-    unlockReq: 10,
-    unlockLabel: "10 battles",
+    color: "#061C2A",
+    accent: "#66DDFF",
+    unlockReq: 5,
+    unlockLabel: "5 battles",
   },
   {
     id: "venom",
     name: "Venom Fang",
-    icon: "🐍",
-    color: "#0A1A0A",
-    accent: "#4ADE80",
-    unlockReq: 25,
-    unlockLabel: "25 battles",
+    icon: "☠️",
+    color: "#081A08",
+    accent: "#44FF66",
+    unlockReq: 20,
+    unlockLabel: "20 battles",
   },
   {
-    id: "inferno",
-    name: "Hellfire",
+    id: "storm",
+    name: "Storm Surge",
+    icon: "🌩",
+    color: "#110820",
+    accent: "#AA66FF",
+    unlockReq: 60,
+    unlockLabel: "60 battles",
+  },
+  {
+    id: "inferno_bolt",
+    name: "Inferno Bolt",
     icon: "🔥",
-    color: "#2A0A00",
-    accent: "#FF6B35",
-    unlockReq: 45,
-    unlockLabel: "45 battles",
-  },
-  {
-    id: "arcane",
-    name: "Arcane Surge",
-    icon: "🔮",
-    color: "#1A0A2A",
-    accent: "#C084FC",
-    unlockReq: 70,
-    unlockLabel: "70 battles",
-  },
-  {
-    id: "divine",
-    name: "Divine Wrath",
-    icon: "👑",
-    color: "#2A1A00",
-    accent: "#FFD700",
-    unlockReq: 100,
-    unlockLabel: "100 battles",
-  },
-  {
-    id: "void",
-    name: "Void Tear",
-    icon: "🌑",
-    color: "#050505",
-    accent: "#8B5CF6",
-    unlockReq: 150,
-    unlockLabel: "150 battles",
-  },
-  {
-    id: "dragon",
-    name: "Dragon Breath",
-    icon: "🐉",
-    color: "#2A0500",
-    accent: "#FF4444",
-    unlockReq: 200,
-    unlockLabel: "200 battles",
+    color: "#1E0400",
+    accent: "#FF4400",
+    unlockReq: 0,
+    streakReq: 42,
+    unlockLabel: "42 day streak",
   },
 ]
 
-const WAR_TABLES = [
+const WAR_TABLES: {
+  id: string
+  name: string
+  icon: string
+  color: string
+  accent: string
+  unlockReq: number
+  streakReq?: number
+  unlockLabel?: string
+}[] = [
   {
-    id: "classic",
-    name: "Dark Oak",
+    id: "oak_plank",
+    name: "Oak Plank",
     icon: "🪵",
-    color: "#18120E",
-    accent: "#8B7355",
+    color: "#2A1C0E",
+    accent: "#B89968",
     unlockReq: 0,
   },
   {
-    id: "iron",
-    name: "Iron Forge",
-    icon: "⚒",
-    color: "#12141A",
-    accent: "#78909C",
-    unlockReq: 10,
-    unlockLabel: "10 battles",
+    id: "iron_banded",
+    name: "Iron Banded",
+    icon: "⚙️",
+    color: "#15181C",
+    accent: "#8899AA",
+    unlockReq: 0,
+  },
+  {
+    id: "crimson_velvet",
+    name: "Crimson Velvet",
+    icon: "🩸",
+    color: "#200810",
+    accent: "#CC3344",
+    unlockReq: 5,
+    unlockLabel: "5 battles",
   },
   {
     id: "marble",
     name: "White Marble",
-    icon: "🏛",
-    color: "#1A1A1A",
-    accent: "#E0E0E0",
-    unlockReq: 30,
-    unlockLabel: "30 battles",
+    icon: "🏺",
+    color: "#1E1E1E",
+    accent: "#D8D8D8",
+    unlockReq: 20,
+    unlockLabel: "20 battles",
   },
   {
-    id: "crimson",
-    name: "Crimson Velvet",
-    icon: "🩸",
-    color: "#1A0808",
-    accent: "#C0392B",
-    unlockReq: 50,
-    unlockLabel: "50 battles",
-  },
-  {
-    id: "gold",
+    id: "royal_gold",
     name: "Royal Gold",
-    icon: "👑",
-    color: "#1A1505",
-    accent: "#FFD700",
-    unlockReq: 80,
-    unlockLabel: "80 battles",
+    icon: "⚜️",
+    color: "#1C1600",
+    accent: "#CCA800",
+    unlockReq: 60,
+    unlockLabel: "60 battles",
   },
   {
     id: "obsidian",
-    name: "Obsidian Slab",
-    icon: "🌑",
-    color: "#0A0A0A",
-    accent: "#424242",
+    name: "Obsidian",
+    icon: "🖤",
+    color: "#0A0A0C",
+    accent: "#5566AA",
     unlockReq: 120,
     unlockLabel: "120 battles",
   },
-  {
-    id: "jade",
-    name: "Jade Emperor",
-    icon: "🐉",
-    color: "#0A1A10",
-    accent: "#4CAF50",
-    unlockReq: 175,
-    unlockLabel: "175 battles",
-  },
-  {
-    id: "celestial",
-    name: "Star Table",
-    icon: "⭐",
-    color: "#0A0A20",
-    accent: "#7DD3FC",
-    unlockReq: 250,
-    unlockLabel: "250 battles",
-  },
 ]
 
-const BOUNTY_STYLES = [
+const BOUNTY_STYLES: {
+  id: string
+  name: string
+  icon: string
+  color: string
+  accent: string
+  unlockReq: number
+  streakReq?: number
+  unlockLabel?: string
+}[] = [
   {
-    id: "classic",
-    name: "Classic Gold",
+    id: "gold_coin",
+    name: "Gold Coin",
     icon: "💰",
-    color: "#0D0D0D",
+    color: "#1A1000",
     accent: "#DAA520",
     unlockReq: 0,
   },
   {
-    id: "diamond",
-    name: "Diamond",
-    icon: "💎",
-    color: "#0A1525",
-    accent: "#B0C4DE",
-    unlockReq: 10,
-    unlockLabel: "10 battles",
+    id: "silver_cache",
+    name: "Silver Cache",
+    icon: "🪙",
+    color: "#1A1E22",
+    accent: "#C0CCDA",
+    unlockReq: 0,
   },
   {
     id: "ruby",
-    name: "Ruby Treasure",
-    icon: "❤️‍🔥",
-    color: "#1A0808",
-    accent: "#DC143C",
-    unlockReq: 25,
-    unlockLabel: "25 battles",
+    name: "Ruby",
+    icon: "💎",
+    color: "#220808",
+    accent: "#FF2244",
+    unlockReq: 5,
+    unlockLabel: "5 battles",
   },
   {
     id: "emerald",
-    name: "Emerald Hoard",
-    icon: "🪲",
-    color: "#0A1A0A",
-    accent: "#50C878",
-    unlockReq: 45,
-    unlockLabel: "45 battles",
+    name: "Emerald",
+    icon: "💚",
+    color: "#051A0A",
+    accent: "#22DD66",
+    unlockReq: 20,
+    unlockLabel: "20 battles",
   },
   {
-    id: "shadow",
-    name: "Shadow Loot",
-    icon: "🌑",
-    color: "#0A0A14",
-    accent: "#9370DB",
-    unlockReq: 70,
-    unlockLabel: "70 battles",
+    id: "diamond",
+    name: "Diamond",
+    icon: "💠",
+    color: "#080E1E",
+    accent: "#99EEFF",
+    unlockReq: 60,
+    unlockLabel: "60 battles",
   },
   {
-    id: "celestial",
-    name: "Star Bounty",
-    icon: "⭐",
-    color: "#0A0A1A",
-    accent: "#87CEEB",
-    unlockReq: 100,
-    unlockLabel: "100 battles",
-  },
-  {
-    id: "inferno",
-    name: "Molten Spoils",
-    icon: "🔥",
-    color: "#1A0A00",
-    accent: "#FF6347",
-    unlockReq: 150,
-    unlockLabel: "150 battles",
-  },
-  {
-    id: "royal",
-    name: "Royal Bounty",
+    id: "eternal_crown",
+    name: "Eternal Crown",
     icon: "👑",
-    color: "#1A0A20",
-    accent: "#E8C547",
-    unlockReq: 200,
-    unlockLabel: "200 battles",
+    color: "#200840",
+    accent: "#FFCC00",
+    unlockReq: 0,
+    streakReq: 60,
+    unlockLabel: "60 day streak",
   },
 ]
 
@@ -474,60 +428,47 @@ export const BOUNTY_STYLE_CONFIG: Record<
     icon: string
   }
 > = {
-  classic: {
-    backColor: "#0D0D0D",
+  gold_coin: {
+    backColor: "#2A1A04",
     accent: "#DAA520",
-    frontBg: "#FDF8E8",
-    textColor: "#B8860B",
+    frontBg: "#FFF8E8",
+    textColor: "#8B6200",
     icon: "💰",
   },
-  diamond: {
-    backColor: "#0A1525",
-    accent: "#B0C4DE",
-    frontBg: "#F0F4F8",
-    textColor: "#4682B4",
-    icon: "💎",
+  silver_cache: {
+    backColor: "#1A1E22",
+    accent: "#C0CCDA",
+    frontBg: "#F4F6F8",
+    textColor: "#445566",
+    icon: "🪙",
   },
   ruby: {
-    backColor: "#1A0808",
-    accent: "#DC143C",
-    frontBg: "#FDF0F0",
-    textColor: "#B22222",
-    icon: "❤️‍🔥",
+    backColor: "#360A0A",
+    accent: "#FF2244",
+    frontBg: "#FFF0F0",
+    textColor: "#AA0022",
+    icon: "💎",
   },
   emerald: {
-    backColor: "#0A1A0A",
-    accent: "#50C878",
-    frontBg: "#F0FDF4",
-    textColor: "#2E8B57",
-    icon: "🪲",
+    backColor: "#082A10",
+    accent: "#22DD66",
+    frontBg: "#EEFFF4",
+    textColor: "#116622",
+    icon: "💚",
   },
-  shadow: {
-    backColor: "#0A0A14",
-    accent: "#9370DB",
-    frontBg: "#F5F0FF",
-    textColor: "#6A5ACD",
-    icon: "🌑",
+  diamond: {
+    backColor: "#0C1830",
+    accent: "#99EEFF",
+    frontBg: "#EEF8FF",
+    textColor: "#1166AA",
+    icon: "💠",
   },
-  celestial: {
-    backColor: "#0A0A1A",
-    accent: "#87CEEB",
-    frontBg: "#F0F8FF",
-    textColor: "#4682B4",
-    icon: "⭐",
-  },
-  inferno: {
-    backColor: "#1A0A00",
-    accent: "#FF6347",
-    frontBg: "#FFF5F0",
-    textColor: "#CD4F39",
-    icon: "🔥",
-  },
-  royal: {
-    backColor: "#1A0A20",
-    accent: "#E8C547",
-    frontBg: "#FFFDF0",
-    textColor: "#B8960B",
+  eternal_crown: {
+    // 60-day streak
+    backColor: "#200840",
+    accent: "#FFCC00",
+    frontBg: "#FFFAEE",
+    textColor: "#AA7700",
     icon: "👑",
   },
 }
@@ -539,6 +480,7 @@ const STORAGE_KEYS = {
   selectedWild: "@mythic_wild_style",
   selectedTable: "@mythic_war_table",
   selectedBounty: "@mythic_bounty_style",
+  bestStreak: "@mythic_best_streak",
 }
 
 type TabType = "cards" | "fields" | "wild" | "bounty" | "table"
@@ -551,18 +493,46 @@ const TAB_CONFIG: { key: TabType; icon: string; label: string }[] = [
   { key: "table", icon: "⚒", label: "Table" },
 ]
 
+// One-time migration: clears legacy cosmetic IDs that no longer exist.
+// Players will see defaults but can re-pick any unlocked item.
+const ARMORY_MIGRATION_KEY = "@mythic_armory_migrated_v2"
+
+export const migrateArmoryIfNeeded = async () => {
+  try {
+    const done = await AsyncStorage.getItem(ARMORY_MIGRATION_KEY)
+    if (done) return
+
+    const validIds = {
+      [STORAGE_KEYS.selectedBack]: CARD_BACKS.map((i) => i.id),
+      [STORAGE_KEYS.selectedField]: BATTLEFIELDS.map((i) => i.id),
+      [STORAGE_KEYS.selectedWild]: WILD_STYLES.map((i) => i.id),
+      [STORAGE_KEYS.selectedTable]: WAR_TABLES.map((i) => i.id),
+      [STORAGE_KEYS.selectedBounty]: BOUNTY_STYLES.map((i) => i.id),
+    }
+
+    for (const [key, valid] of Object.entries(validIds)) {
+      const current = await AsyncStorage.getItem(key)
+      if (current && !valid.includes(current)) {
+        await AsyncStorage.removeItem(key)
+      }
+    }
+
+    await AsyncStorage.setItem(ARMORY_MIGRATION_KEY, "1")
+  } catch {}
+}
+
 export const getSelectedTheme = async (): Promise<ThemeConfig> => {
   try {
     const backId =
-      (await AsyncStorage.getItem(STORAGE_KEYS.selectedBack)) || "classic"
+      (await AsyncStorage.getItem(STORAGE_KEYS.selectedBack)) || "oak_shield"
     const fieldId =
-      (await AsyncStorage.getItem(STORAGE_KEYS.selectedField)) || "forest"
+      (await AsyncStorage.getItem(STORAGE_KEYS.selectedField)) || "forest_camp"
     const wildId =
-      (await AsyncStorage.getItem(STORAGE_KEYS.selectedWild)) || "classic"
+      (await AsyncStorage.getItem(STORAGE_KEYS.selectedWild)) || "spark"
     const tableId =
-      (await AsyncStorage.getItem(STORAGE_KEYS.selectedTable)) || "classic"
+      (await AsyncStorage.getItem(STORAGE_KEYS.selectedTable)) || "oak_plank"
     const bountyId =
-      (await AsyncStorage.getItem(STORAGE_KEYS.selectedBounty)) || "classic"
+      (await AsyncStorage.getItem(STORAGE_KEYS.selectedBounty)) || "gold_coin"
     const back = CARD_BACKS.find((b) => b.id === backId) || CARD_BACKS[0]
     const field = BATTLEFIELDS.find((f) => f.id === fieldId) || BATTLEFIELDS[0]
     return {
@@ -576,13 +546,13 @@ export const getSelectedTheme = async (): Promise<ThemeConfig> => {
     }
   } catch {
     return {
-      cardBack: "classic",
-      cardBackColor: "#162A47",
-      battlefield: "forest",
-      battlefieldColor: "#0F1A12",
-      wildStyle: "classic",
-      warTable: "classic",
-      bountyStyle: "classic",
+      cardBack: "oak_shield",
+      cardBackColor: "#1A1410",
+      battlefield: "forest_camp",
+      battlefieldColor: "#0A1F10",
+      wildStyle: "spark",
+      warTable: "oak_plank",
+      bountyStyle: "gold_coin",
     }
   }
 }
@@ -600,6 +570,7 @@ export const incrementGamesPlayed = async () => {
 
 const Armory = ({ onBack }: ArmoryProps) => {
   const [gamesPlayed, setGamesPlayed] = useState(0)
+  const [bestStreak, setBestStreak] = useState(0)
   const [selectedBack, setSelectedBack] = useState("classic")
   const [selectedField, setSelectedField] = useState("forest")
   const [selectedWild, setSelectedWild] = useState("classic")
@@ -610,6 +581,30 @@ const Armory = ({ onBack }: ArmoryProps) => {
   const fadeAnim = useRef(new Animated.Value(0)).current
   const slideAnim = useRef(new Animated.Value(20)).current
   const glowPulse = useRef(new Animated.Value(0.3)).current
+
+  useEffect(() => {
+    ;(async () => {
+      const gamesStr = await AsyncStorage.getItem(STORAGE_KEYS.gamesPlayed)
+      const streakStr = await AsyncStorage.getItem(STORAGE_KEYS.bestStreak)
+      setGamesPlayed(gamesStr ? parseInt(gamesStr) : 0)
+      setBestStreak(streakStr ? parseInt(streakStr) : 0)
+      setSelectedBack(
+        (await AsyncStorage.getItem(STORAGE_KEYS.selectedBack)) || "classic",
+      )
+      setSelectedField(
+        (await AsyncStorage.getItem(STORAGE_KEYS.selectedField)) || "forest",
+      )
+      setSelectedWild(
+        (await AsyncStorage.getItem(STORAGE_KEYS.selectedWild)) || "classic",
+      )
+      setSelectedTable(
+        (await AsyncStorage.getItem(STORAGE_KEYS.selectedTable)) || "classic",
+      )
+      setSelectedBounty(
+        (await AsyncStorage.getItem(STORAGE_KEYS.selectedBounty)) || "classic",
+      )
+    })()
+  }, [])
 
   useEffect(() => {
     Animated.parallel([
@@ -638,28 +633,6 @@ const Armory = ({ onBack }: ArmoryProps) => {
         }),
       ]),
     ).start()
-  }, [])
-
-  useEffect(() => {
-    ;(async () => {
-      const gamesStr = await AsyncStorage.getItem(STORAGE_KEYS.gamesPlayed)
-      setGamesPlayed(gamesStr ? parseInt(gamesStr) : 0)
-      setSelectedBack(
-        (await AsyncStorage.getItem(STORAGE_KEYS.selectedBack)) || "classic",
-      )
-      setSelectedField(
-        (await AsyncStorage.getItem(STORAGE_KEYS.selectedField)) || "forest",
-      )
-      setSelectedWild(
-        (await AsyncStorage.getItem(STORAGE_KEYS.selectedWild)) || "classic",
-      )
-      setSelectedTable(
-        (await AsyncStorage.getItem(STORAGE_KEYS.selectedTable)) || "classic",
-      )
-      setSelectedBounty(
-        (await AsyncStorage.getItem(STORAGE_KEYS.selectedBounty)) || "classic",
-      )
-    })()
   }, [])
 
   const selectItem = async (id: string) => {
@@ -702,6 +675,7 @@ const Armory = ({ onBack }: ArmoryProps) => {
         return WAR_TABLES
     }
   }
+
   const getSelected = () => {
     switch (tab) {
       case "cards":
@@ -719,8 +693,14 @@ const Armory = ({ onBack }: ArmoryProps) => {
 
   const items = getItems()
   const selected = getSelected()
-  const unlockedCount = items.filter((i) => gamesPlayed >= i.unlockReq).length
-  const nextLock = items.find((i) => gamesPlayed < i.unlockReq)
+
+  const unlockedCount = items.filter((i: any) =>
+    i.streakReq ? bestStreak >= i.streakReq : gamesPlayed >= i.unlockReq,
+  ).length
+
+  const nextLock = items.find((i: any) =>
+    i.streakReq ? bestStreak < i.streakReq : gamesPlayed < i.unlockReq,
+  )
 
   return (
     <View style={z.container}>
@@ -753,7 +733,9 @@ const Armory = ({ onBack }: ArmoryProps) => {
           </Text>
           {nextLock && (
             <Text style={z.nextUnlock}>
-              Next unlock at {nextLock.unlockReq} battles
+              {(nextLock as any).streakReq
+                ? `Next streak unlock at ${(nextLock as any).streakReq} day streak`
+                : `Next unlock at ${nextLock.unlockReq} battles`}
             </Text>
           )}
         </View>
@@ -787,8 +769,11 @@ const Armory = ({ onBack }: ArmoryProps) => {
           showsVerticalScrollIndicator={false}
         >
           {items.map((item: any) => {
-            const unlocked = gamesPlayed >= item.unlockReq
+            const unlocked = item.streakReq
+              ? bestStreak >= item.streakReq
+              : gamesPlayed >= item.unlockReq
             const isSel = selected === item.id
+
             return (
               <TouchableOpacity
                 key={item.id}
@@ -797,12 +782,16 @@ const Armory = ({ onBack }: ArmoryProps) => {
                   {
                     backgroundColor: unlocked
                       ? item.color
-                      : "rgba(10,15,12,0.5)",
+                      : item.streakReq
+                        ? "rgba(40,10,0,0.6)"
+                        : "rgba(10,15,12,0.5)",
                     borderColor: isSel
                       ? item.accent
                       : unlocked
                         ? "rgba(232,197,71,0.15)"
-                        : "rgba(255,255,255,0.05)",
+                        : item.streakReq
+                          ? "rgba(255,100,0,0.15)"
+                          : "rgba(255,255,255,0.05)",
                     borderWidth: isSel ? 2 : 1,
                   },
                   isSel && {
@@ -853,6 +842,7 @@ const Armory = ({ onBack }: ArmoryProps) => {
                     </Text>
                   </>
                 )}
+
                 <Text
                   style={[
                     z.itemIcon,
@@ -863,26 +853,46 @@ const Armory = ({ onBack }: ArmoryProps) => {
                     },
                   ]}
                 >
-                  {unlocked ? item.icon : "🔒"}
+                  {unlocked ? item.icon : item.streakReq ? "🗝" : "🔒"}
                 </Text>
+
                 <Text
                   style={[
                     z.itemName,
                     unlocked && { color: item.accent },
                     !unlocked && z.itemLocked,
+                    !unlocked &&
+                      item.streakReq && { color: "rgba(255,140,0,0.5)" },
                   ]}
                   numberOfLines={1}
                 >
                   {unlocked ? item.name : item.unlockLabel}
                 </Text>
+
                 {isSel && (
                   <View style={[z.check, { backgroundColor: item.accent }]}>
                     <Text style={z.checkTxt}>✓</Text>
                   </View>
                 )}
+
                 {!unlocked && (
-                  <View style={z.lockBadge}>
-                    <Text style={z.lockTxt}>LOCKED</Text>
+                  <View
+                    style={[
+                      z.lockBadge,
+                      item.streakReq && {
+                        borderColor: "rgba(255,100,0,0.2)",
+                        backgroundColor: "rgba(255,100,0,0.05)",
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        z.lockTxt,
+                        item.streakReq && { color: "rgba(255,140,0,0.5)" },
+                      ]}
+                    >
+                      {item.streakReq ? "🔥 STREAK" : "LOCKED"}
+                    </Text>
                   </View>
                 )}
               </TouchableOpacity>
@@ -890,9 +900,7 @@ const Armory = ({ onBack }: ArmoryProps) => {
           })}
         </ScrollView>
 
-        <TouchableOpacity style={z.backBtn} onPress={onBack}>
-          <Text style={z.backTxt}>← Return to Castle</Text>
-        </TouchableOpacity>
+        <ReturnToCastle onPress={onBack} />
       </Animated.View>
     </View>
   )
