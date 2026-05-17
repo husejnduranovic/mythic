@@ -1283,6 +1283,23 @@ const styles = StyleSheet.create({
     height: 22,
     backgroundColor: "rgba(232,197,71,0.08)",
   },
+  testCrashBtn: {
+    position: "absolute",
+    bottom: 8,
+    left: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: "rgba(255,0,0,0.3)",
+    borderWidth: 1,
+    borderColor: "rgba(255,0,0,0.6)",
+  },
+  testCrashText: {
+    color: "#fff",
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
 })
 
 export default HomeScreen

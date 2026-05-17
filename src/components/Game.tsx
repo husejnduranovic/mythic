@@ -1268,10 +1268,10 @@ const Game = ({
         getSavedLoungeCode()
           .then((code) => {
             if (code && uid && heroName) {
+              // Example for lounge submission:
+
               submitLoungeScore(code, uid, heroName, score, bestCombo).catch(
-                () => {
-                  // Silent fail — lounge submission is non-critical, main score already saved
-                },
+                () => {},
               )
             }
           })

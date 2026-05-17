@@ -17,6 +17,7 @@ import * as SplashScreen from "expo-splash-screen"
 import { firestore } from "./src/services/Firebase"
 import { AppState, View } from "react-native"
 import { getUserProfile } from "./src/services/Dailychallenge"
+import VersionGate from "./src/components/VersionGate"
 
 SplashScreen.preventAutoHideAsync()
 
@@ -26,7 +27,7 @@ interface UserData {
   email: string
 }
 
-export default function App() {
+function App() {
   const [introSeen, setIntroSeen] = useState<boolean | null>(null)
   const [user, setUser] = useState<UserData | null>(null)
   const [screen, setScreen] = useState<
@@ -295,3 +296,11 @@ export default function App() {
     </>
   )
 }
+
+const AppWithGate = () => (
+  <VersionGate>
+    <App />
+  </VersionGate>
+)
+
+export default AppWithGate
