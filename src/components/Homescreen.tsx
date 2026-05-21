@@ -291,7 +291,9 @@ const HomeScreen = ({
           activeOpacity={0.8}
         >
           <Text style={styles.prizeTagIcon}>🏆</Text>
-          <Text style={styles.prizeTagText}>€100 MONTHLY PRIZES</Text>
+          <Text style={styles.prizeTagText}>
+            €100 monthly prize unlocks at 100+ active warriors.
+          </Text>
           <View style={styles.prizeTagLive}>
             <Text style={styles.prizeTagLiveText}>LIVE</Text>
           </View>

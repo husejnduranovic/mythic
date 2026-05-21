@@ -181,7 +181,12 @@ function App() {
       <>
         <StatusBar hidden />
         <View style={{ flex: 1, backgroundColor: "#0B1410" }}>
-          <IntroScreen onComplete={() => setShowRules(false)} skipAnimation />
+          <IntroScreen
+            onComplete={() => setShowRules(false)}
+            skipAnimation
+            showReturnButton
+            onReturnHome={() => setShowRules(false)}
+          />
         </View>
       </>
     )

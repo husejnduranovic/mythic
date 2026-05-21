@@ -246,3 +246,41 @@ export const deleteRoom = async (code: string): Promise<void> => {
     await roomRef(code).remove()
   } catch {}
 }
+
+// Get list of all players currently in arena lobbies (looking for matches)
+export const subscribeToOnlinePlayers = (
+  callback: (
+    players: { uid: string; heroName: string; roomCode: string }[],
+  ) => void,
+): (() => void) => {
+  const roomsRef = database().ref("rooms")
+  let active = true
+
+  const handler = (snapshot: any) => {
+    if (!active) return
+    const rooms = snapshot.val() || {}
+    const onlinePlayers: { uid: string; heroName: string; roomCode: string }[] =
+      []
+
+    Object.values(rooms).forEach((room: any) => {
+      if (room.state === "lobby" && room.players) {
+        Object.values(room.players).forEach((player: any) => {
+          onlinePlayers.push({
+            uid: player.uid,
+            heroName: player.heroName,
+            roomCode: room.code,
+          })
+        })
+      }
+    })
+
+    callback(onlinePlayers)
+  }
+
+  roomsRef.on("value", handler)
+
+  return () => {
+    active = false
+    roomsRef.off("value", handler)
+  }
+}

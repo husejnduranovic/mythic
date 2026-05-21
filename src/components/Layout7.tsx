@@ -7,6 +7,7 @@ interface ILayout7Props {
   cards: ICard[]
   onClick: (index: number) => void
   hintedIndices?: Set<number>
+  pendingIndex?: number | null
 }
 
 /**
@@ -62,7 +63,12 @@ const isOpen = (cards: ICard[], ...blockers: number[]) =>
   blockers.every((i) => !cards[i]?.visible)
 
 const Layout7 = React.memo(
-  ({ cards, onClick, hintedIndices = new Set() }: ILayout7Props) => {
+  ({
+    cards,
+    onClick,
+    hintedIndices = new Set(),
+    pendingIndex,
+  }: ILayout7Props) => {
     if (cards.length < 30) return null
 
     const C = (i: number, open: boolean) => (
@@ -72,6 +78,7 @@ const Layout7 = React.memo(
         remove={!cards[i].visible}
         onClick={() => onClick(i)}
         hinted={hintedIndices.has(i)}
+        pending={pendingIndex === i}
       />
     )
 

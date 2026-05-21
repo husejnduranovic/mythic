@@ -18,6 +18,7 @@ import {
   startGame,
   onRoomUpdate,
   getRoomOnce,
+  subscribeToOnlinePlayers,
 } from "../services/ArenaService"
 import database from "@react-native-firebase/database"
 import ReturnToCastle from "./ReturnToCastle"
@@ -46,6 +47,18 @@ const ArenaScreen = ({
   const fadeAnim = useRef(new Animated.Value(0)).current
   const slideAnim = useRef(new Animated.Value(20)).current
   const glowPulse = useRef(new Animated.Value(0.3)).current
+
+  const [onlinePlayers, setOnlinePlayers] = useState<
+    { uid: string; heroName: string; roomCode: string }[]
+  >([])
+
+  useEffect(() => {
+    if (mode !== "menu") return
+    const unsub = subscribeToOnlinePlayers((players) => {
+      setOnlinePlayers(players.filter((p) => p.uid !== uid))
+    })
+    return unsub
+  }, [mode, uid])
 
   useEffect(() => {
     Animated.parallel([
@@ -356,68 +369,108 @@ const ArenaScreen = ({
           </View>
         )}
 
-        {/* Two cards side by side */}
-        <View style={styles.menuRow}>
-          {/* Create Room */}
-          <TouchableOpacity
-            style={styles.menuCard}
-            onPress={handleCreate}
-            disabled={loading}
-            activeOpacity={0.85}
-          >
-            <View style={styles.menuCardGlow} />
-            <View style={styles.menuCardIconWrap}>
-              <Text style={styles.menuCardIcon}>⚔</Text>
-            </View>
-            <Text style={styles.menuCardTitle}>Host Battle</Text>
-            <Text style={styles.menuCardDesc}>
-              Create a room and invite warriors
-            </Text>
-            <View style={styles.menuCardFooter}>
-              <Text style={styles.menuCardAction}>CREATE →</Text>
-            </View>
-          </TouchableOpacity>
-
-          {/* Join Room */}
-          <View style={styles.menuCard}>
-            <View style={styles.menuCardGlow} />
-            <View style={styles.menuCardIconWrap}>
-              <Text style={styles.menuCardIcon}>🛡</Text>
-            </View>
-            <Text style={styles.menuCardTitle}>Join Battle</Text>
-            <Text style={styles.menuCardDesc}>Enter room code to join</Text>
-
-            <View style={styles.codeInputWrap}>
-              <TextInput
-                style={styles.codeInput}
-                value={joinCode}
-                onChangeText={(t) =>
-                  setJoinCode(t.replace(/[^0-9]/g, "").slice(0, 4))
-                }
-                placeholder="----"
-                placeholderTextColor="rgba(232,197,71,0.2)"
-                keyboardType="number-pad"
-                maxLength={4}
-              />
-            </View>
-
+        {/* Two-column layout: cards (left 72%) + online list (right 28%) */}
+        <View style={styles.menuLayout}>
+          {/* LEFT — Host + Join cards */}
+          <View style={styles.menuLeft}>
+            {/* Create Room */}
             <TouchableOpacity
-              style={[
-                styles.joinBtn,
-                joinCode.length !== 4 && styles.joinBtnDisabled,
-              ]}
-              onPress={handleJoin}
-              disabled={loading || joinCode.length !== 4}
+              style={styles.menuCard}
+              onPress={handleCreate}
+              disabled={loading}
               activeOpacity={0.85}
             >
-              <Text style={styles.joinBtnText}>JOIN →</Text>
+              <View style={styles.menuCardGlow} />
+              <View style={styles.menuCardIconWrap}>
+                <Text style={styles.menuCardIcon}>⚔</Text>
+              </View>
+              <Text style={styles.menuCardTitle}>Host Battle</Text>
+              <Text style={styles.menuCardDesc}>
+                Create a room and invite warriors
+              </Text>
+              <View style={styles.menuCardFooter}>
+                <Text style={styles.menuCardAction}>CREATE →</Text>
+              </View>
             </TouchableOpacity>
+
+            {/* Join Room */}
+            <View style={styles.menuCard}>
+              <View style={styles.menuCardGlow} />
+              <View style={styles.menuCardIconWrap}>
+                <Text style={styles.menuCardIcon}>🛡</Text>
+              </View>
+              <Text style={styles.menuCardTitle}>Join Battle</Text>
+              <Text style={styles.menuCardDesc}>Enter room code to join</Text>
+
+              <View style={styles.codeInputWrap}>
+                <TextInput
+                  style={styles.codeInput}
+                  value={joinCode}
+                  onChangeText={(t) =>
+                    setJoinCode(t.replace(/[^0-9]/g, "").slice(0, 4))
+                  }
+                  placeholder="----"
+                  placeholderTextColor="rgba(232,197,71,0.2)"
+                  keyboardType="number-pad"
+                  maxLength={4}
+                />
+              </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.joinBtn,
+                  joinCode.length !== 4 && styles.joinBtnDisabled,
+                ]}
+                onPress={handleJoin}
+                disabled={loading || joinCode.length !== 4}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.joinBtnText}>JOIN →</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* RIGHT — Online warriors list */}
+          <View style={styles.menuRight}>
+            <View style={styles.onlineHeaderRow}>
+              <View style={styles.onlineLiveDot} />
+              <Text style={styles.onlineHeaderText}>
+                ONLINE · {onlinePlayers.length}
+              </Text>
+            </View>
+
+            {onlinePlayers.length === 0 ? (
+              <View style={styles.emptyOnline}>
+                <Text style={styles.emptyOnlineIcon}>⚔</Text>
+                <Text style={styles.emptyOnlineText}>No warriors waiting</Text>
+              </View>
+            ) : (
+              <ScrollView
+                style={styles.onlineListScroll}
+                contentContainerStyle={styles.onlineListContent}
+                showsVerticalScrollIndicator={false}
+              >
+                {onlinePlayers.map((p, i) => (
+                  <TouchableOpacity
+                    key={`${p.uid}-${i}`}
+                    style={styles.onlineCard}
+                    onPress={() => setJoinCode(p.roomCode)}
+                    activeOpacity={0.75}
+                  >
+                    <View style={styles.onlineCardAvatar}>
+                      <Text style={styles.onlineCardAvatarText}>⚔</Text>
+                    </View>
+                    <Text style={styles.onlineCardName} numberOfLines={1}>
+                      {p.heroName}
+                    </Text>
+                    <Text style={styles.onlineCardCode}>#{p.roomCode}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
           </View>
         </View>
 
-        {/* <TouchableOpacity style={styles.backBtn} onPress={onBack}>
-          <Text style={styles.backText}>← Return to Castle</Text>
-        </TouchableOpacity> */}
         <ReturnToCastle onPress={onBack} />
       </Animated.View>
     </View>
@@ -425,6 +478,280 @@ const ArenaScreen = ({
 }
 
 const styles = StyleSheet.create({
+  // Two-column layout
+  menuLayout: {
+    flexDirection: "row",
+    gap: 12,
+    width: "100%",
+    maxWidth: 780,
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+  },
+  menuLeft: {
+    flexDirection: "row",
+    gap: 10,
+    flex: 0.72,
+    justifyContent: "center",
+  },
+  menuRight: {
+    flex: 0.28,
+    minWidth: 140,
+  },
+
+  // Online warriors panel (right column)
+  onlineHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 6,
+    paddingHorizontal: 4,
+  },
+  onlineLiveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#7BED9F",
+    shadowColor: "#7BED9F",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+  },
+  onlineHeaderText: {
+    color: "rgba(232,197,71,0.6)",
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 2,
+  },
+  emptyOnline: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 24,
+    backgroundColor: "rgba(232,197,71,0.02)",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(232,197,71,0.06)",
+    borderStyle: "dashed",
+    gap: 6,
+  },
+  emptyOnlineIcon: {
+    fontSize: 20,
+    opacity: 0.3,
+  },
+  emptyOnlineText: {
+    color: "rgba(232,197,71,0.4)",
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 1,
+    textAlign: "center",
+  },
+  onlineListScroll: {
+    maxHeight: 220,
+  },
+  onlineListContent: {
+    gap: 4,
+  },
+  onlineCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(232,197,71,0.04)",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: "rgba(232,197,71,0.1)",
+  },
+  onlineCardAvatar: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: "rgba(232,197,71,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(232,197,71,0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  onlineCardAvatarText: {
+    fontSize: 10,
+    color: "rgba(232,197,71,0.6)",
+  },
+  onlineCardName: {
+    flex: 1,
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+  onlineCardCode: {
+    color: "#E8C547",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+  // Action bar
+  actionBar: {
+    flexDirection: "row",
+    gap: 10,
+    width: "100%",
+    maxWidth: 480,
+    marginTop: 4,
+    marginBottom: 12,
+  },
+  hostBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "rgba(232,197,71,0.08)",
+    borderWidth: 1.5,
+    borderColor: "rgba(232,197,71,0.3)",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    shadowColor: "#E8C547",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  hostBtnIcon: {
+    fontSize: 22,
+  },
+  hostBtnTextWrap: {
+    flex: 1,
+  },
+  hostBtnLabel: {
+    color: "#E8C547",
+    fontSize: 13,
+    fontWeight: "900",
+    letterSpacing: 3,
+  },
+  hostBtnHint: {
+    color: "rgba(232,197,71,0.45)",
+    fontSize: 9,
+    fontWeight: "600",
+    letterSpacing: 0.5,
+    marginTop: 1,
+  },
+  joinSection: {
+    flex: 1,
+    flexDirection: "row",
+    gap: 6,
+    alignItems: "center",
+  },
+  joinInput: {
+    flex: 1,
+    backgroundColor: "rgba(232,197,71,0.04)",
+    borderWidth: 1.5,
+    borderColor: "rgba(232,197,71,0.2)",
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    color: "#E8C547",
+    fontSize: 18,
+    fontWeight: "900",
+    letterSpacing: 4,
+    textAlign: "center",
+  },
+  joinBtnNew: {
+    backgroundColor: "#E8C547",
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    shadowColor: "#E8C547",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  joinBtnNewDisabled: {
+    opacity: 0.3,
+    shadowOpacity: 0,
+  },
+  joinBtnNewText: {
+    color: "#1a1a1a",
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 2,
+  },
+
+  // Section divider
+  sectionDivider: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 12,
+    width: "100%",
+    maxWidth: 480,
+  },
+  sectionDividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "rgba(232,197,71,0.1)",
+  },
+  sectionDividerText: {
+    color: "rgba(232,197,71,0.4)",
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 3,
+  },
+
+  // Online section — main attraction
+  onlineSectionWrap: {
+    width: "100%",
+    maxWidth: 480,
+    flex: 1,
+    marginBottom: 12,
+  },
+
+  emptyOnlineSubtext: {
+    color: "rgba(255,255,255,0.3)",
+    fontSize: 10,
+    fontWeight: "600",
+    letterSpacing: 0.5,
+  },
+
+  onlineCardLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flex: 1,
+  },
+
+  onlineCardInfo: {
+    flex: 1,
+  },
+
+  onlineCardStatus: {
+    color: "rgba(255,255,255,0.3)",
+    fontSize: 9,
+    fontWeight: "600",
+    letterSpacing: 0.5,
+    marginTop: 2,
+  },
+  onlineCardRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  onlineCardCodeLabel: {
+    color: "rgba(232,197,71,0.4)",
+    fontSize: 7,
+    fontWeight: "900",
+    letterSpacing: 2,
+  },
+  onlineCardCodeValue: {
+    color: "#E8C547",
+    fontSize: 13,
+    fontWeight: "900",
+    letterSpacing: 1,
+    marginTop: 1,
+  },
+  onlineCardArrow: {
+    color: "rgba(232,197,71,0.4)",
+    fontSize: 16,
+    fontWeight: "900",
+  },
   container: {
     flex: 1,
     backgroundColor: "#0B1410",
@@ -527,11 +854,11 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(232,197,71,0.04)",
     borderWidth: 1,
     borderColor: "rgba(232,197,71,0.15)",
-    borderRadius: 14,
-    padding: 16,
+    borderRadius: 12,
+    padding: 12, // was 16
     alignItems: "center",
-    width: 200,
-    gap: 6,
+    width: 160, // was 200
+    gap: 4, // was 6
     overflow: "hidden",
   },
   menuCardGlow: {
@@ -544,29 +871,29 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(232,197,71,0.05)",
   },
   menuCardIconWrap: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
+    width: 44, // was 54
+    height: 44, // was 54
+    borderRadius: 22,
     borderWidth: 1.5,
     borderColor: "rgba(232,197,71,0.3)",
     backgroundColor: "rgba(232,197,71,0.05)",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: 2, // was 4
   },
-  menuCardIcon: { fontSize: 26 },
+  menuCardIcon: { fontSize: 22 }, // was 26
   menuCardTitle: {
     color: "#E8C547",
-    fontSize: 14,
+    fontSize: 12, // was 14
     fontWeight: "900",
     letterSpacing: 2,
   },
   menuCardDesc: {
     color: "rgba(255,255,255,0.3)",
-    fontSize: 9,
+    fontSize: 8, // was 9
     textAlign: "center",
     letterSpacing: 0.5,
-    minHeight: 22,
+    minHeight: 20, // was 22
   },
   menuCardFooter: {
     marginTop: 8,
@@ -585,20 +912,20 @@ const styles = StyleSheet.create({
 
   // Join code input
   codeInputWrap: {
-    marginTop: 4,
-    width: 140,
+    marginTop: 2,
+    width: 120, // was 140
   },
   codeInput: {
     backgroundColor: "rgba(232,197,71,0.06)",
     borderWidth: 1.5,
     borderColor: "rgba(232,197,71,0.25)",
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     color: "#E8C547",
-    fontSize: 22,
+    fontSize: 18, // was 22
     fontWeight: "900",
-    letterSpacing: 10,
+    letterSpacing: 8, // was 10
     textAlign: "center",
   },
   joinBtn: {
@@ -903,6 +1230,90 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     width: "100%",
+  },
+  onlineSection: {
+    width: "100%",
+    maxWidth: 420,
+    marginTop: 16,
+    alignItems: "center",
+  },
+  onlineHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 8,
+    width: "100%",
+  },
+  onlineHeaderLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "rgba(232,197,71,0.12)",
+  },
+  onlineDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#7BED9F",
+  },
+  onlineTitle: {
+    color: "rgba(232,197,71,0.5)",
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 3,
+  },
+  onlineScroll: {
+    maxHeight: 140,
+    width: "100%",
+  },
+  onlineList: {
+    gap: 4,
+    paddingHorizontal: 4,
+  },
+  onlineRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "rgba(232,197,71,0.03)",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: "rgba(232,197,71,0.08)",
+  },
+  onlineAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "rgba(232,197,71,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(232,197,71,0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  onlineAvatarText: {
+    fontSize: 10,
+    color: "rgba(232,197,71,0.6)",
+  },
+  onlineName: {
+    flex: 1,
+    color: "rgba(255,255,255,0.65)",
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+  onlineCodeBadge: {
+    backgroundColor: "rgba(232,197,71,0.08)",
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: "rgba(232,197,71,0.15)",
+  },
+  onlineCodeText: {
+    color: "#E8C547",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1,
   },
 })
 

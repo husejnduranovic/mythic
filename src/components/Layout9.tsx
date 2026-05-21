@@ -8,6 +8,7 @@ interface ILayout9Props {
   onClick: (index: number) => void
   hintedIndices?: Set<number>
   bountyIndices?: Set<number>
+  pendingIndex?: number | null
 }
 
 const isOpen = (cards: ICard[], ...blockers: number[]) =>
@@ -57,6 +58,7 @@ const Layout9 = React.memo(
     onClick,
     hintedIndices = new Set(),
     bountyIndices = new Set(),
+    pendingIndex,
   }: ILayout9Props) => {
     if (cards.length < 32) return null
 
@@ -68,6 +70,7 @@ const Layout9 = React.memo(
         onClick={() => onClick(i)}
         hinted={hintedIndices.has(i)}
         bounty={bountyIndices?.has(i)}
+        pending={pendingIndex === i}
       />
     )
 
@@ -134,7 +137,7 @@ const Layout9 = React.memo(
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 4,
+    paddingHorizontal: 12,
     paddingTop: 4,
     paddingBottom: 4,
   },

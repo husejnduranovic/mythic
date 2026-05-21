@@ -43,6 +43,7 @@ interface ICardProps {
     frontBg: string
     textColor: string
   }
+  pending?: boolean
 }
 
 // ─── REPLACE THESE CONSTANTS at the top of Card.tsx ───
@@ -938,22 +939,6 @@ const FallingCard = ({
   )
 }
 
-const HintGlow = () => {
-  const pulse = useSharedValue(0.6)
-  useEffect(() => {
-    pulse.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 800, easing: Easing.inOut(Easing.sin) }),
-        withTiming(0.6, { duration: 800, easing: Easing.inOut(Easing.sin) }),
-      ),
-      -1,
-      false,
-    )
-  }, [])
-  const style = useAnimatedStyle(() => ({ opacity: pulse.value }))
-  return <Animated.View style={[styles.hintGlow, style]} pointerEvents="none" />
-}
-
 const Card = React.memo(
   (props: ICardProps) => {
     const {
@@ -967,6 +952,7 @@ const Card = React.memo(
       hinted = false,
       cardBackColor: propBackColor,
       bounty,
+      pending,
     } = props
     const contextBackColor = useCardBackColor()
     const cardBackColor =
@@ -1041,10 +1027,15 @@ const Card = React.memo(
         hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
         style={[
           isDeck ? styles.touchDeck : styles.touch,
-          { zIndex: isOpen ? 2 : 1 },
+          { zIndex: pending ? 10 : isOpen ? 2 : 1 },
         ]}
       >
-        <View style={isDeck ? styles.wrapDeck : styles.wrap}>
+        <View
+          style={[
+            isDeck ? styles.wrapDeck : styles.wrap,
+            pending && styles.wrapPending,
+          ]}
+        >
           {isDeck ? (
             <DeckCard remaining={remaining!} backColor={cardBackColor} />
           ) : isOpen && card ? (
@@ -1071,6 +1062,7 @@ const Card = React.memo(
     if (prev.alwaysEnabled !== next.alwaysEnabled) return false
     if (prev.remaining !== next.remaining) return false
     if (prev.cardBackColor !== next.cardBackColor) return false
+    if (prev.pending !== next.pending) return false
     // if (prev.onClick !== next.onClick) return false // ← ADD THIS
 
     const pc = prev.card
@@ -1100,6 +1092,12 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.45, // was 0.25 — deeper shadow for depth
     shadowRadius: 5, // was 3
+  },
+  wrapPending: {
+    transform: [{ scale: 1.15 }],
+    borderWidth: 2,
+    borderColor: "#E8C547",
+    borderRadius: CARD_RADIUS,
   },
   wrapDeck: {
     width: DECK_W,

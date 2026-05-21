@@ -8,6 +8,7 @@ interface ILayout2Props {
   onClick: (index: number) => void
   hintedIndices?: Set<number>
   bountyIndices?: Set<number>
+  pendingIndex?: number | null
 }
 
 const isOpen = (cards: ICard[], ...blockers: number[]) =>
@@ -56,8 +57,9 @@ const Layout2 = React.memo(
     onClick,
     hintedIndices = new Set(),
     bountyIndices = new Set(),
+    pendingIndex,
   }: ILayout2Props) => {
-    if (cards.length < 30) return null
+    if (cards.length < 32) return null
 
     const C = (i: number, open: boolean) => (
       <Card
@@ -67,18 +69,22 @@ const Layout2 = React.memo(
         onClick={() => onClick(i)}
         hinted={hintedIndices.has(i)}
         bounty={bountyIndices?.has(i)}
+        pending={pendingIndex === i}
       />
     )
 
     return (
       <View style={styles.container}>
         <View style={styles.topSection}>
-          {/* LEFT PILE — outer 2x2 wide, inner 2x2 squeezed in the middle overlapping outer corners */}
+          {/* LEFT PILE — two tops, outer 2x2, inner 2x2 */}
           <View style={styles.pile}>
             <View style={styles.pileInner}>
-              {/* Top single — OPEN */}
+              {/* Two top cards side by side — BOTH OPEN, BOTH block inner box */}
               <View style={[styles.absRow, { top: 110 }]}>
-                <View style={styles.row}>{C(0, true)}</View>
+                <View style={styles.topPairRow}>
+                  {C(0, true)}
+                  {C(30, true)}
+                </View>
               </View>
               {/* Outer 2x2 — upper row, wide */}
               <View style={[styles.absRow, { top: 40 }]}>
@@ -87,11 +93,11 @@ const Layout2 = React.memo(
                   {C(2, isOpen(cards, 6))}
                 </View>
               </View>
-              {/* Inner 2x2 — upper row, squeezed in the middle, sits OVER outer corners */}
+              {/* Inner 2x2 — upper row, blocked by BOTH top cards */}
               <View style={[styles.absRow, { top: 70 }]}>
                 <View style={styles.innerRow}>
-                  {C(5, isOpen(cards, 0))}
-                  {C(6, isOpen(cards, 0))}
+                  {C(5, isOpen(cards, 0, 30))}
+                  {C(6, isOpen(cards, 0, 30))}
                 </View>
               </View>
               {/* Outer 2x2 — lower row, wide */}
@@ -101,11 +107,11 @@ const Layout2 = React.memo(
                   {C(4, isOpen(cards, 8))}
                 </View>
               </View>
-              {/* Inner 2x2 — lower row, squeezed in the middle */}
+              {/* Inner 2x2 — lower row, blocked by BOTH top cards */}
               <View style={[styles.absRow, { top: 140 }]}>
                 <View style={styles.innerRow}>
-                  {C(7, isOpen(cards, 0))}
-                  {C(8, isOpen(cards, 0))}
+                  {C(7, isOpen(cards, 0, 30))}
+                  {C(8, isOpen(cards, 0, 30))}
                 </View>
               </View>
             </View>
@@ -135,8 +141,12 @@ const Layout2 = React.memo(
           {/* RIGHT PILE — mirror */}
           <View style={styles.pile}>
             <View style={styles.pileInner}>
+              {/* Two top cards — BOTH OPEN */}
               <View style={[styles.absRow, { top: 110 }]}>
-                <View style={styles.row}>{C(9, true)}</View>
+                <View style={styles.topPairRow}>
+                  {C(9, true)}
+                  {C(31, true)}
+                </View>
               </View>
               <View style={[styles.absRow, { top: 40 }]}>
                 <View style={styles.outerRow}>
@@ -146,8 +156,8 @@ const Layout2 = React.memo(
               </View>
               <View style={[styles.absRow, { top: 70 }]}>
                 <View style={styles.innerRow}>
-                  {C(14, isOpen(cards, 9))}
-                  {C(15, isOpen(cards, 9))}
+                  {C(14, isOpen(cards, 9, 31))}
+                  {C(15, isOpen(cards, 9, 31))}
                 </View>
               </View>
               <View style={[styles.absRow, { top: 180 }]}>
@@ -158,8 +168,8 @@ const Layout2 = React.memo(
               </View>
               <View style={[styles.absRow, { top: 140 }]}>
                 <View style={styles.innerRow}>
-                  {C(16, isOpen(cards, 9))}
-                  {C(17, isOpen(cards, 9))}
+                  {C(16, isOpen(cards, 9, 31))}
+                  {C(17, isOpen(cards, 9, 31))}
                 </View>
               </View>
             </View>
@@ -241,6 +251,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 22, // minimal gap between inner cards
     padding: 10,
+  },
+  // Two top cards side by side
+  topPairRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 2,
   },
 })
 

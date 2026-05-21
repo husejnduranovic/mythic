@@ -87,7 +87,7 @@ const LEVEL_CONFIG: Record<
   // 2: { fieldCards: 30, deckStart: 30, time: 85, layout: 2 },
   3: { fieldCards: 30, deckStart: 30, time: 80, layout: 7 },
   4: { fieldCards: 32, deckStart: 32, time: 80, layout: 8 },
-  5: { fieldCards: 30, deckStart: 30, time: 285, layout: 2 },
+  5: { fieldCards: 32, deckStart: 32, time: 85, layout: 2 },
   // 5: { fieldCards: 32, deckStart: 32, time: 85, layout: 9 },
   6: { fieldCards: 28, deckStart: 28, time: 75, layout: 5 },
 }
@@ -937,8 +937,9 @@ export const bottomBarStyles = StyleSheet.create({
   },
 
   rightBox: {
-    alignItems: "flex-end",
-    gap: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
     minWidth: 75,
     zIndex: 2,
     height: 52,
@@ -1132,6 +1133,8 @@ const Game = ({
   // Drives the shield flash animation when insurance triggers.
   const insuranceFlash = useSharedValue(0)
 
+  const wildPlacingRef = useRef(false)
+
   const insuranceFlashStyle = useAnimatedStyle(() => ({
     opacity: insuranceFlash.value,
     transform: [{ scale: 0.8 + insuranceFlash.value * 0.4 }],
@@ -1177,6 +1180,7 @@ const Game = ({
     levelRef.current = level
     deckIndexRef.current = deckIndex
     freeDrawAvailableRef.current = freeDrawAvailable
+    wildPlacingRef.current = wildPlacing
   })
 
   useEffect(() => {
@@ -1692,6 +1696,10 @@ const Game = ({
     const wildActive = wildActiveRef.current
     const bountyIndices = bountyIndicesRef.current
     const level = levelRef.current
+    const wildPlacing = wildPlacingRef.current
+
+    // BLOCK: if we're in the middle of choosing a wild slot, ignore field taps
+    if (wildPlacing) return
 
     const cur = cards[currentIndex]
     const tapped = cards[index]
@@ -1707,6 +1715,17 @@ const Game = ({
       autoAdvanceTimer.current = null
     }
 
+    // WILD FLOW WITH CHOICE — defer everything until placement
+    if (isW && secondCard !== null) {
+      // Player chose this field card — but don't apply effects yet.
+      // Card stays visible. Wild stays in use (won't refund). Show placement UI.
+      setWildActive(false)
+      setWildPendingIndex(index)
+      setWildPlacing(true)
+      return
+    }
+
+    // ALL OTHER CASES — immediate apply (normal match or wild with single slot)
     const nc = combo + 1
     const layoutMultiplier = 1 + (level - 1) * 0.5
     const gloryMultiplier = gloryActiveRef.current ? 2 : 1
@@ -1734,14 +1753,10 @@ const Game = ({
     setShowHints(false)
 
     if (isW) {
+      // Wild used with single active slot — auto-place into current
       setWildActive(false)
-      if (secondCard !== null) {
-        setWildPendingIndex(index)
-        setWildPlacing(true)
-      } else {
-        setTimerFrozen(false)
-        setCurrentIndex(index)
-      }
+      setTimerFrozen(false)
+      setCurrentIndex(index)
     } else if (mc) {
       if (nc >= SECOND_CARD_COMBO && secondCard === null) {
         setSecondCard(currentIndex)
@@ -1750,7 +1765,64 @@ const Game = ({
     } else {
       setSecondCard(index)
     }
-  }, []) // ← empty deps, stable forever
+  }, [])
+
+  const applyWildPlacement = (slot: "first" | "second") => {
+    const cards = cardsRef.current
+    const combo = comboRef.current
+    const bountyIndices = bountyIndicesRef.current
+    const level = levelRef.current
+    const index = wildPendingIndex
+    if (index === null) return
+
+    // Now apply the score/combo (deferred from handleCardPress)
+    const nc = combo + 1
+    const layoutMultiplier = 1 + (level - 1) * 0.5
+    const gloryMultiplier = gloryActiveRef.current ? 2 : 1
+    const isBounty = bountyIndices.has(index)
+    const bountyMultiplier = isBounty ? 5 : 1
+    const pts = Math.round(
+      BASE_CARD_VALUE *
+        getComboMultiplier(nc) *
+        layoutMultiplier *
+        gloryMultiplier *
+        bountyMultiplier,
+    )
+
+    if (isBounty) showMilestone("BOUNTY!", "#FFD700", "💰")
+    SoundService.playMatch(nc)
+    showPointsAnimation(pts)
+
+    // Hide the card NOW (it was visually staying until placement)
+    setCards((prev) => {
+      const u = [...prev]
+      u[index] = { ...u[index], visible: false }
+      return u
+    })
+    setCombo(nc)
+    setScore((s) => s + pts)
+    setShowHints(false)
+
+    // Place into the chosen slot
+    if (slot === "first") {
+      setCurrentIndex(index)
+    } else {
+      setSecondCard(index)
+    }
+
+    setWildPlacing(false)
+    setWildPendingIndex(null)
+    setTimerFrozen(false)
+  }
+
+  const handleCancelWildPlacement = () => {
+    // Refund the wild
+    setWildCount((c) => c + 1)
+    setWildActive(false)
+    setWildPlacing(false)
+    setWildPendingIndex(null)
+    setTimerFrozen(false)
+  }
 
   const activateGloryHunt = () => {
     if (gloryCharges <= 0) return
@@ -1823,20 +1895,12 @@ const Game = ({
 
   const handleWildPlaceFirst = () => {
     SoundService.playDeckDraw()
-    setCurrentIndex(wildPendingIndex!)
-    // secondCard stays unchanged
-    setWildPlacing(false)
-    setWildPendingIndex(null)
-    setTimerFrozen(false)
+    applyWildPlacement("first")
   }
 
   const handleWildPlaceSecond = () => {
     SoundService.playDeckDraw()
-    setSecondCard(wildPendingIndex!)
-    // currentIndex stays unchanged
-    setWildPlacing(false)
-    setWildPendingIndex(null)
-    setTimerFrozen(false)
+    applyWildPlacement("second")
   }
 
   const handleWild = () => {
@@ -2050,6 +2114,7 @@ const Game = ({
       hintedIndices,
       bountyIndices,
       bountyConfig,
+      pendingIndex: wildPendingIndex,
     }
 
     switch (config.layout) {
@@ -2939,11 +3004,14 @@ const Game = ({
                   !betweenLevels &&
                   !gameOver && (
                     <TouchableOpacity
-                      style={styles.freeDrawBtn}
+                      style={styles.freeDrawCard}
                       onPress={handleFreeDraw}
-                      activeOpacity={0.8}
+                      activeOpacity={0.7}
                     >
-                      <Text style={styles.freeDrawText}>FREE DRAW</Text>
+                      <View style={styles.freeDrawCardInner}>
+                        <Text style={styles.freeDrawCardText}>1 FREE</Text>
+                        <Text style={styles.freeDrawCardText}>DRAW</Text>
+                      </View>
                     </TouchableOpacity>
                   )}
                 <View style={styles.spoilsBox}>
@@ -2952,19 +3020,6 @@ const Game = ({
                     {score.toLocaleString()}
                   </Reanimated.Text>
                 </View>
-                {carryButtonData.shouldShow ? (
-                  <TouchableOpacity
-                    style={styles.carryBtn}
-                    onPress={handleAbandonLayout}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.carryBtnIcon}>⚡</Text>
-                    <Text style={styles.carryBtnText}>
-                      x{carryButtonData.carried}
-                    </Text>
-                  </TouchableOpacity>
-                ) : null}
-                {/* carry combo button stays here */}
               </View>
               <View style={styles.centerCards}>
                 <View
@@ -3021,6 +3076,23 @@ const Game = ({
                   </>
                 )}
               </View>
+              {carryButtonData.shouldShow && (
+                <TouchableOpacity
+                  style={[
+                    styles.carryCard,
+                    { right: wildCount > 1 ? 230 : wildCount > 0 ? 170 : 110 },
+                  ]}
+                  onPress={handleAbandonLayout}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.carryCardInner}>
+                    <Text style={styles.carryCardLabel}>CARRY COMBO</Text>
+                    <Text style={styles.carryCardValue}>
+                      x{carryButtonData.carried}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              )}
               {/* Wild cards between center and timer */}
               {wildCount > 0 && !wildActive && (
                 <TouchableOpacity
@@ -3623,10 +3695,13 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+    height: "100%", // force full height
+    width: "100%", // force full width
     backgroundColor: "rgba(0,0,0,0.92)",
     justifyContent: "center",
     alignItems: "center",
     zIndex: 1000,
+    elevation: 1000, // android needs elevation too
   },
   quitCard: {
     alignItems: "center",
@@ -3636,9 +3711,10 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "rgba(232,197,71,0.25)",
     paddingHorizontal: 36,
-    paddingVertical: 28,
+    paddingVertical: 20, // reduced from 28
     minWidth: 300,
     maxWidth: 340,
+    maxHeight: "90%", // ADD THIS — never exceeds 90% of overlay
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.9,
@@ -3677,20 +3753,19 @@ const styles = StyleSheet.create({
   },
   quitIconWrap: {
     position: "relative",
-    width: 72,
-    height: 72,
+    width: 56, // was 72
+    height: 56, // was 72
     justifyContent: "center",
     alignItems: "center",
-    marginVertical: 4,
+    marginVertical: 2, // was 4
   },
   quitIconBehind: {
     position: "absolute",
-    fontSize: 52,
+    fontSize: 40, // was 52
     opacity: 0.25,
-    transform: [{ rotate: "0deg" }],
   },
   quitIconFront: {
-    fontSize: 44,
+    fontSize: 34, // was 44
     zIndex: 2,
   },
   quitTitle: {
@@ -3722,8 +3797,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "rgba(255,80,80,0.2)",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 14, // was 16
+    paddingVertical: 6, // was 8
     width: "100%",
   },
   quitWarningIcon: { fontSize: 16 },
@@ -3740,7 +3815,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(232,197,71,0.12)",
     paddingHorizontal: 28,
-    paddingVertical: 10,
+    paddingVertical: 6, // was 10
     width: "100%",
   },
   quitScoreLabel: {
@@ -3765,7 +3840,7 @@ const styles = StyleSheet.create({
     gap: 12,
     backgroundColor: "#E8C547",
     paddingHorizontal: 28,
-    paddingVertical: 14,
+    paddingVertical: 10, // was 14
     borderRadius: 12,
     width: "100%",
     borderWidth: 1.5,
@@ -3789,7 +3864,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 10,
     paddingHorizontal: 28,
-    paddingVertical: 12,
+    paddingVertical: 8, // was 12
     borderRadius: 12,
     width: "100%",
     borderWidth: 1,
@@ -4923,27 +4998,38 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: 2,
   },
-  carryBtn: {
-    backgroundColor: "rgba(255,255,255,0.06)",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    alignItems: "center",
+  carryCard: {
+    width: 56,
+    height: 78,
+    margin: 2,
+    position: "absolute",
+    bottom: 8,
+  },
+  carryCardInner: {
+    flex: 1,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: "rgba(123,237,159,0.5)",
+    backgroundColor: "rgba(123,237,159,0.08)",
+    borderStyle: "dashed",
     justifyContent: "center",
-    flexDirection: "row",
-    gap: 5,
+    alignItems: "center",
+    gap: 2,
   },
-  carryBtnIcon: {
-    fontSize: 11,
-    color: "rgba(232,197,71,0.6)",
-  },
-  carryBtnText: {
-    color: "rgba(255,255,255,0.7)",
-    fontSize: 12,
+  carryCardLabel: {
+    color: "rgba(123,237,159,0.8)",
+    fontSize: 8, // was 10
     fontWeight: "900",
-    letterSpacing: 1,
+    letterSpacing: 1.5, // was 2
+    textAlign: "center",
+  },
+  carryCardValue: {
+    color: "#7BED9F",
+    fontSize: 16,
+    fontWeight: "900",
+    textShadowColor: "rgba(123,237,159,0.4)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 6,
   },
   wildProgress: {
     flexDirection: "row",
@@ -4971,21 +5057,27 @@ const styles = StyleSheet.create({
     fontSize: 8,
     fontWeight: "800",
   },
-  freeDrawBtn: {
-    backgroundColor: "rgba(255,255,255,0.08)",
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    alignItems: "center",
-    justifyContent: "center",
+  freeDrawCard: {
+    width: 56,
+    height: 78,
+    margin: 2,
   },
-  freeDrawText: {
-    color: "rgba(255,255,255,0.6)",
-    fontSize: 8,
+  freeDrawCardInner: {
+    flex: 1,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: "rgba(232,197,71,0.4)",
+    backgroundColor: "rgba(232,197,71,0.06)",
+    borderStyle: "dashed",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  freeDrawCardText: {
+    color: "rgba(232,197,71,0.75)",
+    fontSize: 11,
     fontWeight: "900",
-    letterSpacing: 1,
+    letterSpacing: 2,
+    lineHeight: 14,
   },
   freeDrawIcon: {
     fontSize: 10,

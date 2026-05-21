@@ -8,6 +8,7 @@ interface ILayout8Props {
   onClick: (index: number) => void
   hintedIndices?: Set<number>
   bountyIndices?: Set<number>
+  pendingIndex?: number | null
 }
 
 /**
@@ -68,6 +69,7 @@ const Layout8 = React.memo(
     onClick,
     hintedIndices = new Set(),
     bountyIndices = new Set(),
+    pendingIndex,
   }: ILayout8Props) => {
     if (cards.length < 32) return null
 
@@ -79,6 +81,7 @@ const Layout8 = React.memo(
         onClick={() => onClick(i)}
         hinted={hintedIndices.has(i)}
         bounty={bountyIndices?.has(i)}
+        pending={pendingIndex === i}
       />
     )
 

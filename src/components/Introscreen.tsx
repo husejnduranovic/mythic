@@ -7,12 +7,15 @@ import {
   View,
 } from "react-native"
 import AsyncStorage from "@react-native-async-storage/async-storage"
+import ReturnToCastle from "./ReturnToCastle"
 
 const INTRO_KEY = "@mythic_intro_seen"
 
 interface IntroScreenProps {
   onComplete: () => void
   skipAnimation?: boolean
+  showReturnButton?: boolean // NEW
+  onReturnHome?: () => void // NEW
 }
 
 const TUTORIAL_SLIDES = [
@@ -75,6 +78,8 @@ const TUTORIAL_SLIDES = [
 const IntroScreen = ({
   onComplete,
   skipAnimation = false,
+  showReturnButton = false,
+  onReturnHome,
 }: IntroScreenProps) => {
   const [slideIndex, setSlideIndex] = useState(0)
 
@@ -389,6 +394,9 @@ const IntroScreen = ({
       <Text style={z.skipHint}>
         {slideIndex + 1} / {TUTORIAL_SLIDES.length}
       </Text>
+      {showReturnButton && onReturnHome && (
+        <ReturnToCastle onPress={onReturnHome} />
+      )}
     </View>
   )
 }
@@ -612,7 +620,12 @@ const z = StyleSheet.create({
     letterSpacing: 1,
   },
 
-  skipHint: { color: "rgba(255,255,255,0.15)", fontSize: 10, marginTop: 8 },
+  skipHint: {
+    color: "rgba(255,255,255,0.15)",
+    fontSize: 10,
+    marginTop: 8,
+    marginBottom: 20,
+  },
 })
 
 export default IntroScreen
