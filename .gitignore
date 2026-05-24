@@ -38,4 +38,4 @@ google-services.json
 service-account.json
 firebase-adminsdk-*.json
 .env
-.env.local
+.env.local@husejn__mythic-peaks.jks 

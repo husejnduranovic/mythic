@@ -81,20 +81,22 @@ const Layout2 = React.memo(
             <View style={styles.pileInner}>
               {/* Two top cards side by side — BOTH OPEN, BOTH block inner box */}
               <View style={[styles.absRow, { top: 110 }]}>
-                <View style={styles.topPairRow}>
+                <View style={[styles.topPairRow, { bottom: 60 }]}>
                   {C(0, true)}
+                </View>
+                <View style={[styles.topPairRow, { bottom: 20 }]}>
                   {C(30, true)}
                 </View>
               </View>
               {/* Outer 2x2 — upper row, wide */}
-              <View style={[styles.absRow, { top: 40 }]}>
+              <View style={[styles.absRow, { top: 20 }]}>
                 <View style={styles.outerRow}>
                   {C(1, isOpen(cards, 5))}
                   {C(2, isOpen(cards, 6))}
                 </View>
               </View>
               {/* Inner 2x2 — upper row, blocked by BOTH top cards */}
-              <View style={[styles.absRow, { top: 70 }]}>
+              <View style={[styles.absRow, { top: 50 }]}>
                 <View style={styles.innerRow}>
                   {C(5, isOpen(cards, 0, 30))}
                   {C(6, isOpen(cards, 0, 30))}
@@ -143,30 +145,33 @@ const Layout2 = React.memo(
             <View style={styles.pileInner}>
               {/* Two top cards — BOTH OPEN */}
               <View style={[styles.absRow, { top: 110 }]}>
-                <View style={styles.topPairRow}>
+                <View style={[styles.topPairRow, { bottom: 60 }]}>
                   {C(9, true)}
+                  {/* {C(31, true)} */}
+                </View>
+                <View style={[styles.topPairRow, { bottom: 20 }]}>
                   {C(31, true)}
                 </View>
               </View>
-              <View style={[styles.absRow, { top: 40 }]}>
+              <View style={[styles.absRow, { top: 20 }]}>
                 <View style={styles.outerRow}>
                   {C(10, isOpen(cards, 14))}
                   {C(11, isOpen(cards, 15))}
                 </View>
               </View>
-              <View style={[styles.absRow, { top: 70 }]}>
+              <View style={[styles.absRow, { top: 50 }]}>
                 <View style={styles.innerRow}>
                   {C(14, isOpen(cards, 9, 31))}
                   {C(15, isOpen(cards, 9, 31))}
                 </View>
               </View>
-              <View style={[styles.absRow, { top: 180 }]}>
+              <View style={[styles.absRow, { top: 170 }]}>
                 <View style={styles.outerRow}>
                   {C(12, isOpen(cards, 16))}
                   {C(13, isOpen(cards, 17))}
                 </View>
               </View>
-              <View style={[styles.absRow, { top: 140 }]}>
+              <View style={[styles.absRow, { top: 130 }]}>
                 <View style={styles.innerRow}>
                   {C(16, isOpen(cards, 9, 31))}
                   {C(17, isOpen(cards, 9, 31))}
@@ -256,7 +261,7 @@ const styles = StyleSheet.create({
   topPairRow: {
     flexDirection: "row",
     justifyContent: "center",
-    gap: 2,
+    gap: 4,
   },
 })
 
