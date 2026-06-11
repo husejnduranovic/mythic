@@ -1,0 +1,147 @@
+# Mythic Peaks — Refactor & Improvement Plan
+
+Ordered smallest-risk-first. Each Phase 1 step is a separate commit; the app must build (`tsc --noEmit` + `gradlew assembleRelease`) after every step. No behavior changes in Phase 1.
+
+## Current state (findings)
+
+| File | Lines | Notes |
+|---|---|---|
+| `src/components/Game.tsx` | 4,822 | Monolith: constants, scoring math, 4 decorative components, ~80 state hooks, all Firebase score-saving, 7 screen states, 1,700+ lines of styles |
+| `src/components/Arenascreen.tsx` | 1,520 | Menu + lobby + invite UI + styles in one file |
+| `src/components/Profile.tsx` | 1,066 | Includes the multi-collection rename logic |
+| `src/components/Scoreboard.tsx` | 851 | Exports `saveScore` (a service function) consumed by Game.tsx |
+| Services | ~750 total | Mostly clean, but components also call Firestore directly (App, Game, Profile, Authscreen) |
+
+Cross-cutting issues found:
+
+- **heroName is denormalized** into `gameScores`, `dailyScores`, `allTimeScores`, `loungeScores`, and RTDB rooms. Renaming requires rewriting history — root of Bug 1.
+- **`getAllTimeLeaderboard` reads `gameScores`, not `allTimeScores`** (`Dailychallenge.ts:83-94`), contradicting the intended schema in CLAUDE.md. One player can occupy multiple top-50 slots, and renames must touch every historical game doc.
+- **`onRoomUpdate` polls RTDB every 1s** (`ArenaService.ts:232-255`) instead of using a realtime `.on("value")` listener.
+- **Mixed `doc.exists` (property) vs `doc.exists()` (method)** — `Dailychallenge.ts:108`, `LoungeService.ts:103`. With RNFirebase v23, `!doc.exists` is `!function` → always `false`; the code only works by accident because the score comparison covers the missing-doc case.
+- **Silent `catch {}` everywhere** — failures (including the rename and invite writes) disappear without a trace.
+- **Large commented-out feature blocks** in Game.tsx (wild cards, carry combo, combo insurance — several hundred lines). Note: CLAUDE.md still describes these as live features; code says they're disabled. **Confirm with owner before deleting.**
+- Dead import: `subscribeToOnlinePlayers` in `Arenascreen.tsx:21` (never called).
+- `Dailychallenge.ts` is misnamed — it contains all general score/profile persistence, not just daily quest.
+- Misc: `console.log` of arena players in `Game.tsx:1204`, `LogBox.ignoreLogs` hack in `ArenaService.ts:4`, debug scripts (`check_activity.js`, `reset-users.js`) in repo root (untracked, fine, but should move to a `scripts/` folder).
+
+---
+
+## Phase 1 — Refactor (pure restructuring, zero behavior change)
+
+### Step 1.0 — Safety net (no code change)
+- Work on `refactor/v1.4` branch (already on it). Commit `CLAUDE.md` + this plan first.
+- Verification gate for every step: `npx tsc --noEmit` passes, `cd android && gradlew assembleRelease` builds, manual smoke test (one full game, one daily, one 2-player arena round).
+
+### Step 1.1 — Delete dead code (needs one approval)
+- Remove all commented-out wild-card / carry-combo / insurance blocks in Game.tsx (~400 lines), commented-out `LEVEL_CONFIG` variants, dead `subscribeToOnlinePlayers` import, commented-out duplicate `handleSendInvite` in Arenascreen.
+- **Gate:** confirm wild cards / carry combo / insurance are intentionally retired (CLAUDE.md disagrees with code). If they may return, keep the blocks in git history only — that's what history is for.
+- Risk: none (comments only). Biggest payoff per line for later steps.
+
+### Step 1.2 — Extract pure game logic → `src/game/`
+New folder, pure TypeScript, no React imports — this becomes unit-testable for free:
+- `src/game/config.ts`: `LEVEL_CONFIG`, `TOTAL_LEVELS`, `BASE_CARD_VALUE`, `SECOND_CARD_COMBO`, `COMBO_MILESTONES`, `RUNES`
+- `src/game/scoring.ts`: `getComboMultiplier`, plus extracted-as-is helpers for the inline math in Game.tsx: `getLayoutMultiplier(level)` (`1 + (level-1)*0.5`), match points, bounty bonus (5000×layout), time bonus (50/s), deck bonus (200/card), perfect-clear bonus (50000×layout×glory)
+- Move `isCardMatch` from CardService here; CardService re-exports for compatibility.
+- Game.tsx imports these; numbers and formulas copied verbatim.
+- Risk: very low (moves of constants and pure functions).
+
+### Step 1.3 — Extract decorative components out of Game.tsx
+- `src/components/game/Battlefield.tsx` (lines 245–549 + styles `s`), `Battlements` + `WallTexture` (currently exported from Game.tsx — keep re-exports until callers updated), `PulsingCard`, `LayoutEntrance`, `bottomBarStyles`/`bs`.
+- Risk: low (self-contained `React.memo` components).
+
+### Step 1.4 — Firebase service cleanup (structure only)
+- Rename `Dailychallenge.ts` → split into `src/services/ScoreService.ts` (game/all-time score submission, `updateUserProfile`, rank queries) and `src/services/DailyQuestService.ts` (`hasPlayedToday`, `submitDailyScore`, daily leaderboard). Keep function bodies identical.
+- Move `saveScore`/local-score helpers out of `Scoreboard.tsx` into `src/services/LocalScoreService.ts`.
+- `src/services/collections.ts`: single source for collection names + doc-id builders (`dailyScoreId(date, uid)`, `loungeScoreId(code, week, uid)`).
+- Normalize all `doc.exists` → `doc.exists()` (Dailychallenge/LoungeService). Today the property form happens to produce the same outcome, so this is behavior-neutral — but verify each site when changing.
+- Move AsyncStorage keys (`@mythic_*`, scattered across 5 files) into one `storageKeys.ts`.
+- Replace silent `catch {}` with a tiny `logError(scope, err)` helper (console-only for now — same user-visible behavior, but failures become diagnosable; directly needed for Phase 2).
+- Risk: low-medium (many import-path updates; tsc catches them all).
+
+### Step 1.5 — Extract score-saving flow from Game.tsx
+- The `gameOver` effect (`Game.tsx:1217-1322`) fires ~8 independent Firestore operations inline. Move into `ScoreService.saveGameResults(params)` returning `{ rank, dailyRank, isAllTimeRecord, isPersonalBest, previousBest }`; Game.tsx keeps only the effect that calls it and sets state.
+- Same call order/fire-and-forget semantics — no awaiting changes, no new sequencing.
+- Risk: medium (touches the money path — verify a score still lands in all collections after one game, daily, arena, and lounge run).
+
+### Step 1.6 — Split Game.tsx screen states
+- Game renders 7 distinct screens via early returns: already-played (`:2058`), pre-battle (`:2094`), game-over (`:2257`), between-levels (`:2471`), paused (`:2769`), main board, quit-confirm modal (`:3282`).
+- Extract each into `src/components/game/` with explicit props; move the matching styles with them. One commit per screen, building between each.
+- Target: Game.tsx ≤ ~1,200 lines (state + logic + main board).
+- Risk: medium (mechanical but large; styles must move with their consumers).
+
+### Step 1.7 — App.tsx + Arenascreen tidy-up
+- App.tsx: replace the if-chain with a screen map; extract the presence logic (`isOnline` writes, online-count subscription, streak load) into `src/hooks/usePresence.ts` / `useUserStats.ts`.
+- Arenascreen: split menu view / lobby view / invite-modal into components; remove the `roomCode || "1234"` fallback **only as part of Phase 2** (it's a behavior change).
+- Risk: low.
+
+### Step 1.8 (optional, last) — Data-driven layouts
+- `Layout1–9.tsx` (~1,800 lines total) are structurally identical position tables. Could collapse into one component + 9 data files. Defer unless needed — touching card positioning right before bug-fix work isn't worth it.
+
+**Explicitly NOT in Phase 1** (behavior changes, need approval): RTDB polling → listener, leaderboard source change, batched rename, any scoring/gameplay change.
+
+---
+
+## Phase 2 — Bug root causes (located, NOT fixed yet)
+
+### Bug 1: Profile name change "not working" / stale name in Hall of Glory
+
+Root causes, in order of impact — `Profile.tsx:162-232` (`handleNameChange`):
+
+1. **Partial-failure design.** The handler updates `users` → `allTimeScores` → every `gameScores` doc → every `dailyScores` doc, serially, with individual `await doc.ref.update(...)` calls in `for` loops, all inside one try/catch. If *any* later write fails (security rules, offline blip, doc count), the catch shows "Failed to update" — but `users/{uid}.heroName` has **already changed**. Result: user sees an error, app header may show old or new name depending on `onNameChange`, and leaderboard docs are part-old part-new.
+2. **Hall of Glory reads the wrong collection.** The all-time tab is fed by `getAllTimeLeaderboard()` → **`gameScores`** (`Dailychallenge.ts:83-94`), i.e. every historical game doc with the heroName frozen at play time. So the rename only "works" if the loop over potentially hundreds of `gameScores` docs fully succeeds — fragile by construction. (`allTimeScores` — one doc per user — exists and is maintained, but isn't used for display.)
+3. **`loungeScores` is never renamed** — venue weekly leaderboards permanently show the old name.
+4. No batching: Firestore `WriteBatch` (500 ops/batch) would make the rewrite atomic per batch; currently it's N sequential round-trips.
+5. Likely external factor to verify during fix: Firestore security rules (managed in console, not in repo) must allow this client to update `gameScores`/`dailyScores` docs and query `users` by heroName. Capture the actual error via the Step 1.4 `logError` before fixing.
+
+Proposed fix direction (for approval later): make `users/{uid}.heroName` the single source of truth; point the all-time tab at `allTimeScores` (also fixes duplicate-player slots in top 50); rename only `users` + `allTimeScores` (+ current-week `loungeScores`) in a `WriteBatch`; stop renaming historical `gameScores`/`dailyScores` (or do it in a Cloud Function trigger on `users` heroName change).
+
+### Bug 2: Arena Invite button "not working as expected"
+
+Root causes — `Arenascreen.tsx` + `ArenaService.ts`:
+
+1. **The invitee almost never sees the invite.** Invites are only received in `subscribeToMyInvites`, which is mounted **only inside Arenascreen**, and the modal is only shown when the invitee's local `mode === "menu"` (`Arenascreen.tsx:74-81`). But the "INVITE ONLINE" list shows everyone with `users.isOnline == true` — i.e. anyone anywhere in the app (home screen, mid-game…). Invite someone on the Home screen → write succeeds, button flips to "SENT", recipient sees nothing. The 60s expiry (`ArenaService.ts:362`) then kills it.
+2. **`roomCode || "1234"` fallback** (`Arenascreen.tsx:112`): if `roomCode` is ever empty (room deleted underneath, or `createRoom` failed — note `createRoom` swallows its error and *still returns the code*, `ArenaService.ts:116-139`), the invite points to nonexistent room "1234" → invitee gets "Room not found".
+3. **No error handling on send**: `sendArenaInvite` does `users/{toUid}.update(...)` — writing to *another user's* doc. If security rules forbid it, the promise rejects unhandled while the UI still shows "SENT".
+4. Minor: `sentAt: Date.now()` is client clock — skewed clocks break the 60s window; invite is a single `pendingInvite` field, so a second invite silently overwrites the first.
+
+Proposed fix direction (for approval later): subscribe to invites at App level (banner/modal on any screen, or at least Home + Arena); remove the `"1234"` fallback and disable invite buttons until `roomCode` is set; make `createRoom` throw on failure; surface send errors; consider a dedicated `invites/{uid}` doc or RTDB node with tight rules instead of writing to the target's user doc.
+
+---
+
+## Phase 3 — Redesign proposals (nothing built without approval)
+
+### 3.1 Navigation & app shell
+- App.tsx hand-rolled screen switching has no Android back-button handling, no transitions, no deep links. Proposal: adopt `react-navigation` (native-stack). Enables: hardware back = quit-confirm in game / back-to-home elsewhere, animated transitions, and an invite deep-link (`mythicpeaks://arena/1234`) that would make Arena invites genuinely good.
+
+### 3.2 Design system
+- The gold-on-dark palette (`#E8C547`, `#0F1A12`, rgba-gold borders), ornamental headers (`◆` + lines), glow-pulse loops, and "Return to Castle" are re-implemented per screen with copy-pasted styles and `Animated.loop` boilerplate. Proposal: `src/ui/` with theme tokens + shared `OrnateHeader`, `PanelCard`, `GoldButton`, `ScreenBackground`. Cuts hundreds of style lines, makes screens consistent, and makes any future re-skin a one-file change.
+
+### 3.3 Per-screen notes
+- **Home**: dense two-column layout carrying 10+ actions. Proposal: group into Play (battle/daily/arena) vs Meta (armory/profile/leaderboards/lounge); make streak + online count tappable; move logout behind profile.
+- **Hall of Glory**: dedup all-time list (one row per player — falls out of Bug 1 fix); add weekly tab to match lounge cadence; pull-to-refresh (currently loads once per mount); highlight-and-scroll-to your row.
+- **Arena**: global invite banner (3.1); "share code" via system share sheet; show host's heroName in join flow before committing; replace 1s polling with RTDB listener (also battery win).
+- **Game over**: rank/daily-rank arrive async with no loading state — reserve space or skeleton to avoid layout pop; "personal best" and "all-time record" celebrations can overlap — sequence them.
+- **Profile**: name editor is the only editable thing yet takes top billing; consider moving stats/milestones up, name-edit behind a pencil icon. Show rename progress properly once Bug 1 fix makes it fast.
+- **Auth/Intro**: fine functionally; could reuse 3.2 components for consistency.
+- **Armory/Lounge**: visually consistent already; main win is migrating to shared components.
+
+### 3.4 Tech-debt items adjacent to redesign (flag only)
+- `expo-av` is deprecated (removal announced for SDK 54+ successors) — plan migration to `expo-audio` at the next SDK bump.
+- Online presence via Firestore writes on every AppState change is costly at scale; RTDB `.info/connected` presence is the standard pattern.
+- No automated tests; after Step 1.2, `src/game/` is pure and cheap to cover with a handful of Jest tests (scoring table, match rules, seeded deck determinism).
+
+---
+
+## Suggested commit sequence
+
+| # | Commit | Risk |
+|---|---|---|
+| 1 | docs: add CLAUDE.md + REFACTOR_PLAN.md | none |
+| 2 | chore: remove dead/commented code (after approval) | none |
+| 3 | refactor: extract src/game/ (config, scoring) | very low |
+| 4 | refactor: extract Battlefield + decorative components | low |
+| 5 | refactor: split services, collections.ts, storageKeys, logError, exists() | low-med |
+| 6 | refactor: ScoreService.saveGameResults | medium |
+| 7–12 | refactor: one screen-state extraction per commit | medium |
+| 13 | refactor: App screen map + presence hooks | low |
+| — | Phase 2 fixes (separate approval, separate branch ok) | — |
