@@ -37,6 +37,50 @@ Cross-cutting issues found:
 - **Gate:** confirm wild cards / carry combo / insurance are intentionally retired (CLAUDE.md disagrees with code). If they may return, keep the blocks in git history only — that's what history is for.
 - Risk: none (comments only). Biggest payoff per line for later steps.
 
+**Status: APPROVED (retired — delete). Full inventory verified, deletion NOT yet executed.** All line numbers refer to Game.tsx at commit `8e9aa10` unless noted.
+
+Confirmed safe to delete — commented-out code:
+- 87, 91 — old `LEVEL_CONFIG` variants
+- 98–117 — `WILD_*_THRESHOLD` consts + entire Combo Insurance block (`INSURANCE_LAYOUTS`, `getInsuranceReset`)
+- 1047–1050, 1054 — wild state hooks + `wildPulse`
+- 1098, 1106, 1114–1126 — `wildActiveRef`, `carryCombo` state, insurance refs/`insuranceFlash`/`insuranceFlashStyle`, `wildPlacingRef`
+- 1163, 1168 — wild lines in ref-sync effect
+- 1374–1387 — wild-card earn logic in combo effect; 1390–1407 — `wildActive` pulse effect
+- 1450 — stray "Inside Game component…" comment
+- 1488–1491 — auto-carry on perfect clear; 1510–1516 — commented setters in `advanceLevel`
+- 1520–1534 — `handleAbandonLayout`
+- 1542, 1560–1568 (keep live 1569–1570), 1571–1573, 1577 — commented blocks in `initLevel`
+- 1649–1650 — `wildPlacing`/`wildPendingIndex` states
+- 1709–1765 — `applyWildPlacement` + `handleCancelWildPlacement`
+- 1807–1822 — `handleWildPlaceFirst/Second`, `handleWild`
+- 1833, 1841–1845, 1854 — commented setters in `handlePlayAgain`
+- 1901 — in `handleFreeDraw`
+- 1911–1939 — `carryButtonData` + `wildProgressData` memos (keep live `battlefieldMemo` 1905–1910)
+- 1987–1990 — commented setters in rematch effect
+- 2028 — `pendingIndex` prop in `getLayout`
+- 2085–2087 — old Return-to-Castle button; 2092, 2255 — "REPLACE … return block" comments
+- 2208–2212, 2527–2533, 2704–2720 — commented `gloryBonusBox` JSX (3 sites)
+- 2558–2582 — carry-combo achievement banner (also update comment 2541: "Perfect Clear > Carry Combo > Glory Hunt" → drop Carry Combo)
+- 2840–2885 — insuranceFlash JSX + wildActive overlay JSX (one contiguous commented region)
+- 2898–2904 — wildPlacing banner JSX
+- 2982–2999 — carry-combo button JSX + trailing "Wild cards between center and timer" comment
+- 3000–3081 — wild cards bottom-bar JSX
+- 3098 — commented COMBO label
+- 3159–3175 — wild progress JSX
+
+Confirmed safe to delete — live-but-unreferenced after the above (verified by grep: only referenced from commented JSX, or never):
+- Style keys: `wildBtn`+`wildIcon` (3922–3940 incl. header comment), `wildCardStack`+`wildCardIcon` (4287–4295 incl. header), `gloryBonusBox`+`gloryBonusText` (4525–4548), `wildBarBtn` (4550–4560), `wildCard`/`wildCard2`/`wildCardFrame`/`wildCardSymbol`/`wildCardLabel` (4561–4601), `wildActiveLabel`/`wildActiveBolt`/`wildActiveText`/`wildActiveSub`/`wildBorder` (4603–4649), `wildSelectBanner`/`wildSelectBannerText` (4841–4863), `abandonBtn`/`abandonBtnText` (4864–4881), `carryComboBox`/`carryComboText`/`carryCard`/`carryCardInner`/`carryCardLabel`/`carryCardValue`/`wildProgress*` (4882–4960), `insuranceFlash`/`insuranceFlashIcon` (5002–5025), `achievementCarry` (5047–5055)
+- `wildConfig` (1445–1446) becomes unused once the commented JSX is gone → also remove `WILD_STYLE_CONFIG` from the Armory import (line ~26). Armory itself untouched — wild styles stay purchasable there.
+- Rename style header 4438: "FLOATING BUTTONS (Hint/Wild)" → "(Hint)".
+- `console.log("ARENA PLAYERS:…")` at 1204 (debug noise).
+
+**Keep (live, easily mistaken for dead):** `openCardGlowWild` (used at 2964), `battlefieldMemo` comment 1905–1906, `bountyConfig` 1451–1453, all `freeDraw*` styles, `achievementPerfect`/`achievementGlory`.
+
+Arenascreen.tsx (same commit):
+- Remove unused `subscribeToOnlinePlayers` from import (line 21)
+- Remove commented `handleSendInvite` (107–110) — keep the live one as-is; the `|| "1234"` fallback is a Phase 2 fix, NOT part of this commit
+- Remove commented back-button JSX (487–489)
+
 ### Step 1.2 — Extract pure game logic → `src/game/`
 New folder, pure TypeScript, no React imports — this becomes unit-testable for free:
 - `src/game/config.ts`: `LEVEL_CONFIG`, `TOTAL_LEVELS`, `BASE_CARD_VALUE`, `SECOND_CARD_COMBO`, `COMBO_MILESTONES`, `RUNES`
