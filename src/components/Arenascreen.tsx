@@ -18,7 +18,6 @@ import {
   startGame,
   onRoomUpdate,
   getRoomOnce,
-  subscribeToOnlinePlayers,
   subscribeToOnlineUsers,
   subscribeToMyInvites,
   clearArenaInvite,
@@ -104,10 +103,6 @@ const ArenaScreen = ({
     setIncomingInvite(null)
   }
 
-  // const handleSendInvite = async (toUid: string) => {
-  //   if (!roomCode) return
-  //   await sendArenaInvite(toUid, heroName, roomCode)
-  // }
   const handleSendInvite = async (toUid: string) => {
     await sendArenaInvite(toUid, heroName, roomCode || "1234")
     setInvitedUids((prev) => new Set(prev).add(toUid))
@@ -484,9 +479,6 @@ const ArenaScreen = ({
             </View>
           </View>
 
-          {/* <TouchableOpacity style={styles.backBtn} onPress={onBack}>
-            <Text style={styles.backText}>← Return to Castle</Text>
-          </TouchableOpacity> */}
           <ReturnToCastle onPress={onBack} />
         </Animated.View>
       </View>
