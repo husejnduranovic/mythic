@@ -81,7 +81,7 @@ const CARD_BACKS: {
   {
     id: "steel_bastion",
     name: "Steel Bastion",
-    icon: "⚔",
+    icon: "🏰",
     color: "#0E1A2E",
     accent: "#6B9FD4",
     unlockReq: 0,
@@ -117,7 +117,7 @@ const CARD_BACKS: {
     name: "Eagle Pennant",
     icon: "🦅",
     color: "#2A1C00",
-    accent: "#F0A500",
+    accent: "#E8B84B",
     unlockReq: 25,
     unlockLabel: "25 battles",
   },
@@ -483,12 +483,11 @@ const STORAGE_KEYS = {
   bestStreak: "@mythic_best_streak",
 }
 
-type TabType = "cards" | "fields" | "wild" | "bounty" | "table"
+type TabType = "cards" | "fields" | "bounty" | "table"
 
 const TAB_CONFIG: { key: TabType; icon: string; label: string }[] = [
   { key: "cards", icon: "🃏", label: "Backs" },
   { key: "fields", icon: "🏟", label: "Fields" },
-  { key: "wild", icon: "⚡", label: "Wild" },
   { key: "bounty", icon: "💰", label: "Bounty" },
   { key: "table", icon: "⚒", label: "Table" },
 ]
@@ -589,19 +588,18 @@ const Armory = ({ onBack }: ArmoryProps) => {
       setGamesPlayed(gamesStr ? parseInt(gamesStr) : 0)
       setBestStreak(streakStr ? parseInt(streakStr) : 0)
       setSelectedBack(
-        (await AsyncStorage.getItem(STORAGE_KEYS.selectedBack)) || "classic",
+        (await AsyncStorage.getItem(STORAGE_KEYS.selectedBack)) || "oak_shield",
       )
       setSelectedField(
-        (await AsyncStorage.getItem(STORAGE_KEYS.selectedField)) || "forest",
-      )
-      setSelectedWild(
-        (await AsyncStorage.getItem(STORAGE_KEYS.selectedWild)) || "classic",
+        (await AsyncStorage.getItem(STORAGE_KEYS.selectedField)) ||
+          "forest_camp",
       )
       setSelectedTable(
-        (await AsyncStorage.getItem(STORAGE_KEYS.selectedTable)) || "classic",
+        (await AsyncStorage.getItem(STORAGE_KEYS.selectedTable)) || "oak_plank",
       )
       setSelectedBounty(
-        (await AsyncStorage.getItem(STORAGE_KEYS.selectedBounty)) || "classic",
+        (await AsyncStorage.getItem(STORAGE_KEYS.selectedBounty)) ||
+          "gold_coin",
       )
     })()
   }, [])
@@ -646,10 +644,6 @@ const Armory = ({ onBack }: ArmoryProps) => {
         setSelectedField(id)
         await AsyncStorage.setItem(STORAGE_KEYS.selectedField, id)
         break
-      case "wild":
-        setSelectedWild(id)
-        await AsyncStorage.setItem(STORAGE_KEYS.selectedWild, id)
-        break
       case "bounty":
         setSelectedBounty(id)
         await AsyncStorage.setItem(STORAGE_KEYS.selectedBounty, id)
@@ -667,8 +661,6 @@ const Armory = ({ onBack }: ArmoryProps) => {
         return CARD_BACKS
       case "fields":
         return BATTLEFIELDS
-      case "wild":
-        return WILD_STYLES
       case "bounty":
         return BOUNTY_STYLES
       case "table":
@@ -682,8 +674,6 @@ const Armory = ({ onBack }: ArmoryProps) => {
         return selectedBack
       case "fields":
         return selectedField
-      case "wild":
-        return selectedWild
       case "bounty":
         return selectedBounty
       case "table":

@@ -95,75 +95,60 @@ const LEVEL_CONFIG: Record<
 const TOTAL_LEVELS = Object.keys(LEVEL_CONFIG).length
 const BASE_CARD_VALUE = 500
 const SECOND_CARD_COMBO = 2
-const WILD_COMBO_THRESHOLD = 10
-const WILD_SECOND_THRESHOLD = 20
+// const WILD_COMBO_THRESHOLD = 10
+// const WILD_SECOND_THRESHOLD = 20
 
 // ─── Combo Insurance ───
 // Triggers once per layout on layouts 4 & 5, only when combo is x10+
 // Cushion, not crutch — preserves the cliff math while saving worthy runs
-const INSURANCE_LAYOUTS = new Set([4, 5])
-const INSURANCE_MIN_COMBO = 10
+// const INSURANCE_LAYOUTS = new Set([4, 5])
+// const INSURANCE_MIN_COMBO = 10
 
 // Combo tier the insurance resets you to. Snapped to real multiplier tiers
 // so the post-save value is always meaningful, not a number between cliffs.
-const getInsuranceReset = (combo: number): number => {
-  if (combo >= 100) return 50
-  if (combo >= 70) return 40
-  if (combo >= 45) return 25
-  if (combo >= 25) return 15
-  if (combo >= 15) return 10
-  if (combo >= 10) return 5
-  return 0 // below threshold, no save
-}
+// const getInsuranceReset = (combo: number): number => {
+//   if (combo >= 100) return 50
+//   if (combo >= 70) return 40
+//   if (combo >= 45) return 25
+//   if (combo >= 25) return 15
+//   if (combo >= 15) return 10
+//   if (combo >= 10) return 5
+//   return 0 // below threshold, no save
+// }
 
 const COMBO_MILESTONES: Record<
   number,
   { text: string; color: string; icon: string }
 > = {
   5: { text: "WORTHY!", color: "#7BED9F", icon: "⚔" },
-  10: { text: "VALIANT!", color: "#FFD700", icon: "🛡" },
-  15: { text: "GLORIOUS!", color: "#FF6B35", icon: "👑" },
-  20: { text: "LEGENDARY!", color: "#FF4757", icon: "🐉" },
-  25: { text: "RAMPAGE!", color: "#FF00FF", icon: "⚡" },
-  30: { text: "BEYOND MYTHIC!", color: "#FFFFFF", icon: "💀" },
-  35: { text: "TRANSCENDENT!", color: "#00FFFF", icon: "🌀" },
-  40: { text: "KILLING SPREA!", color: "#FFD700", icon: "⚡" },
-  45: { text: "UNSTOPPABLE!", color: "#FF1493", icon: "🔥" },
-  50: { text: "DIVINE!", color: "#7DF9FF", icon: "👁" },
-  60: { text: "ETERNAL!", color: "#FFD700", icon: "♾" },
-  70: { text: "ASCENDED!", color: "#FFFFFF", icon: "✦" },
-  // New — for the real players
-  80: { text: "WARLORD!", color: "#FF8C00", icon: "🔱" },
-  90: { text: "CONQUEROR!", color: "#E040FB", icon: "☠️" },
-  100: { text: "MYTHIC PEAK!", color: "#E8C547", icon: "🏔" },
-  110: { text: "OVERLORD!", color: "#FF1744", icon: "👹" },
-  120: { text: "IMMORTAL!", color: "#00E5FF", icon: "💎" },
-  130: { text: "MASTER OF PEAKS!", color: "#FFFFFF", icon: "⚜️" },
+  8: { text: "VALIANT!", color: "#FFD700", icon: "🛡" },
+  12: { text: "GLORIOUS!", color: "#FF6B35", icon: "👑" },
+  16: { text: "LEGENDARY!", color: "#FF4757", icon: "🐉" },
+  20: { text: "RAMPAGE!", color: "#FF00FF", icon: "⚡" },
+  24: { text: "UNSTOPPABLE!", color: "#FF1493", icon: "🔥" },
+  28: { text: "DIVINE!", color: "#7DF9FF", icon: "👁" },
+  32: { text: "MASTER OF PEAKS!", color: "#FFFFFF", icon: "⚜️" },
 }
 
 const getComboMultiplier = (c: number) => {
-  if (c >= 130) return 1200
-  if (c >= 120) return 1050
-  if (c >= 110) return 900
-  if (c >= 100) return 750
-  if (c >= 90) return 620
-  if (c >= 80) return 500 // current 70 cap becomes 80
-  if (c >= 70) return 420
-  if (c >= 60) return 350
-  if (c >= 50) return 250
-  if (c >= 45) return 200
-  if (c >= 40) return 175
-  if (c >= 35) return 150
-  if (c >= 30) return 100
-  if (c >= 25) return 65
-  if (c >= 20) return 40
-  if (c >= 15) return 24
-  if (c >= 12) return 15
-  if (c >= 10) return 12
-  if (c >= 7) return 6
-  if (c >= 5) return 4
-  if (c >= 3) return 2.5
-  if (c >= 2) return 1.5
+  if (c >= 32) return 300
+  if (c >= 30) return 260
+  if (c >= 28) return 220
+  if (c >= 26) return 185
+  if (c >= 24) return 155
+  if (c >= 22) return 128
+  if (c >= 20) return 105
+  if (c >= 18) return 84
+  if (c >= 16) return 66
+  if (c >= 14) return 50
+  if (c >= 12) return 37
+  if (c >= 10) return 27
+  if (c >= 8) return 18
+  if (c >= 6) return 11
+  if (c >= 5) return 8
+  if (c >= 4) return 5.5
+  if (c >= 3) return 3.5
+  if (c >= 2) return 2
   return 1
 }
 
@@ -1021,7 +1006,7 @@ const bs = StyleSheet.create({
 })
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window")
-const CARD_SCALE = Math.min(SCREEN_W / 800, SCREEN_H / 400, 1)
+const CARD_SCALE = Math.min(SCREEN_W / 780, SCREEN_H / 360, 1)
 const CARD_W = Math.round(52 * CARD_SCALE)
 const CARD_H = Math.round(74 * CARD_SCALE)
 
@@ -1059,17 +1044,17 @@ const Game = ({
   const [paused, setPaused] = useState(false)
   const [showHints, setShowHints] = useState(false)
   const [scoreSaved, setScoreSaved] = useState(false)
-  const [wildCount, setWildCount] = useState(0)
-  const [wildActive, setWildActive] = useState(false)
-  const [wildFirstEarned, setWildFirstEarned] = useState(false)
-  const [wildSecondEarned, setWildSecondEarned] = useState(false)
+  // const [wildCount, setWildCount] = useState(0)
+  // const [wildActive, setWildActive] = useState(false)
+  // const [wildFirstEarned, setWildFirstEarned] = useState(false)
+  // const [wildSecondEarned, setWildSecondEarned] = useState(false)
   const [showQuitConfirm, setShowQuitConfirm] = useState(false)
   const [alreadyPlayed, setAlreadyPlayed] = useState(false)
   const [alreadyPlayedScore, setAlreadyPlayedScore] = useState(0)
-  const wildPulse = useRef(new Animated.Value(1)).current
+  // const wildPulse = useRef(new Animated.Value(1)).current
   const [milestoneText, setMilestoneText] = useState("")
   const [milestoneIcon, setMilestoneIcon] = useState("")
-  const [milestoneColor, setMilestoneColor] = useState("#fff")
+  const [milestoneColor, setMilestoneColor] = useState("#ffffff")
 
   const milestoneOpacity = useSharedValue(0)
   const milestoneScale = useSharedValue(0.5)
@@ -1110,7 +1095,7 @@ const Game = ({
   const currentIndexRef = useRef(0)
   const secondCardRef = useRef<number | null>(null)
   const comboRef = useRef(0)
-  const wildActiveRef = useRef(false)
+  // const wildActiveRef = useRef(false)
   const bountyIndicesRef = useRef<Set<number>>(new Set())
   const levelRef = useRef(1)
   const deckIndexRef = useRef(0)
@@ -1118,7 +1103,7 @@ const Game = ({
 
   const [bountyIndices, setBountyIndices] = useState<Set<number>>(new Set())
 
-  const [carryCombo, setCarryCombo] = useState(0)
+  // const [carryCombo, setCarryCombo] = useState(0)
 
   const [isPersonalBest, setIsPersonalBest] = useState(false)
   const [previousBest, setPreviousBest] = useState(0)
@@ -1128,17 +1113,17 @@ const Game = ({
 
   // Tracks which layouts have already burned their insurance charge this run.
   // Reset on game restart (handlePlayAgain) and on level entry (initLevel for fresh runs).
-  const insuranceUsedRef = useRef<Set<number>>(new Set())
+  // const insuranceUsedRef = useRef<Set<number>>(new Set())
 
   // Drives the shield flash animation when insurance triggers.
-  const insuranceFlash = useSharedValue(0)
+  // const insuranceFlash = useSharedValue(0)
 
-  const wildPlacingRef = useRef(false)
+  //   const insuranceFlashStyle = useAnimatedStyle(() => ({
+  //   opacity: insuranceFlash.value,
+  //   transform: [{ scale: 0.8 + insuranceFlash.value * 0.4 }],
+  // }))
 
-  const insuranceFlashStyle = useAnimatedStyle(() => ({
-    opacity: insuranceFlash.value,
-    transform: [{ scale: 0.8 + insuranceFlash.value * 0.4 }],
-  }))
+  // const wildPlacingRef = useRef(false)
 
   // Reanimated styles for hot-path animations — must be at component top level
   const comboPulseStyle = useAnimatedStyle(() => ({
@@ -1162,7 +1147,7 @@ const Game = ({
   useEffect(() => {
     if (!arenaMode || !betweenLevels || arenaPlayers.length === 0) return
     const allReady = arenaPlayers.every(
-      (p: any) => (p.currentLevel || 0) >= level,
+      (p: any) => (p.currentLevel || 0) >= level || p.disconnected === true,
     )
     if (allReady && arenaCountdown === null) {
       setArenaCountdown(3)
@@ -1175,12 +1160,12 @@ const Game = ({
     currentIndexRef.current = currentIndex
     secondCardRef.current = secondCard
     comboRef.current = combo
-    wildActiveRef.current = wildActive
+    // wildActiveRef.current = wildActive
     bountyIndicesRef.current = bountyIndices
     levelRef.current = level
     deckIndexRef.current = deckIndex
     freeDrawAvailableRef.current = freeDrawAvailable
-    wildPlacingRef.current = wildPlacing
+    // wildPlacingRef.current = wildPlacing
   })
 
   useEffect(() => {
@@ -1302,14 +1287,14 @@ const Game = ({
           .catch(() => {})
         if (dailyMode) {
           submitDailyScore(uid, heroName, score, bestCombo, clearPct)
-          firestore()
-            .collection("dailyScores")
-            .where("date", "==", getTodayString())
-            .where("score", ">", score)
-            .get()
-            .then((snap) => {
-              setDailyRank(snap.size + 1)
-            })
+            .then(() =>
+              firestore()
+                .collection("dailyScores")
+                .where("date", "==", getTodayString())
+                .where("score", ">", score)
+                .get(),
+            )
+            .then((snap) => setDailyRank(snap.size + 1))
             .catch(() => setDailyRank(null))
         }
         if (arenaMode && roomCode) {
@@ -1387,39 +1372,39 @@ const Game = ({
       else if (newMatches === 30) freezeTimerForCombo(5)
 
       // Wild cards based on new matches only
-      if (
-        newMatches >= WILD_SECOND_THRESHOLD &&
-        wildFirstEarned &&
-        !wildSecondEarned
-      ) {
-        setWildCount((c) => Math.min(c + 1, 2))
-        setWildSecondEarned(true)
-        showMilestone("2nd WILD!", "#FF4757", "🃏🃏")
-      } else if (newMatches >= WILD_COMBO_THRESHOLD && !wildFirstEarned) {
-        setWildCount(1)
-        setWildFirstEarned(true)
-        showMilestone("WILD CARD!", "#E8C547", "🃏")
-      }
+      // if (
+      //   newMatches >= WILD_SECOND_THRESHOLD &&
+      //   wildFirstEarned &&
+      //   !wildSecondEarned
+      // ) {
+      //   setWildCount((c) => Math.min(c + 1, 2))
+      //   setWildSecondEarned(true)
+      //   showMilestone("2nd WILD!", "#FF4757", "🃏🃏")
+      // } else if (newMatches >= WILD_COMBO_THRESHOLD && !wildFirstEarned) {
+      //   setWildCount(1)
+      //   setWildFirstEarned(true)
+      //   showMilestone("WILD CARD!", "#E8C547", "🃏")
+      // }
     }
   }, [combo])
-  useEffect(() => {
-    if (wildActive) {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(wildPulse, {
-            toValue: 1.15,
-            duration: 400,
-            useNativeDriver: true,
-          }),
-          Animated.timing(wildPulse, {
-            toValue: 1,
-            duration: 400,
-            useNativeDriver: true,
-          }),
-        ]),
-      ).start()
-    } else wildPulse.setValue(1)
-  }, [wildActive])
+  // useEffect(() => {
+  //   if (wildActive) {
+  //     Animated.loop(
+  //       Animated.sequence([
+  //         Animated.timing(wildPulse, {
+  //           toValue: 1.15,
+  //           duration: 400,
+  //           useNativeDriver: true,
+  //         }),
+  //         Animated.timing(wildPulse, {
+  //           toValue: 1,
+  //           duration: 400,
+  //           useNativeDriver: true,
+  //         }),
+  //       ]),
+  //     ).start()
+  //   } else wildPulse.setValue(1)
+  // }, [wildActive])
 
   useEffect(() => {
     if (score > 0) {
@@ -1501,9 +1486,9 @@ const Game = ({
       showMilestone("PERFECT CLEAR!", "#7BED9F", "✨")
 
       // Auto-carry combo on perfect clear
-      if (level < TOTAL_LEVELS) {
-        setCarryCombo(combo)
-      }
+      // if (level < TOTAL_LEVELS) {
+      //   setCarryCombo(combo)
+      // }
     }
 
     SoundService.playLevelComplete()
@@ -1518,16 +1503,7 @@ const Game = ({
         level >= TOTAL_LEVELS,
       )
     }
-    if (arenaMode && roomCode && uid) {
-      updatePlayerScore(
-        roomCode,
-        uid,
-        score,
-        bestCombo,
-        level,
-        level >= TOTAL_LEVELS,
-      )
-    }
+
     setArenaCountdown(null)
     setGloryActive(false)
     gloryActiveRef.current = false
@@ -1535,27 +1511,27 @@ const Game = ({
     // setWildFirstEarned(false)
     // setWildSecondEarned(false)
     setBountyIndices(new Set())
-    setWildActive(false)
-    setWildPlacing(false)
-    setWildPendingIndex(null)
+    // setWildActive(false)
+    // setWildPlacing(false)
+    // setWildPendingIndex(null)
     setBetweenLevels(true)
   }, [cards, config.fieldCards])
 
-  const handleAbandonLayout = () => {
-    const remainingCards = cards
-      .slice(0, config.fieldCards)
-      .filter((c) => c.visible).length
-    const carried = combo - remainingCards
-    if (carried <= 0 || levelCompleteRef.current) return
-    setCarryCombo(carried)
-    // setCarryWilds(wildCount)
-    setWildActive(false)
-    setWildPlacing(false)
-    setWildPendingIndex(null)
-    showMilestone(`COMBO x${carried} CARRIED!`, "#FF8C00", "⚡")
-    SoundService.playFreeze()
-    advanceLevel()
-  }
+  // const handleAbandonLayout = () => {
+  //   const remainingCards = cards
+  //     .slice(0, config.fieldCards)
+  //     .filter((c) => c.visible).length
+  //   const carried = combo - remainingCards
+  //   if (carried <= 0 || levelCompleteRef.current) return
+  //   setCarryCombo(carried)
+  //   // setCarryWilds(wildCount)
+  //   setWildActive(false)
+  //   setWildPlacing(false)
+  //   setWildPendingIndex(null)
+  //   showMilestone(`COMBO x${carried} CARRIED!`, "#FF8C00", "⚡")
+  //   SoundService.playFreeze()
+  //   advanceLevel()
+  // }
 
   const comboBaseRef = useRef(0)
 
@@ -1563,7 +1539,7 @@ const Game = ({
     if (alreadyPlayed) return
     setLoading(true)
     setFreeDrawAvailable(true)
-    setWildActive(false)
+    // setWildActive(false)
     setReady(false)
     levelCompleteRef.current = false
     if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current)
@@ -1581,21 +1557,24 @@ const Game = ({
     setCurrentIndex(config.deckStart)
     setDeckIndex(config.deckStart + 1)
 
-    if (carryCombo > 0) {
-      setCombo(carryCombo)
-      comboBaseRef.current = carryCombo
-      setCarryCombo(0)
-    } else {
-      setCombo(0)
-      comboBaseRef.current = 0
-    }
-    setWildCount(0)
-    setWildFirstEarned(false)
-    setWildSecondEarned(false)
+    // if (carryCombo > 0) {
+    //   setCombo(carryCombo)
+    //   comboBaseRef.current = carryCombo
+    //   setCarryCombo(0)
+    // } else {
+    //   setCombo(0)
+    //   comboBaseRef.current = 0
+    // }
+    // zamijeni cijeli carryCombo if/else blok s:
+    setCombo(0)
+    comboBaseRef.current = 0
+    // setWildCount(0)
+    // setWildFirstEarned(false)
+    // setWildSecondEarned(false)
 
     setSecondCard(null)
     setShowHints(false)
-    setWildActive(false)
+    // setWildActive(false)
     setTimerFrozen(false)
     if (freezeTimer.current) clearTimeout(freezeTimer.current)
     setLoading(true)
@@ -1604,14 +1583,7 @@ const Game = ({
       SoundService.playShuffle()
       setTimeout(() => setReady(true), 50)
     }, 20)
-  }, [
-    level,
-    config.fieldCards,
-    config.deckStart,
-    dailyMode,
-    alreadyPlayed,
-    carryCombo,
-  ])
+  }, [level, config.fieldCards, config.deckStart, dailyMode, alreadyPlayed])
 
   useEffect(() => {
     if (!alreadyPlayed && !preBattle) initLevel()
@@ -1628,9 +1600,9 @@ const Game = ({
     if (cards.slice(0, config.fieldCards).every((c) => !c.visible))
       advanceLevel()
   }, [cards, ready])
+
   useEffect(() => {
     if (!ready || !cards.length || levelCompleteRef.current) return
-    if (wildActive || wildPlacing) return
     if (deckIndex < cards.length) return
     const hv = cards.slice(0, config.fieldCards).some((c) => c.visible)
     if (!hv) {
@@ -1655,20 +1627,9 @@ const Game = ({
       }
       return
     }
-    if (!hm && !wildActive) {
-      if (wildCount <= 0) {
-        advanceLevel()
-        return
-      }
-      // Has wild but no matches — give 3 seconds to use it
-      if (!autoAdvanceTimer.current) {
-        autoAdvanceTimer.current = setTimeout(() => {
-          if (!levelCompleteRef.current) advanceLevel()
-        }, 2000)
-      }
-      return
-    }
-  }, [deckIndex, cards, currentIndex, secondCard, ready, wildActive, wildCount])
+    // Nema spoja i nema wilda više — kraj layouta
+    advanceLevel()
+  }, [deckIndex, cards, currentIndex, secondCard, ready])
 
   const showPointsAnimation = (pts: number) => {
     requestAnimationFrame(() => {
@@ -1685,59 +1646,42 @@ const Game = ({
     })
   }
 
-  const [wildPlacing, setWildPlacing] = useState(false)
-  const [wildPendingIndex, setWildPendingIndex] = useState<number | null>(null)
+  // const [wildPlacing, setWildPlacing] = useState(false)
+  // const [wildPendingIndex, setWildPendingIndex] = useState<number | null>(null)
 
   const handleCardPress = useCallback((index: number) => {
     const cards = cardsRef.current
     const currentIndex = currentIndexRef.current
     const secondCard = secondCardRef.current
     const combo = comboRef.current
-    const wildActive = wildActiveRef.current
     const bountyIndices = bountyIndicesRef.current
     const level = levelRef.current
-    const wildPlacing = wildPlacingRef.current
-
-    // BLOCK: if we're in the middle of choosing a wild slot, ignore field taps
-    if (wildPlacing) return
 
     const cur = cards[currentIndex]
     const tapped = cards[index]
     if (!cur || !tapped) return
 
-    const isW = wildActive
     const mc = isCardMatch(cur, tapped)
     const ms = secondCard !== null && isCardMatch(cards[secondCard], tapped)
-    if (!mc && !ms && !isW) return
+    if (!mc && !ms) return
 
     if (autoAdvanceTimer.current) {
       clearTimeout(autoAdvanceTimer.current)
       autoAdvanceTimer.current = null
     }
 
-    // WILD FLOW WITH CHOICE — defer everything until placement
-    if (isW && secondCard !== null) {
-      // Player chose this field card — but don't apply effects yet.
-      // Card stays visible. Wild stays in use (won't refund). Show placement UI.
-      setWildActive(false)
-      setWildPendingIndex(index)
-      setWildPlacing(true)
-      return
-    }
-
-    // ALL OTHER CASES — immediate apply (normal match or wild with single slot)
     const nc = combo + 1
     const layoutMultiplier = 1 + (level - 1) * 0.5
     const gloryMultiplier = gloryActiveRef.current ? 2 : 1
     const isBounty = bountyIndices.has(index)
-    const bountyMultiplier = isBounty ? 5 : 1
     const pts = Math.round(
       BASE_CARD_VALUE *
         getComboMultiplier(nc) *
         layoutMultiplier *
-        gloryMultiplier *
-        bountyMultiplier,
+        gloryMultiplier,
     )
+    // Bounty = fiksni bonus, ne množi se s comboom
+    const bountyBonus = isBounty ? Math.round(5000 * layoutMultiplier) : 0
 
     if (isBounty) showMilestone("BOUNTY!", "#FFD700", "💰")
     SoundService.playMatch(nc)
@@ -1749,15 +1693,10 @@ const Game = ({
       return u
     })
     setCombo(nc)
-    setScore((s) => s + pts)
+    setScore((s) => s + pts + bountyBonus)
     setShowHints(false)
 
-    if (isW) {
-      // Wild used with single active slot — auto-place into current
-      setWildActive(false)
-      setTimerFrozen(false)
-      setCurrentIndex(index)
-    } else if (mc) {
+    if (mc) {
       if (nc >= SECOND_CARD_COMBO && secondCard === null) {
         setSecondCard(currentIndex)
       }
@@ -1767,62 +1706,63 @@ const Game = ({
     }
   }, [])
 
-  const applyWildPlacement = (slot: "first" | "second") => {
-    const cards = cardsRef.current
-    const combo = comboRef.current
-    const bountyIndices = bountyIndicesRef.current
-    const level = levelRef.current
-    const index = wildPendingIndex
-    if (index === null) return
+  // const applyWildPlacement = (slot: "first" | "second") => {
+  //   const cards = cardsRef.current
+  //   const combo = comboRef.current
+  //   const bountyIndices = bountyIndicesRef.current
+  //   const level = levelRef.current
+  //   const index = wildPendingIndex
+  //   if (index === null) return
 
-    // Now apply the score/combo (deferred from handleCardPress)
-    const nc = combo + 1
-    const layoutMultiplier = 1 + (level - 1) * 0.5
-    const gloryMultiplier = gloryActiveRef.current ? 2 : 1
-    const isBounty = bountyIndices.has(index)
-    const bountyMultiplier = isBounty ? 5 : 1
-    const pts = Math.round(
-      BASE_CARD_VALUE *
-        getComboMultiplier(nc) *
-        layoutMultiplier *
-        gloryMultiplier *
-        bountyMultiplier,
-    )
+  //   // Now apply the score/combo (deferred from handleCardPress)
+  //   const nc = combo + 1
+  //   const layoutMultiplier = 1 + (level - 1) * 0.5
+  //   const gloryMultiplier = gloryActiveRef.current ? 2 : 1
+  //   const isBounty = bountyIndices.has(index)
+  //   const pts = Math.round(
+  //     BASE_CARD_VALUE *
+  //       getComboMultiplier(nc) *
+  //       layoutMultiplier *
+  //       gloryMultiplier,
+  //   )
+  //   // Bounty = fiksni bonus, NE množi se s comboom (to je bilo ono što je davalo 21M iz jedne karte)
+  //   const bountyBonus = isBounty ? Math.round(5000 * layoutMultiplier) : 0
 
-    if (isBounty) showMilestone("BOUNTY!", "#FFD700", "💰")
-    SoundService.playMatch(nc)
-    showPointsAnimation(pts)
+  //   if (isBounty) showMilestone("BOUNTY!", "#FFD700", "💰")
+  //   SoundService.playMatch(nc)
+  //   showPointsAnimation(pts)
 
-    // Hide the card NOW (it was visually staying until placement)
-    setCards((prev) => {
-      const u = [...prev]
-      u[index] = { ...u[index], visible: false }
-      return u
-    })
-    setCombo(nc)
-    setScore((s) => s + pts)
-    setShowHints(false)
+  //   // Hide the card NOW (it was visually staying until placement)
+  //   setCards((prev) => {
+  //     const u = [...prev]
+  //     u[index] = { ...u[index], visible: false }
+  //     return u
+  //   })
+  //   setCombo(nc)
+  //   // setScore((s) => s + pts)
+  //   setScore((s) => s + pts + bountyBonus)
+  //   setShowHints(false)
 
-    // Place into the chosen slot
-    if (slot === "first") {
-      setCurrentIndex(index)
-    } else {
-      setSecondCard(index)
-    }
+  //   // Place into the chosen slot
+  //   if (slot === "first") {
+  //     setCurrentIndex(index)
+  //   } else {
+  //     setSecondCard(index)
+  //   }
 
-    setWildPlacing(false)
-    setWildPendingIndex(null)
-    setTimerFrozen(false)
-  }
+  //   setWildPlacing(false)
+  //   setWildPendingIndex(null)
+  //   setTimerFrozen(false)
+  // }
 
-  const handleCancelWildPlacement = () => {
-    // Refund the wild
-    setWildCount((c) => c + 1)
-    setWildActive(false)
-    setWildPlacing(false)
-    setWildPendingIndex(null)
-    setTimerFrozen(false)
-  }
+  // const handleCancelWildPlacement = () => {
+  //   // Refund the wild
+  //   setWildCount((c) => c + 1)
+  //   setWildActive(false)
+  //   setWildPlacing(false)
+  //   setWildPendingIndex(null)
+  //   setTimerFrozen(false)
+  // }
 
   const activateGloryHunt = () => {
     if (gloryCharges <= 0) return
@@ -1835,8 +1775,6 @@ const Game = ({
   const handleDeckPress = useCallback(() => {
     const cards = cardsRef.current
     const deckIndex = deckIndexRef.current
-    const level = levelRef.current
-    const combo = comboRef.current
 
     if (deckIndex >= cards.length) return
     if (autoAdvanceTimer.current) {
@@ -1857,58 +1795,31 @@ const Game = ({
       }),
     ]).start()
 
-    const insuranceEligible =
-      INSURANCE_LAYOUTS.has(level) &&
-      !insuranceUsedRef.current.has(level) &&
-      combo >= INSURANCE_MIN_COMBO
-
-    let nextCombo = 0
-    let nextComboBase = 0
-
-    if (insuranceEligible) {
-      const resetTo = getInsuranceReset(combo)
-      if (resetTo > 0) {
-        insuranceUsedRef.current.add(level)
-        nextCombo = resetTo
-        nextComboBase = resetTo
-        insuranceFlash.value = withSequence(
-          withTiming(1, { duration: 120 }),
-          withTiming(0, { duration: 380 }),
-        )
-        showMilestone(`COMBO SAVED · x${resetTo}`, "#7BED9F", "🛡")
-        SoundService.playFreeze()
-      }
-    }
-
     setCurrentIndex(deckIndex)
     setDeckIndex((i) => i + 1)
-    setCombo(nextCombo)
-    comboBaseRef.current = nextComboBase
-    setWildFirstEarned(false)
-    setWildSecondEarned(false)
+    setCombo(0)
+    comboBaseRef.current = 0
     setTimerFrozen(false)
     if (freezeTimer.current) clearTimeout(freezeTimer.current)
     setSecondCard(null)
-    setShowHints(false)
-    setWildActive(false)
-  }, []) // ← stable
+  }, [])
 
-  const handleWildPlaceFirst = () => {
-    SoundService.playDeckDraw()
-    applyWildPlacement("first")
-  }
+  // const handleWildPlaceFirst = () => {
+  //   SoundService.playDeckDraw()
+  //   applyWildPlacement("first")
+  // }
 
-  const handleWildPlaceSecond = () => {
-    SoundService.playDeckDraw()
-    applyWildPlacement("second")
-  }
+  // const handleWildPlaceSecond = () => {
+  //   SoundService.playDeckDraw()
+  //   applyWildPlacement("second")
+  // }
 
-  const handleWild = () => {
-    if (wildCount <= 0 || wildActive) return
-    setWildCount((c) => c - 1)
-    setTimerFrozen(true)
-    setWildActive(true)
-  }
+  // const handleWild = () => {
+  //   if (wildCount <= 0 || wildActive) return
+  //   setWildCount((c) => c - 1)
+  //   setTimerFrozen(true)
+  //   setWildActive(true)
+  // }
   const handleNextLevel = () => {
     setBetweenLevels(false)
     level >= TOTAL_LEVELS ? setGameOver(true) : setLevel((l) => l + 1)
@@ -1927,11 +1838,11 @@ const Game = ({
     setLevel(1)
     setGameOver(false)
     setScoreSaved(false)
-    setWildCount(0)
-    setWildFirstEarned(false)
-    setWildSecondEarned(false)
-    setWildActive(false)
-    setWildActive(false)
+    // setWildCount(0)
+    // setWildFirstEarned(false)
+    // setWildSecondEarned(false)
+    // setWildActive(false)
+    // setWildActive(false)
     setRound((r) => r + 1)
     setPreBattle(true)
     setGloryCharges(1)
@@ -1940,7 +1851,7 @@ const Game = ({
     setIsPersonalBest(false)
     setPreviousBest(0)
     personalBestComboShownRef.current = false
-    insuranceUsedRef.current = new Set()
+    // insuranceUsedRef.current = new Set()
   }
   const handleBackPress = () => {
     setShowQuitConfirm(true)
@@ -1987,7 +1898,7 @@ const Game = ({
     setDeckIndex((i) => i + 1)
     setSecondCard(null)
     setShowHints(false)
-    setWildActive(false)
+    // setWildActive(false)
     showMilestone("FREE DRAW!", "#4FC3F7", "🃏")
   }, []) // ← stable
 
@@ -1999,33 +1910,33 @@ const Game = ({
   )
   // Carry combo button — only shows when ≤7 field cards remain and combo > remaining.
   // Memoized to avoid filtering the full card array on every state change.
-  const carryButtonData = useMemo(() => {
-    const fieldRemaining = cards
-      .slice(0, config.fieldCards)
-      .filter((c) => c.visible).length
-    const carried = combo - fieldRemaining
-    const shouldShow =
-      carried > 0 &&
-      fieldRemaining <= 7 &&
-      !betweenLevels &&
-      !gameOver &&
-      level < TOTAL_LEVELS
-    return { shouldShow, carried }
-  }, [cards, config.fieldCards, combo, betweenLevels, gameOver, level])
+  // const carryButtonData = useMemo(() => {
+  //   const fieldRemaining = cards
+  //     .slice(0, config.fieldCards)
+  //     .filter((c) => c.visible).length
+  //   const carried = combo - fieldRemaining
+  //   const shouldShow =
+  //     carried > 0 &&
+  //     fieldRemaining <= 7 &&
+  //     !betweenLevels &&
+  //     !gameOver &&
+  //     level < TOTAL_LEVELS
+  //   return { shouldShow, carried }
+  // }, [cards, config.fieldCards, combo, betweenLevels, gameOver, level])
 
-  const wildProgressData = useMemo(() => {
-    if (wildSecondEarned) return null
-    const newMatches = combo - comboBaseRef.current
-    const target = wildFirstEarned
-      ? WILD_SECOND_THRESHOLD
-      : WILD_COMBO_THRESHOLD
-    const remaining = target - newMatches
-    if (remaining <= 0) return null
-    return {
-      progress: Math.min((newMatches / target) * 100, 100),
-      remaining,
-    }
-  }, [combo, wildFirstEarned, wildSecondEarned])
+  // const wildProgressData = useMemo(() => {
+  //   if (wildSecondEarned) return null
+  //   const newMatches = combo - comboBaseRef.current
+  //   const target = wildFirstEarned
+  //     ? WILD_SECOND_THRESHOLD
+  //     : WILD_COMBO_THRESHOLD
+  //   const remaining = target - newMatches
+  //   if (remaining <= 0) return null
+  //   return {
+  //     progress: Math.min((newMatches / target) * 100, 100),
+  //     remaining,
+  //   }
+  // }, [combo, wildFirstEarned, wildSecondEarned])
 
   useEffect(() => {
     if (!arenaMode || !roomCode || !uid) return
@@ -2073,10 +1984,10 @@ const Game = ({
         setLevel(1)
         setGameOver(false)
         setScoreSaved(false)
-        setWildCount(0)
-        setWildFirstEarned(false)
-        setWildSecondEarned(false)
-        setWildActive(false)
+        // setWildCount(0)
+        // setWildFirstEarned(false)
+        // setWildSecondEarned(false)
+        // setWildActive(false)
         setWantsRematch(false)
         setRound((r) => r + 1)
       }
@@ -2114,7 +2025,7 @@ const Game = ({
       hintedIndices,
       bountyIndices,
       bountyConfig,
-      pendingIndex: wildPendingIndex,
+      // pendingIndex: wildPendingIndex,
     }
 
     switch (config.layout) {
@@ -2352,13 +2263,27 @@ const Game = ({
     const isVictory = clearPct >= 80
     const isMidBattle = clearPct >= 50
     const outcomeIcon = isVictory ? "👑" : isMidBattle ? "⚔️" : "🛡"
+    const allFinished = arenaMode
+      ? arenaPlayers.every((p: any) => p.finished || p.disconnected)
+      : true
+
+    const myArenaRank = arenaMode
+      ? arenaPlayers.findIndex((p: any) => p.uid === uid) + 1
+      : 0
+
     const outcomeTitle = dailyMode
       ? "QUEST COMPLETE"
-      : isVictory
-        ? "VICTORY"
-        : isMidBattle
-          ? "BATTLE OVER"
-          : "RETREAT"
+      : arenaMode
+        ? !allFinished
+          ? "FINALIZING..."
+          : myArenaRank === 1
+            ? "VICTORY"
+            : `RANK #${myArenaRank}`
+        : isVictory
+          ? "VICTORY"
+          : isMidBattle
+            ? "BATTLE OVER"
+            : "RETREAT"
 
     return (
       <View
@@ -2630,31 +2555,31 @@ const Game = ({
                 </View>
               )
             }
-            if (carryCombo > 0) {
-              return (
-                <View
-                  style={[styles.achievementBanner, styles.achievementCarry]}
-                >
-                  <Text style={{ fontSize: 18 }}>⚡</Text>
-                  <View style={styles.achievementCenter}>
-                    <Text
-                      style={[styles.achievementTitle, { color: "#7BED9F" }]}
-                    >
-                      COMBO CARRIED
-                    </Text>
-                    <Text
-                      style={[
-                        styles.achievementSub,
-                        { color: "rgba(123,237,159,0.6)" },
-                      ]}
-                    >
-                      x{carryCombo} ready for next battlefield
-                    </Text>
-                  </View>
-                  <Text style={{ fontSize: 18 }}>⚡</Text>
-                </View>
-              )
-            }
+            // if (carryCombo > 0) {
+            //   return (
+            //     <View
+            //       style={[styles.achievementBanner, styles.achievementCarry]}
+            //     >
+            //       <Text style={{ fontSize: 18 }}>⚡</Text>
+            //       <View style={styles.achievementCenter}>
+            //         <Text
+            //           style={[styles.achievementTitle, { color: "#7BED9F" }]}
+            //         >
+            //           COMBO CARRIED
+            //         </Text>
+            //         <Text
+            //           style={[
+            //             styles.achievementSub,
+            //             { color: "rgba(123,237,159,0.6)" },
+            //           ]}
+            //         >
+            //           x{carryCombo} ready for next battlefield
+            //         </Text>
+            //       </View>
+            //       <Text style={{ fontSize: 18 }}>⚡</Text>
+            //     </View>
+            //   )
+            // }
             if (gloryActive) {
               return (
                 <View
@@ -2760,7 +2685,7 @@ const Game = ({
           )}
 
           {/* Glory Hunt */}
-          {level < TOTAL_LEVELS - 1 && gloryCharges > 0 && !gloryActive && (
+          {level < TOTAL_LEVELS && gloryCharges > 0 && !gloryActive && (
             <TouchableOpacity
               style={styles.gloryBtn}
               onPress={activateGloryHunt}
@@ -2813,7 +2738,8 @@ const Game = ({
                     Waiting... (
                     {
                       arenaPlayers.filter(
-                        (p: any) => (p.currentLevel || 0) >= level,
+                        (p: any) =>
+                          (p.currentLevel || 0) >= level || p.disconnected,
                       ).length
                     }
                     /{arenaPlayers.length})
@@ -2911,13 +2837,13 @@ const Game = ({
             <Text style={styles.backBtnText}>✕</Text>
           </TouchableOpacity>
           {/* Combo insurance shield flash — tiny, brief, no text */}
-          <Animated.View
+          {/* <Animated.View
             pointerEvents="none"
             style={[styles.insuranceFlash, insuranceFlashStyle]}
           >
             <Text style={styles.insuranceFlashIcon}>🛡</Text>
-          </Animated.View>
-          {wildActive && (
+          </Animated.View> */}
+          {/* {wildActive && (
             <Animated.View
               style={[
                 styles.wildBorder,
@@ -2956,7 +2882,7 @@ const Game = ({
                 </Text>
               </View>
             </View>
-          )}
+          )} */}
           {gloryActive && (
             <View style={styles.gloryBadge}>
               <Text style={styles.gloryBadgeText}>⚡ GLORY HUNT · 2X</Text>
@@ -2969,13 +2895,13 @@ const Game = ({
               </LayoutEntrance>
             ) : null}
           </View>
-          {wildPlacing && (
+          {/* {wildPlacing && (
             <View style={styles.wildSelectBanner}>
               <Text style={styles.wildSelectBannerText}>
                 ⚡ TAP CARD TO REPLACE
               </Text>
             </View>
-          )}
+          )} */}
           <View style={styles.wallContainer}>
             <Battlements color={tableConfig.color} />
             <View
@@ -3009,8 +2935,21 @@ const Game = ({
                       activeOpacity={0.7}
                     >
                       <View style={styles.freeDrawCardInner}>
-                        <Text style={styles.freeDrawCardText}>1 FREE</Text>
-                        <Text style={styles.freeDrawCardText}>DRAW</Text>
+                        {/* gornji lijevi ugao */}
+                        <View style={styles.freeDrawCorner}>
+                          <Text style={styles.freeDrawCornerIcon}>↻</Text>
+                        </View>
+                        {/* centar */}
+                        <Text style={styles.freeDrawCenterIcon}>↻</Text>
+                        {/* donji desni ugao (rotiran) */}
+                        <View
+                          style={[
+                            styles.freeDrawCorner,
+                            styles.freeDrawCornerBR,
+                          ]}
+                        >
+                          <Text style={styles.freeDrawCornerIcon}>↻</Text>
+                        </View>
                       </View>
                     </TouchableOpacity>
                   )}
@@ -3022,61 +2961,25 @@ const Game = ({
                 </View>
               </View>
               <View style={styles.centerCards}>
-                <View
-                  style={[
-                    styles.openCardGlow,
-                    wildActive && styles.openCardGlowWild,
-                  ]}
-                />
-                {wildPlacing ? (
-                  <>
-                    <TouchableOpacity
-                      onPress={handleWildPlaceFirst}
-                      activeOpacity={0.7}
-                    >
-                      <PulsingCard>
-                        <Card
-                          card={cards[currentIndex]}
-                          isOpen
-                          disabled
-                          cardBackColor={theme.cardBackColor}
-                        />
-                      </PulsingCard>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={handleWildPlaceSecond}
-                      activeOpacity={0.7}
-                    >
-                      <PulsingCard>
-                        <Card
-                          card={cards[secondCard!]}
-                          isOpen
-                          disabled
-                          cardBackColor={theme.cardBackColor}
-                        />
-                      </PulsingCard>
-                    </TouchableOpacity>
-                  </>
-                ) : (
-                  <>
+                <View style={[styles.openCardGlow, styles.openCardGlowWild]} />
+                <>
+                  <Card
+                    card={cards[currentIndex]}
+                    isOpen
+                    disabled
+                    cardBackColor={theme.cardBackColor}
+                  />
+                  {secondCard !== null && (
                     <Card
-                      card={cards[currentIndex]}
+                      card={cards[secondCard]}
                       isOpen
                       disabled
                       cardBackColor={theme.cardBackColor}
                     />
-                    {secondCard !== null && (
-                      <Card
-                        card={cards[secondCard]}
-                        isOpen
-                        disabled
-                        cardBackColor={theme.cardBackColor}
-                      />
-                    )}
-                  </>
-                )}
+                  )}
+                </>
               </View>
-              {carryButtonData.shouldShow && (
+              {/* {carryButtonData.shouldShow && (
                 <TouchableOpacity
                   style={[
                     styles.carryCard,
@@ -3092,9 +2995,9 @@ const Game = ({
                     </Text>
                   </View>
                 </TouchableOpacity>
-              )}
+              )} */}
               {/* Wild cards between center and timer */}
-              {wildCount > 0 && !wildActive && (
+              {/* {wildCount > 0 && !wildActive && (
                 <TouchableOpacity
                   style={styles.wildBarBtn}
                   onPress={handleWild}
@@ -3175,7 +3078,7 @@ const Game = ({
                     </View>
                   )}
                 </TouchableOpacity>
-              )}
+              )} */}
               <View style={styles.rightBox}>
                 <Timer
                   key={layoutKey}
@@ -3185,9 +3088,7 @@ const Game = ({
                       : config.time
                   }
                   onTimeUp={advanceLevel}
-                  paused={
-                    paused || betweenLevels || showQuitConfirm || wildPlacing
-                  }
+                  paused={paused || betweenLevels || showQuitConfirm}
                   frozen={timerFrozen}
                   onTick={(t) => {
                     timeLeftRef.current = t
@@ -3256,7 +3157,7 @@ const Game = ({
                     </Text>
                   )}
                   {/* Wild card progress */}
-                  {wildProgressData && (
+                  {/* {wildProgressData && (
                     <View style={styles.wildProgress}>
                       <Text style={styles.wildProgressIcon}>🃏</Text>
                       <View style={styles.wildProgressTrack}>
@@ -3271,7 +3172,7 @@ const Game = ({
                         {wildProgressData.remaining}
                       </Text>
                     </View>
-                  )}
+                  )} */}
                 </View>
               </View>
             </View>
@@ -5066,18 +4967,34 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 10,
     borderWidth: 1.5,
-    borderColor: "rgba(232,197,71,0.4)",
-    backgroundColor: "rgba(232,197,71,0.06)",
-    borderStyle: "dashed",
+    borderColor: "rgba(232,197,71,0.6)",
+    backgroundColor: "#F2E8D5",
     justifyContent: "center",
     alignItems: "center",
+    overflow: "hidden",
   },
-  freeDrawCardText: {
-    color: "rgba(232,197,71,0.75)",
-    fontSize: 11,
+  freeDrawCorner: {
+    position: "absolute",
+    top: 3,
+    left: 4,
+    alignItems: "center",
+  },
+  freeDrawCornerBR: {
+    top: undefined,
+    left: undefined,
+    bottom: 3,
+    right: 4,
+    transform: [{ rotate: "180deg" }],
+  },
+  freeDrawCenterIcon: {
+    fontSize: 30,
+    color: "#5B3A8B", // skoro crna, topla tamna — maksimalan kontrast
     fontWeight: "900",
-    letterSpacing: 2,
-    lineHeight: 14,
+  },
+  freeDrawCornerIcon: {
+    fontSize: 11,
+    color: "#5B3A8B",
+    fontWeight: "900",
   },
   freeDrawIcon: {
     fontSize: 10,

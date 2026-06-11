@@ -19,6 +19,10 @@ import {
   onRoomUpdate,
   getRoomOnce,
   subscribeToOnlinePlayers,
+  subscribeToOnlineUsers,
+  subscribeToMyInvites,
+  clearArenaInvite,
+  sendArenaInvite,
 } from "../services/ArenaService"
 import database from "@react-native-firebase/database"
 import ReturnToCastle from "./ReturnToCastle"
@@ -48,17 +52,66 @@ const ArenaScreen = ({
   const slideAnim = useRef(new Animated.Value(20)).current
   const glowPulse = useRef(new Animated.Value(0.3)).current
 
+  const [incomingInvite, setIncomingInvite] = useState<{
+    fromName: string
+    roomCode: string
+  } | null>(null)
+
+  const [invitedUids, setInvitedUids] = useState<Set<string>>(new Set())
+
   const [onlinePlayers, setOnlinePlayers] = useState<
-    { uid: string; heroName: string; roomCode: string }[]
+    { uid: string; heroName: string }[]
   >([])
 
   useEffect(() => {
     if (mode !== "menu") return
-    const unsub = subscribeToOnlinePlayers((players) => {
-      setOnlinePlayers(players.filter((p) => p.uid !== uid))
+    const unsub = subscribeToOnlineUsers((players) => {
+      setOnlinePlayers(players)
     })
     return unsub
   }, [mode, uid])
+
+  useEffect(() => {
+    const unsub = subscribeToMyInvites(uid, (invite) => {
+      // Ne prikazuj poziv ako si već u sobi
+      if (mode === "menu" && invite) setIncomingInvite(invite)
+      else if (!invite) setIncomingInvite(null)
+    })
+    return unsub
+  }, [uid, mode])
+
+  const handleAcceptInvite = async () => {
+    if (!incomingInvite) return
+    const code = incomingInvite.roomCode
+    await clearArenaInvite(uid)
+    setIncomingInvite(null)
+    setJoinCode(code)
+    // joinaj odmah
+    const result = await joinRoom(code, uid, heroName)
+    if (result.success) {
+      setRoomCode(code)
+      const roomData = await getRoomOnce(code)
+      if (roomData) setRoom(roomData)
+      setMode("lobby")
+      subscribeToRoom(code)
+    } else {
+      setError(result.error || "Room no longer available")
+    }
+  }
+
+  const handleDeclineInvite = async () => {
+    await clearArenaInvite(uid)
+    setIncomingInvite(null)
+  }
+
+  // const handleSendInvite = async (toUid: string) => {
+  //   if (!roomCode) return
+  //   await sendArenaInvite(toUid, heroName, roomCode)
+  // }
+  const handleSendInvite = async (toUid: string) => {
+    await sendArenaInvite(toUid, heroName, roomCode || "1234")
+    setInvitedUids((prev) => new Set(prev).add(toUid))
+  }
 
   useEffect(() => {
     Animated.parallel([
@@ -175,6 +228,13 @@ const ArenaScreen = ({
     setMode("menu")
   }
 
+  useEffect(() => {
+    const unsub = subscribeToOnlineUsers((players) => {
+      setOnlinePlayers(players)
+    })
+    return unsub
+  }, [])
+
   const isHost = room?.hostUid === uid
   const players = room?.players ? Object.values(room.players) : []
 
@@ -197,6 +257,38 @@ const ArenaScreen = ({
     return (
       <View style={styles.container}>
         <BackgroundDecor />
+        {incomingInvite && (
+          <View style={styles.inviteModalOverlay}>
+            <View style={styles.inviteModalCard}>
+              <Text style={styles.inviteModalIcon}>⚔</Text>
+              <Text style={styles.inviteModalTitle}>BATTLE INVITE</Text>
+              <Text style={styles.inviteModalText}>
+                {incomingInvite.fromName} is calling you to the arena
+              </Text>
+              <View style={styles.inviteModalCode}>
+                <Text style={styles.inviteModalCodeText}>
+                  #{incomingInvite.roomCode}
+                </Text>
+              </View>
+              <View style={styles.inviteModalBtns}>
+                <TouchableOpacity
+                  style={styles.inviteAcceptBtn}
+                  onPress={handleAcceptInvite}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.inviteAcceptText}>⚔ JOIN</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.inviteDeclineBtn}
+                  onPress={handleDeclineInvite}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.inviteDeclineText}>Decline</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
         <Animated.View
           style={[
             styles.lobbyContent,
@@ -326,6 +418,69 @@ const ArenaScreen = ({
                   ),
                 )}
               </ScrollView>
+              {/* Invite online players */}
+              <View style={styles.inviteSection}>
+                <View style={styles.playersSectionHeader}>
+                  <View style={styles.sectionLine} />
+                  <Text style={styles.playersTitle}>INVITE ONLINE</Text>
+                  <View style={styles.sectionLine} />
+                </View>
+
+                {(() => {
+                  const inRoom = new Set(players.map((p: RoomPlayer) => p.uid))
+                  const invitable = onlinePlayers.filter(
+                    (p) => !inRoom.has(p.uid),
+                  )
+
+                  if (invitable.length === 0) {
+                    return (
+                      <Text style={styles.inviteEmptyText}>
+                        No other warriors online
+                      </Text>
+                    )
+                  }
+
+                  return (
+                    <ScrollView
+                      style={styles.inviteScroll}
+                      contentContainerStyle={{ gap: 4 }}
+                      showsVerticalScrollIndicator={false}
+                    >
+                      {invitable.map((p, i) => {
+                        const sent = invitedUids.has(p.uid)
+                        return (
+                          <View key={`${p.uid}-${i}`} style={styles.inviteRow}>
+                            <View style={styles.onlineCardAvatar}>
+                              <Text style={styles.onlineCardAvatarText}>⚔</Text>
+                            </View>
+                            <Text style={styles.inviteName} numberOfLines={1}>
+                              {p.heroName}
+                            </Text>
+                            <TouchableOpacity
+                              style={[
+                                styles.inviteBtn,
+                                sent && styles.inviteBtnSent,
+                              ]}
+                              onPress={() => handleSendInvite(p.uid)}
+                              disabled={sent}
+                              activeOpacity={0.8}
+                            >
+                              <Text
+                                style={[
+                                  styles.inviteBtnText,
+                                  sent && styles.inviteBtnTextSent,
+                                ]}
+                              >
+                                {sent ? "SENT" : "INVITE"}
+                              </Text>
+                            </TouchableOpacity>
+                          </View>
+                        )
+                      })}
+                    </ScrollView>
+                  )
+                })()}
+              </View>
             </View>
           </View>
 
@@ -451,20 +606,14 @@ const ArenaScreen = ({
                 showsVerticalScrollIndicator={false}
               >
                 {onlinePlayers.map((p, i) => (
-                  <TouchableOpacity
-                    key={`${p.uid}-${i}`}
-                    style={styles.onlineCard}
-                    onPress={() => setJoinCode(p.roomCode)}
-                    activeOpacity={0.75}
-                  >
+                  <View key={`${p.uid}-${i}`} style={styles.onlineCard}>
                     <View style={styles.onlineCardAvatar}>
                       <Text style={styles.onlineCardAvatarText}>⚔</Text>
                     </View>
                     <Text style={styles.onlineCardName} numberOfLines={1}>
-                      {p.heroName}
+                      {p.uid === uid ? `${p.heroName} (you)` : p.heroName}
                     </Text>
-                    <Text style={styles.onlineCardCode}>#{p.roomCode}</Text>
-                  </TouchableOpacity>
+                  </View>
                 ))}
               </ScrollView>
             )}
@@ -1314,6 +1463,122 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "900",
     letterSpacing: 1,
+  },
+  inviteSection: { marginTop: 10 },
+  inviteScroll: { maxHeight: 100 },
+  inviteEmptyText: {
+    color: "rgba(255,255,255,0.25)",
+    fontSize: 9,
+    fontStyle: "italic",
+    textAlign: "center",
+    paddingVertical: 8,
+  },
+  inviteRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(232,197,71,0.03)",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: "rgba(232,197,71,0.08)",
+  },
+  inviteName: {
+    flex: 1,
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  inviteBtn: {
+    backgroundColor: "#E8C547",
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  inviteBtnSent: {
+    backgroundColor: "rgba(232,197,71,0.12)",
+  },
+  inviteBtnText: {
+    color: "#1a1a1a",
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+  inviteBtnTextSent: {
+    color: "rgba(232,197,71,0.6)",
+  },
+  inviteModalOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 100,
+  },
+  inviteModalCard: {
+    backgroundColor: "#14100C",
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: "rgba(232,197,71,0.4)",
+    paddingHorizontal: 28,
+    paddingVertical: 20,
+    alignItems: "center",
+    gap: 6,
+    maxWidth: 320,
+  },
+  inviteModalIcon: { fontSize: 32 },
+  inviteModalTitle: {
+    color: "#E8C547",
+    fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 3,
+  },
+  inviteModalText: {
+    color: "rgba(255,255,255,0.6)",
+    fontSize: 12,
+    textAlign: "center",
+  },
+  inviteModalCode: {
+    backgroundColor: "rgba(232,197,71,0.1)",
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+    marginVertical: 4,
+  },
+  inviteModalCodeText: {
+    color: "#E8C547",
+    fontSize: 20,
+    fontWeight: "900",
+    letterSpacing: 2,
+  },
+  inviteModalBtns: { flexDirection: "row", gap: 10, marginTop: 4 },
+  inviteAcceptBtn: {
+    backgroundColor: "#E8C547",
+    borderRadius: 10,
+    paddingHorizontal: 24,
+    paddingVertical: 8,
+  },
+  inviteAcceptText: {
+    color: "#1a1a1a",
+    fontSize: 13,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+  inviteDeclineBtn: {
+    borderRadius: 10,
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,100,100,0.3)",
+  },
+  inviteDeclineText: {
+    color: "rgba(255,100,100,0.6)",
+    fontSize: 12,
+    fontWeight: "700",
   },
 })
 

@@ -13,6 +13,14 @@ import firestore from "@react-native-firebase/firestore"
 import { getUserProfile } from "../services/Dailychallenge"
 import ReturnToCastle from "./ReturnToCastle"
 
+import { Dimensions } from "react-native"
+
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window")
+// Profile je dizajniran za ~360px visine landscape ekrana.
+// Na manjem ekranu, sve se smanji proporcionalno.
+const UI_SCALE = Math.min(SCREEN_H / 360, 1)
+const ms = (size: number) => Math.round(size * UI_SCALE)
+
 interface ProfileProps {
   onBack: () => void
   uid: string
@@ -275,364 +283,385 @@ const Profile = ({ onBack, uid, heroName, onNameChange }: ProfileProps) => {
         <View style={styles.bgHLine} />
       </View>
 
-      <Animated.View
-        style={[
-          styles.content,
-          { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
-        ]}
+      <ScrollView
+        style={{ width: "100%" }}
+        contentContainerStyle={{
+          flexGrow: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          paddingVertical: 12,
+        }}
+        showsVerticalScrollIndicator={false}
       >
-        {/* LEFT SIDE */}
-        <View style={styles.leftSection}>
-          <View style={styles.headerOrn}>
-            <View style={styles.headerLine} />
-            <Text style={styles.headerDot}>◆</Text>
-            <View style={styles.headerLine} />
-          </View>
-
-          {/* Avatar */}
-          <View style={styles.avatarWrap}>
-            <View
-              style={[
-                styles.avatarGlow,
-                { backgroundColor: rank.color + "20" },
-              ]}
-            />
-            <View style={[styles.avatarRingOuter, { borderColor: rank.color }]}>
-              <View style={[styles.heroAvatar, { borderColor: rank.color }]}>
-                <Text style={styles.heroAvatarText}>{rank.icon}</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Name */}
-          {editingName ? (
-            <View style={styles.nameEditRow}>
-              <TextInput
-                style={styles.nameInput}
-                value={newName}
-                onChangeText={setNewName}
-                maxLength={16}
-                autoFocus
-                placeholderTextColor="rgba(255,255,255,0.2)"
-              />
-              <TouchableOpacity
-                style={styles.nameSaveBtn}
-                onPress={handleNameChange}
-                disabled={nameSaving}
-              >
-                <Text style={styles.nameSaveBtnText}>
-                  {nameSaving ? "..." : "✓"}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.nameCancelBtn}
-                onPress={() => {
-                  setEditingName(false)
-                  setNewName(heroName)
-                  setNameError("")
-                }}
-              >
-                <Text style={styles.nameCancelBtnText}>✕</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <TouchableOpacity
-              onPress={() => setEditingName(true)}
-              style={styles.nameRow}
-            >
-              <Text style={styles.heroName}>{heroName}</Text>
-              <Text style={styles.editIcon}>✎</Text>
-            </TouchableOpacity>
-          )}
-          {nameError !== "" && (
-            <Text style={styles.nameError}>{nameError}</Text>
-          )}
-
-          {/* Rank */}
-          <View style={styles.rankBadge}>
-            <View
-              style={[styles.rankBadgeLine, { backgroundColor: rank.color }]}
-            />
-            <Text style={[styles.rankName, { color: rank.color }]}>
-              {rank.name}
-            </Text>
-            <View
-              style={[styles.rankBadgeLine, { backgroundColor: rank.color }]}
-            />
-          </View>
-
-          {/* Progress bar */}
-          <View style={styles.rankBarOuter}>
-            <View style={styles.rankBarTrack}>
-              <View
-                style={[
-                  styles.rankFill,
-                  {
-                    width: `${Math.min(progressPct, 100)}%`,
-                    backgroundColor: rank.color,
-                  },
-                ]}
-              />
-            </View>
-            {nextRank.needed > 0 ? (
-              <Text style={styles.rankProgress}>
-                {nextRank.needed} more to{" "}
-                <Text style={{ color: rank.color }}>{nextRank.name}</Text>
-              </Text>
-            ) : (
-              <Text style={[styles.rankProgress, { color: rank.color }]}>
-                Maximum rank achieved
-              </Text>
-            )}
-          </View>
-
-          {/* Milestones */}
-          <View style={styles.milestoneRow}>
-            {milestones.map((m, i) => (
-              <View key={i} style={styles.milestoneItem}>
-                <View
-                  style={[
-                    styles.milestoneDot,
-                    m.reached && {
-                      backgroundColor: rank.color,
-                      borderColor: rank.color,
-                    },
-                  ]}
-                >
-                  {m.reached && <Text style={styles.milestoneCheck}>✓</Text>}
-                </View>
-                <Text
-                  style={[
-                    styles.milestoneLabel,
-                    m.reached && { color: rank.color },
-                  ]}
-                >
-                  {m.label}
-                </Text>
-              </View>
-            ))}
-          </View>
-
-          {/* ── STREAK ── */}
-          {/* ── STREAK ── */}
-          <View style={styles.streakWrap}>
-            <View style={styles.streakOrnRow}>
-              <View style={styles.streakOrnLine} />
-              <Text style={styles.streakOrnDot}>◆</Text>
-              <View style={styles.streakOrnLine} />
-            </View>
-
-            {/* Main streak display */}
-            <View
-              style={[
-                styles.streakBox,
-                {
-                  borderColor: streakColor + "50",
-                  shadowColor: currentStreak >= 7 ? streakColor : "transparent",
-                },
-              ]}
-            >
-              <View
-                style={[
-                  styles.streakGlow,
-                  { backgroundColor: streakColor + "08" },
-                ]}
-              />
-
-              {/* Left — fire icon, bigger at higher streaks */}
-              <Animated.Text
-                style={[
-                  styles.streakFireIcon,
-                  {
-                    opacity: streakPulse,
-                    fontSize:
-                      currentStreak >= 42
-                        ? 40
-                        : currentStreak >= 21
-                          ? 36
-                          : currentStreak >= 7
-                            ? 32
-                            : 26,
-                  },
-                ]}
-              >
-                {currentStreak >= 1 ? "🔥" : "🕯"}
-              </Animated.Text>
-
-              {/* Center — big number */}
-              <View style={styles.streakCenter}>
-                <Text style={[styles.streakCount, { color: streakColor }]}>
-                  {currentStreak}
-                </Text>
-                <Text style={styles.streakLabel}>DAY STREAK</Text>
-              </View>
-
-              {/* Right — best streak */}
-              <View style={styles.streakBestWrap}>
-                <Text style={styles.streakBestIcon}>🏆</Text>
-                <Text
-                  style={[
-                    styles.streakBestCount,
-                    { color: "rgba(232,197,71,0.7)" },
-                  ]}
-                >
-                  {bestStreak}
-                </Text>
-                <Text style={styles.streakBestLabel}>BEST</Text>
-              </View>
-            </View>
-
-            {/* Milestone track */}
-            <View style={styles.streakTrack}>
-              {[
-                { days: 7, label: "7d", name: "FLAME\nBORN", icon: "🔥" },
-                { days: 21, label: "21d", name: "EMBER\nFORGED", icon: "🌋" },
-                { days: 42, label: "42d", name: "INFERNO\nSWORN", icon: "⚡" },
-                { days: 60, label: "60d", name: "ETERNAL\nFLAME", icon: "♾" },
-              ].map((m, i) => {
-                const reached = bestStreak >= m.days
-                const active = currentStreak >= m.days
-                const milestoneColor = reached
-                  ? streakColor
-                  : "rgba(255,255,255,0.1)"
-                return (
-                  <React.Fragment key={i}>
-                    {i > 0 && (
-                      <View
-                        style={[
-                          styles.streakTrackLine,
-                          {
-                            backgroundColor:
-                              bestStreak >= m.days
-                                ? streakColor + "40"
-                                : "rgba(255,255,255,0.06)",
-                          },
-                        ]}
-                      />
-                    )}
-                    <View style={styles.streakMilestoneWrap}>
-                      <View
-                        style={[
-                          styles.streakMilestoneDot,
-                          reached && {
-                            backgroundColor: streakColor + "20",
-                            borderColor: streakColor,
-                            shadowColor: streakColor,
-                            shadowOffset: { width: 0, height: 0 },
-                            shadowOpacity: active ? 0.6 : 0.2,
-                            shadowRadius: active ? 8 : 4,
-                          },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.streakMilestoneIcon,
-                            { opacity: reached ? 1 : 0.25 },
-                          ]}
-                        >
-                          {m.icon}
-                        </Text>
-                      </View>
-                      <Text
-                        style={[
-                          styles.streakMilestoneDays,
-                          reached && { color: streakColor },
-                        ]}
-                      >
-                        {m.label}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.streakMilestoneName,
-                          reached && { color: streakColor + "80" },
-                        ]}
-                      >
-                        {m.name}
-                      </Text>
-                    </View>
-                  </React.Fragment>
-                )
-              })}
-            </View>
-
-            {/* Unlock hint */}
-            <Text style={styles.streakUnlockHint}>
-              🔥 Streak milestones unlock exclusive Armory items
-            </Text>
-          </View>
-        </View>
-
-        {/* Divider */}
-        <View style={styles.verticalDivider}>
-          <View style={styles.vDividerLine} />
-          <Text style={styles.vDividerDot}>◆</Text>
-          <View style={styles.vDividerLine} />
-        </View>
-
-        {/* RIGHT SIDE */}
-        <View style={styles.rightSection}>
-          <View style={styles.statsHeader}>
+        <Animated.View
+          style={[
+            styles.content,
+            { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
+          ]}
+        >
+          {/* LEFT SIDE */}
+          <View style={styles.leftSection}>
             <View style={styles.headerOrn}>
               <View style={styles.headerLine} />
               <Text style={styles.headerDot}>◆</Text>
               <View style={styles.headerLine} />
             </View>
-            <Text style={styles.statsTitle}>BATTLE STATISTICS</Text>
+
+            {/* Avatar */}
+            <View style={styles.avatarWrap}>
+              <View
+                style={[
+                  styles.avatarGlow,
+                  { backgroundColor: rank.color + "20" },
+                ]}
+              />
+              <View
+                style={[styles.avatarRingOuter, { borderColor: rank.color }]}
+              >
+                <View style={[styles.heroAvatar, { borderColor: rank.color }]}>
+                  <Text style={styles.heroAvatarText}>{rank.icon}</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Name */}
+            {editingName ? (
+              <View style={styles.nameEditRow}>
+                <TextInput
+                  style={styles.nameInput}
+                  value={newName}
+                  onChangeText={setNewName}
+                  maxLength={16}
+                  autoFocus
+                  placeholderTextColor="rgba(255,255,255,0.2)"
+                />
+                <TouchableOpacity
+                  style={styles.nameSaveBtn}
+                  onPress={handleNameChange}
+                  disabled={nameSaving}
+                >
+                  <Text style={styles.nameSaveBtnText}>
+                    {nameSaving ? "..." : "✓"}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.nameCancelBtn}
+                  onPress={() => {
+                    setEditingName(false)
+                    setNewName(heroName)
+                    setNameError("")
+                  }}
+                >
+                  <Text style={styles.nameCancelBtnText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                onPress={() => setEditingName(true)}
+                style={styles.nameRow}
+              >
+                <Text style={styles.heroName}>{heroName}</Text>
+                <Text style={styles.editIcon}>✎</Text>
+              </TouchableOpacity>
+            )}
+            {nameError !== "" && (
+              <Text style={styles.nameError}>{nameError}</Text>
+            )}
+
+            {/* Rank */}
+            <View style={styles.rankBadge}>
+              <View
+                style={[styles.rankBadgeLine, { backgroundColor: rank.color }]}
+              />
+              <Text style={[styles.rankName, { color: rank.color }]}>
+                {rank.name}
+              </Text>
+              <View
+                style={[styles.rankBadgeLine, { backgroundColor: rank.color }]}
+              />
+            </View>
+
+            {/* Progress bar */}
+            <View style={styles.rankBarOuter}>
+              <View style={styles.rankBarTrack}>
+                <View
+                  style={[
+                    styles.rankFill,
+                    {
+                      width: `${Math.min(progressPct, 100)}%`,
+                      backgroundColor: rank.color,
+                    },
+                  ]}
+                />
+              </View>
+              {nextRank.needed > 0 ? (
+                <Text style={styles.rankProgress}>
+                  {nextRank.needed} more to{" "}
+                  <Text style={{ color: rank.color }}>{nextRank.name}</Text>
+                </Text>
+              ) : (
+                <Text style={[styles.rankProgress, { color: rank.color }]}>
+                  Maximum rank achieved
+                </Text>
+              )}
+            </View>
+
+            {/* Milestones */}
+            <View style={styles.milestoneRow}>
+              {milestones.map((m, i) => (
+                <View key={i} style={styles.milestoneItem}>
+                  <View
+                    style={[
+                      styles.milestoneDot,
+                      m.reached && {
+                        backgroundColor: rank.color,
+                        borderColor: rank.color,
+                      },
+                    ]}
+                  >
+                    {m.reached && <Text style={styles.milestoneCheck}>✓</Text>}
+                  </View>
+                  <Text
+                    style={[
+                      styles.milestoneLabel,
+                      m.reached && { color: rank.color },
+                    ]}
+                  >
+                    {m.label}
+                  </Text>
+                </View>
+              ))}
+            </View>
+
+            {/* ── STREAK ── */}
+            {/* ── STREAK ── */}
+            <View style={styles.streakWrap}>
+              <View style={styles.streakOrnRow}>
+                <View style={styles.streakOrnLine} />
+                <Text style={styles.streakOrnDot}>◆</Text>
+                <View style={styles.streakOrnLine} />
+              </View>
+
+              {/* Main streak display */}
+              <View
+                style={[
+                  styles.streakBox,
+                  {
+                    borderColor: streakColor + "50",
+                    shadowColor:
+                      currentStreak >= 7 ? streakColor : "transparent",
+                  },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.streakGlow,
+                    { backgroundColor: streakColor + "08" },
+                  ]}
+                />
+
+                {/* Left — fire icon, bigger at higher streaks */}
+                <Animated.Text
+                  style={[
+                    styles.streakFireIcon,
+                    {
+                      opacity: streakPulse,
+                      fontSize:
+                        currentStreak >= 42
+                          ? 40
+                          : currentStreak >= 21
+                            ? 36
+                            : currentStreak >= 7
+                              ? 32
+                              : 26,
+                    },
+                  ]}
+                >
+                  {currentStreak >= 1 ? "🔥" : "🕯"}
+                </Animated.Text>
+
+                {/* Center — big number */}
+                <View style={styles.streakCenter}>
+                  <Text style={[styles.streakCount, { color: streakColor }]}>
+                    {currentStreak}
+                  </Text>
+                  <Text style={styles.streakLabel}>DAY STREAK</Text>
+                </View>
+
+                {/* Right — best streak */}
+                <View style={styles.streakBestWrap}>
+                  <Text style={styles.streakBestIcon}>🏆</Text>
+                  <Text
+                    style={[
+                      styles.streakBestCount,
+                      { color: "rgba(232,197,71,0.7)" },
+                    ]}
+                  >
+                    {bestStreak}
+                  </Text>
+                  <Text style={styles.streakBestLabel}>BEST</Text>
+                </View>
+              </View>
+
+              {/* Milestone track */}
+              <View style={styles.streakTrack}>
+                {[
+                  { days: 7, label: "7d", name: "FLAME\nBORN", icon: "🔥" },
+                  { days: 21, label: "21d", name: "EMBER\nFORGED", icon: "🌋" },
+                  {
+                    days: 42,
+                    label: "42d",
+                    name: "INFERNO\nSWORN",
+                    icon: "⚡",
+                  },
+                  { days: 60, label: "60d", name: "ETERNAL\nFLAME", icon: "♾" },
+                ].map((m, i) => {
+                  const reached = bestStreak >= m.days
+                  const active = currentStreak >= m.days
+                  const milestoneColor = reached
+                    ? streakColor
+                    : "rgba(255,255,255,0.1)"
+                  return (
+                    <React.Fragment key={i}>
+                      {i > 0 && (
+                        <View
+                          style={[
+                            styles.streakTrackLine,
+                            {
+                              backgroundColor:
+                                bestStreak >= m.days
+                                  ? streakColor + "40"
+                                  : "rgba(255,255,255,0.06)",
+                            },
+                          ]}
+                        />
+                      )}
+                      <View style={styles.streakMilestoneWrap}>
+                        <View
+                          style={[
+                            styles.streakMilestoneDot,
+                            reached && {
+                              backgroundColor: streakColor + "20",
+                              borderColor: streakColor,
+                              shadowColor: streakColor,
+                              shadowOffset: { width: 0, height: 0 },
+                              shadowOpacity: active ? 0.6 : 0.2,
+                              shadowRadius: active ? 8 : 4,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.streakMilestoneIcon,
+                              { opacity: reached ? 1 : 0.25 },
+                            ]}
+                          >
+                            {m.icon}
+                          </Text>
+                        </View>
+                        <Text
+                          style={[
+                            styles.streakMilestoneDays,
+                            reached && { color: streakColor },
+                          ]}
+                        >
+                          {m.label}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.streakMilestoneName,
+                            reached && { color: streakColor + "80" },
+                          ]}
+                        >
+                          {m.name}
+                        </Text>
+                      </View>
+                    </React.Fragment>
+                  )
+                })}
+              </View>
+
+              {/* Unlock hint */}
+              <Text style={styles.streakUnlockHint}>
+                🔥 Streak milestones unlock exclusive Armory items
+              </Text>
+            </View>
           </View>
 
-          <View style={styles.bigStatRow}>
-            <View style={styles.bigStat}>
-              <Text style={styles.bigStatValue}>
-                {(data.bestScore || 0).toLocaleString()}
-              </Text>
-              <Text style={styles.bigStatLabel}>BEST SCORE</Text>
-            </View>
-            <View style={styles.bigStatDivider} />
-            <View style={styles.bigStat}>
-              <Text style={styles.bigStatValue}>x{data.bestCombo || 0}</Text>
-              <Text style={styles.bigStatLabel}>BEST COMBO</Text>
-            </View>
+          {/* Divider */}
+          <View style={styles.verticalDivider}>
+            <View style={styles.vDividerLine} />
+            <Text style={styles.vDividerDot}>◆</Text>
+            <View style={styles.vDividerLine} />
           </View>
 
-          <View style={styles.statsList}>
-            <View style={styles.statRow}>
-              <Text style={styles.statLabel}>🃏 Cards Cleared</Text>
-              <Text style={styles.statValue}>
-                {(data.totalCardsCleared || 0).toLocaleString()}
-              </Text>
+          {/* RIGHT SIDE */}
+          <View style={styles.rightSection}>
+            <View style={styles.statsHeader}>
+              <View style={styles.headerOrn}>
+                <View style={styles.headerLine} />
+                <Text style={styles.headerDot}>◆</Text>
+                <View style={styles.headerLine} />
+              </View>
+              <Text style={styles.statsTitle}>BATTLE STATISTICS</Text>
             </View>
-            <View style={styles.statSep} />
-            <View style={styles.statRow}>
-              <Text style={styles.statLabel}>⚔ Battles Fought</Text>
-              <Text style={styles.statValue}>{games}</Text>
-            </View>
-            <View style={styles.statSep} />
-            <View style={styles.statRow}>
-              <Text style={styles.statLabel}>📜 Daily Quests</Text>
-              <Text style={styles.statValue}>
-                {data.dailyQuestsPlayed || 0}
-              </Text>
-            </View>
-            <View style={styles.statSep} />
-            <View style={styles.statRow}>
-              <Text style={styles.statLabel}>🏆 Avg Score</Text>
-              <Text style={styles.statValue}>
-                {games > 0
-                  ? Math.round((data.totalScore || 0) / games).toLocaleString()
-                  : "0"}
-              </Text>
-            </View>
-          </View>
 
-          <View style={styles.totalScoreBox}>
-            <View style={styles.totalGlow} />
-            <Text style={styles.totalScoreLabel}>LIFETIME SPOILS</Text>
-            <Text style={styles.totalScoreValue}>
-              {(data.totalScore || 0).toLocaleString()}
-            </Text>
+            <View style={styles.bigStatRow}>
+              <View style={styles.bigStat}>
+                <Text style={styles.bigStatValue}>
+                  {(data.bestScore || 0).toLocaleString()}
+                </Text>
+                <Text style={styles.bigStatLabel}>BEST SCORE</Text>
+              </View>
+              <View style={styles.bigStatDivider} />
+              <View style={styles.bigStat}>
+                <Text style={styles.bigStatValue}>x{data.bestCombo || 0}</Text>
+                <Text style={styles.bigStatLabel}>BEST COMBO</Text>
+              </View>
+            </View>
+
+            <View style={styles.statsList}>
+              <View style={styles.statRow}>
+                <Text style={styles.statLabel}>🃏 Cards Cleared</Text>
+                <Text style={styles.statValue}>
+                  {(data.totalCardsCleared || 0).toLocaleString()}
+                </Text>
+              </View>
+              <View style={styles.statSep} />
+              <View style={styles.statRow}>
+                <Text style={styles.statLabel}>⚔ Battles Fought</Text>
+                <Text style={styles.statValue}>{games}</Text>
+              </View>
+              <View style={styles.statSep} />
+              <View style={styles.statRow}>
+                <Text style={styles.statLabel}>📜 Daily Quests</Text>
+                <Text style={styles.statValue}>
+                  {data.dailyQuestsPlayed || 0}
+                </Text>
+              </View>
+              <View style={styles.statSep} />
+              <View style={styles.statRow}>
+                <Text style={styles.statLabel}>🏆 Avg Score</Text>
+                <Text style={styles.statValue}>
+                  {games > 0
+                    ? Math.round(
+                        (data.totalScore || 0) / games,
+                      ).toLocaleString()
+                    : "0"}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.totalScoreBox}>
+              <View style={styles.totalGlow} />
+              <Text style={styles.totalScoreLabel}>LIFETIME SPOILS</Text>
+              <Text style={styles.totalScoreValue}>
+                {(data.totalScore || 0).toLocaleString()}
+              </Text>
+            </View>
           </View>
-        </View>
-      </Animated.View>
+        </Animated.View>
+      </ScrollView>
 
       <ReturnToCastle onPress={onBack} />
     </View>
@@ -669,18 +698,18 @@ const styles = StyleSheet.create({
   streakWrap: {
     width: "100%",
     alignItems: "center",
-    marginTop: 6, // was 14
-    gap: 6, // was 10
+    marginTop: ms(6),
+    gap: ms(6),
   },
   streakBox: {
     flexDirection: "row",
     alignItems: "center",
     width: "100%",
     backgroundColor: "rgba(20,8,0,0.6)",
-    borderRadius: 10, // was 14
     borderWidth: 1.5,
     paddingHorizontal: 12, // was 16
-    paddingVertical: 8, // was 12
+    paddingVertical: ms(8),
+    borderRadius: ms(10), // was 12
     gap: 6, // was 8
     overflow: "hidden",
     shadowOffset: { width: 0, height: 0 },
@@ -695,9 +724,8 @@ const styles = StyleSheet.create({
     textShadowRadius: 8,
   },
   streakCount: {
-    fontSize: 26, // was 36
-    fontWeight: "900",
-    lineHeight: 30, // was 40
+    fontSize: ms(26),
+    lineHeight: ms(30),
   },
   streakLabel: {
     color: "rgba(255,255,255,0.3)",
@@ -756,7 +784,7 @@ const styles = StyleSheet.create({
   content: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10, // was 16
+    gap: ms(10),
     width: "100%",
     maxWidth: 680,
   },
@@ -819,24 +847,24 @@ const styles = StyleSheet.create({
     borderRadius: 50,
   },
   avatarRingOuter: {
-    width: 60, // was 80
-    height: 60,
-    borderRadius: 30,
+    width: ms(60),
+    height: ms(60),
+    borderRadius: ms(30),
     borderWidth: 2,
     borderStyle: "dashed",
     justifyContent: "center",
     alignItems: "center",
   },
   heroAvatar: {
-    width: 48, // was 64
-    height: 48,
-    borderRadius: 24,
+    width: ms(48),
+    height: ms(48),
+    borderRadius: ms(24),
     backgroundColor: "rgba(232,197,71,0.08)",
     borderWidth: 2,
     justifyContent: "center",
     alignItems: "center",
   },
-  heroAvatarText: { fontSize: 22 }, // was 28
+  heroAvatarText: { fontSize: ms(22) }, // was 28
   nameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   heroName: {
     color: "#E8C547",

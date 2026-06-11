@@ -1,5 +1,6 @@
 import database from "@react-native-firebase/database"
 import { LogBox } from "react-native"
+import { firestore } from "./Firebase"
 LogBox.ignoreLogs(["This method is deprecated"])
 
 export interface RoomPlayer {
@@ -73,6 +74,24 @@ export const resetRoomForRematch = async (code: string): Promise<void> => {
   await roomRef(code).update({ state: "playing" })
 }
 
+// Setup disconnect handlers for a player in a room
+export const setupDisconnectHandlers = (code: string, uid: string) => {
+  const pRef = playerRef(code, uid)
+
+  // When connection drops, automatically mark player as finished
+  // so others don't wait forever
+  pRef.onDisconnect().update({
+    finished: true,
+    disconnected: true,
+  })
+}
+
+// Clear disconnect handlers (when player intentionally leaves)
+export const clearDisconnectHandlers = (code: string, uid: string) => {
+  const pRef = playerRef(code, uid)
+  pRef.onDisconnect().cancel()
+}
+
 // Create a new room
 export const createRoom = async (
   uid: string,
@@ -81,9 +100,9 @@ export const createRoom = async (
   let code = generateCode()
   let attempts = 0
 
+  // First: find a unique code (no disconnect setup here)
   while (attempts < 10) {
     try {
-      // @ts-ignore
       const snapshot = await roomRef(code).once("value")
       if (!snapshot.exists()) break
     } catch (err) {
@@ -93,6 +112,7 @@ export const createRoom = async (
     attempts++
   }
 
+  // Then: create the room
   try {
     await roomRef(code).set({
       code,
@@ -112,6 +132,8 @@ export const createRoom = async (
         },
       },
     })
+    // Setup disconnect AFTER successful room creation
+    setupDisconnectHandlers(code, uid)
   } catch (err) {}
 
   return code
@@ -149,6 +171,7 @@ export const joinRoom = async (
       currentLevel: 0,
       finished: false,
     })
+    setupDisconnectHandlers(code, uid)
 
     return { success: true }
   } catch (err) {
@@ -165,6 +188,7 @@ export const leaveRoom = async (code: string, uid: string): Promise<void> => {
 
     const room = snapshot.val() as Room
 
+    clearDisconnectHandlers(code, uid)
     // If host leaves, delete the room
     if (room.hostUid === uid) {
       await roomRef(code).remove()
@@ -283,4 +307,70 @@ export const subscribeToOnlinePlayers = (
     active = false
     roomsRef.off("value", handler)
   }
+}
+
+export const subscribeToOnlineUsers = (
+  callback: (players: { uid: string; heroName: string }[]) => void,
+): (() => void) => {
+  const unsub = firestore()
+    .collection("users")
+    .where("isOnline", "==", true)
+    .onSnapshot(
+      (snap) => {
+        const players = snap.docs.map((d) => ({
+          uid: d.id,
+          heroName: d.data().heroName || "Unknown",
+        }))
+        callback(players)
+      },
+      () => {},
+    )
+  return unsub
+}
+
+// Pošalji poziv igraču — upiše pending invite u njegov Firestore doc
+export const sendArenaInvite = async (
+  toUid: string,
+  fromName: string,
+  roomCode: string,
+): Promise<void> => {
+  await firestore()
+    .collection("users")
+    .doc(toUid)
+    .update({
+      pendingInvite: {
+        fromName,
+        roomCode,
+        sentAt: Date.now(),
+      },
+    })
+}
+
+// Slušaj svoje pozive — poziva callback kad ti neko pošalje invite
+export const subscribeToMyInvites = (
+  uid: string,
+  callback: (invite: { fromName: string; roomCode: string } | null) => void,
+): (() => void) => {
+  const unsub = firestore()
+    .collection("users")
+    .doc(uid)
+    .onSnapshot(
+      (snap) => {
+        const data = snap.data()
+        const inv = data?.pendingInvite
+        // Ignoriši stare pozive (>60s) da ne iskaču duhovi
+        if (inv && Date.now() - (inv.sentAt || 0) < 60000) {
+          callback({ fromName: inv.fromName, roomCode: inv.roomCode })
+        } else {
+          callback(null)
+        }
+      },
+      () => {},
+    )
+  return unsub
+}
+
+// Očisti poziv (nakon Join ili Decline)
+export const clearArenaInvite = async (uid: string): Promise<void> => {
+  await firestore().collection("users").doc(uid).update({ pendingInvite: null })
 }

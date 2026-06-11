@@ -275,15 +275,7 @@ const HomeScreen = ({
             <Text style={styles.streakBadgeLabel}>day streak</Text>
           </TouchableOpacity>
         )}
-        {/* Online counter */}
-        {/* {onlineCount > 0 && (
-          <View style={styles.onlineWrap}>
-            <View style={styles.onlineDot} />
-            <Text style={styles.onlineText}>
-              {onlineCount} warrior{onlineCount !== 1 ? "s" : ""} online
-            </Text>
-          </View>
-        )} */}
+
         {/* Monthly Prize — below hero name */}
         <TouchableOpacity
           style={styles.prizeTag}
@@ -292,7 +284,7 @@ const HomeScreen = ({
         >
           <Text style={styles.prizeTagIcon}>🏆</Text>
           <Text style={styles.prizeTagText}>
-            €100 monthly prize unlocks at 100+ active warriors.
+            6 Battlefields · 4 Beast Clans · €100 Monthly Prize
           </Text>
           <View style={styles.prizeTagLive}>
             <Text style={styles.prizeTagLiveText}>LIVE</Text>

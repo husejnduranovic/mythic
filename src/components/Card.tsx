@@ -73,10 +73,10 @@ const SUIT_BG: Record<string, string> = {
 
 // Subtle tint at top — just a whisper of the suit color
 const SUIT_BG_TOP: Record<string, string> = {
-  hearts: "rgba(176,32,32,0.05)",
-  diamonds: "rgba(184,134,11,0.05)",
-  clubs: "rgba(26,92,138,0.05)",
-  spades: "rgba(30,107,58,0.05)",
+  hearts: "rgba(176,32,32,0.07)",
+  diamonds: "rgba(184,134,11,0.07)",
+  clubs: "rgba(26,92,138,0.07)",
+  spades: "rgba(30,107,58,0.07)",
 }
 
 // Pre-computed suit style packs — one object lookup instead of four per card render
@@ -142,7 +142,7 @@ const DEFAULT_BACK_COLOR = "#162A47"
 const BACK_RUNES = ["ᚠ", "ᚦ", "ᚱ", "ᛟ"]
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window")
-const CARD_SCALE = Math.min(SCREEN_W / 750, SCREEN_H / 340, 1)
+const CARD_SCALE = Math.min(SCREEN_W / 780, SCREEN_H / 360, 1)
 const CARD_W = Math.round(52 * CARD_SCALE)
 const CARD_H = Math.round(74 * CARD_SCALE)
 const DECK_W = Math.round(56 * CARD_SCALE)
@@ -525,6 +525,7 @@ const CardFace = React.memo(
         ]}
       >
         <View style={[styles.faceTintTop, { backgroundColor: bgTop }]} />
+        <View style={[styles.faceTintBottom, { backgroundColor: bgTop }]} />
         <View style={[styles.cardFaceInner, { borderColor: color + "20" }]} />
         {isFaceCard && (
           <View style={[styles.faceCardTrim, { borderColor: color + "18" }]} />
@@ -533,7 +534,7 @@ const CardFace = React.memo(
           style={[
             styles.watermarkIcon,
             {
-              color: color + "0C",
+              color: color + "22",
               fontSize: isAce
                 ? Math.round(50 * CARD_SCALE)
                 : Math.round(40 * CARD_SCALE),
@@ -678,6 +679,9 @@ const BountyCardFace = React.memo(
       >
         <View
           style={[styles.faceTintTop, { backgroundColor: bc.accent + "10" }]}
+        />
+        <View
+          style={[styles.faceTintBottom, { backgroundColor: bc.accent + "10" }]}
         />
         <View
           style={[styles.cardFaceInner, { borderColor: bc.accent + "40" }]}
@@ -1121,9 +1125,18 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: "35%",
+    height: "10%",
     borderTopLeftRadius: CARD_RADIUS,
     borderTopRightRadius: CARD_RADIUS,
+  },
+  faceTintBottom: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: "10%",
+    borderBottomLeftRadius: CARD_RADIUS,
+    borderBottomRightRadius: CARD_RADIUS,
   },
   cardFaceInner: {
     position: "absolute",
