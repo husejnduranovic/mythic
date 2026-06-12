@@ -4,13 +4,17 @@ Ordered smallest-risk-first. Each Phase 1 step is a separate commit; the app mus
 
 ## Current state (findings)
 
-| File | Lines | Notes |
-|---|---|---|
-| `src/components/Game.tsx` | 4,822 | Monolith: constants, scoring math, 4 decorative components, ~80 state hooks, all Firebase score-saving, 7 screen states, 1,700+ lines of styles |
-| `src/components/Arenascreen.tsx` | 1,520 | Menu + lobby + invite UI + styles in one file |
-| `src/components/Profile.tsx` | 1,066 | Includes the multi-collection rename logic |
-| `src/components/Scoreboard.tsx` | 851 | Exports `saveScore` (a service function) consumed by Game.tsx |
-| Services | ~750 total | Mostly clean, but components also call Firestore directly (App, Game, Profile, Authscreen) |
+Lines below are the **baseline at plan-writing time**; the *Now* column tracks Phase 1 progress.
+
+| File | Baseline | Now | Notes |
+|---|---|---|---|
+| `src/components/Game.tsx` | 4,822 | **1,575** | Was a monolith (constants, scoring math, 4 decorative components, ~80 state hooks, all Firebase score-saving, 7 screen states, 1,700+ lines of styles). Steps 1.1–1.6 extracted the dead code, `src/game/` logic, decorative components, score-saving flow, and all 6 screen-states + quit modal. Remaining: core state/effects/handlers + main-board JSX & its styles. |
+| `src/components/Arenascreen.tsx` | 1,520 | 1,577 | Menu + lobby + invite UI + styles in one file. Untouched except Step 1.1 dead-code removal — Step 1.7 target. |
+| `src/components/Profile.tsx` | 1,066 | 1,133 | Includes the multi-collection rename logic (Bug 1). Consumer imports updated in Step 1.4; otherwise untouched. |
+| `src/components/Scoreboard.tsx` | 851 | 884 | `saveScore` moved out to `LocalScoreService.ts` in Step 1.4. |
+| Services | ~750 | — | Split/cleaned in Step 1.4 (`ScoreService`, `DailyQuestService`, `LocalScoreService`, `collections.ts`, `storageKeys.ts`, `logError.ts`); `saveGameResults` added in Step 1.5. Components still call Firestore directly (App, Game, Profile, Authscreen). |
+
+**Phase 1 progress:** Steps 1.0–1.6 done (✅). Remaining: **1.7** (App.tsx screen map + presence hooks, Arenascreen split) and optional **1.8** (data-driven layouts). Then Phase 2 bug fixes (separate approval).
 
 Cross-cutting issues found:
 
@@ -188,14 +192,14 @@ Proposed fix direction (for approval later): subscribe to invites at App level (
 
 ## Suggested commit sequence
 
-| # | Commit | Risk |
-|---|---|---|
-| 1 | docs: add CLAUDE.md + REFACTOR_PLAN.md | none |
-| 2 | chore: remove dead/commented code (after approval) | none |
-| 3 | refactor: extract src/game/ (config, scoring) | very low |
-| 4 | refactor: extract Battlefield + decorative components | low |
-| 5 | refactor: split services, collections.ts, storageKeys, logError, exists() | low-med |
-| 6 | refactor: ScoreService.saveGameResults | medium |
-| 7–12 | refactor: one screen-state extraction per commit | medium |
-| 13 | refactor: App screen map + presence hooks | low |
-| — | Phase 2 fixes (separate approval, separate branch ok) | — |
+| # | Commit | Risk | Status |
+|---|---|---|---|
+| 1 | docs: add CLAUDE.md + REFACTOR_PLAN.md | none | ✅ |
+| 2 | chore: remove dead/commented code (after approval) | none | ✅ |
+| 3 | refactor: extract src/game/ (config, scoring) | very low | ✅ |
+| 4 | refactor: extract Battlefield + decorative components | low | ✅ |
+| 5 | refactor: split services, collections.ts, storageKeys, logError, exists() | low-med | ✅ |
+| 6 | refactor: ScoreService.saveGameResults | medium | ✅ |
+| 7–12 | refactor: one screen-state extraction per commit (+ dead-style sweep) | medium | ✅ |
+| 13 | refactor: App screen map + presence hooks | low | ⬜ next |
+| — | Phase 2 fixes (separate approval, separate branch ok) | — | ⬜ |
