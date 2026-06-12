@@ -14,7 +14,7 @@ Lines below are the **baseline at plan-writing time**; the *Now* column tracks P
 | `src/components/Scoreboard.tsx` | 851 | 884 | `saveScore` moved out to `LocalScoreService.ts` in Step 1.4. |
 | Services | ~750 | — | Split/cleaned in Step 1.4 (`ScoreService`, `DailyQuestService`, `LocalScoreService`, `collections.ts`, `storageKeys.ts`, `logError.ts`); `saveGameResults` added in Step 1.5. Components still call Firestore directly (App, Game, Profile, Authscreen). |
 
-**Phase 1 progress:** Steps 1.0–1.7 done (✅). Remaining: optional **1.8** (data-driven layouts). Then Phase 2 bug fixes (separate approval).
+**Phase 1: ✅ COMPLETE** — Steps 1.0–1.7 done; optional 1.8 (data-driven layouts) skipped by owner decision (revisit as a prerequisite if Phase 4 layout expansion proceeds). **Phase 2: ✅ COMPLETE** — both bugs fixed & verified on a real build. **Phase 3 review done:** see `DESIGN_PLAN.md` (2026-06-12) for the design/UX/retention audit and prioritized backlog.
 
 Cross-cutting issues found:
 
@@ -143,7 +143,7 @@ New folder, pure TypeScript, no React imports — this becomes unit-testable for
 
 ---
 
-## Phase 2 — Bug root causes (located, NOT fixed yet)
+## Phase 2 — Bug fixes — ✅ COMPLETE (both fixed & verified)
 
 ### Bug 1: Profile name change "not working" / stale name in Hall of Glory
 
@@ -175,6 +175,12 @@ Proposed fix direction (for approval later): subscribe to invites at App level (
 ---
 
 ## Phase 3 — Redesign proposals (nothing built without approval)
+
+> **2026-06-12:** Phase 3 design review completed — full audit, design tokens, per-screen specs, retention/Arena proposals, and the Phase 4 layout-expansion recommendation now live in **`DESIGN_PLAN.md`**. The notes below (3.1–3.4) remain as the original survey; DESIGN_PLAN.md supersedes them where they overlap.
+>
+> **Same-day addendum (owner input):** directional activity data added (DESIGN_PLAN §6.0 — 6 actives; converts go deep, first session + distribution are the leaks). New items: **"One More Battle" mid-session hook** on game-over (§6.5), **"First Victory" early-reward celebration** (§6 R5), and an **Acquisition section** (§10 — share loop, store-listing refresh, lounge-venue channel, DE/BS localization). Phase 4 reframed: Layouts 3/4c/6 were *deliberately* shelved after playtesting — goal is replay variety (rotation pool / variants / campaign) without hurting the feel of the chosen 6; every layout entering rotation passes an owner feel-gate (DESIGN_PLAN §8).
+>
+> **Phase 3 build started (2026-06-12):** commit `be88536` — design tokens (`src/ui/theme.ts`) + Cinzel fonts activated on Home; commit `b5ad456` — Home de-blue (Arena tile → ember, wolf card → steel). Owner signed off on typography + Home palette direction. Live status table in DESIGN_PLAN.md.
 
 ### 3.1 Navigation & app shell
 - App.tsx hand-rolled screen switching has no Android back-button handling, no transitions, no deep links. Proposal: adopt `react-navigation` (native-stack). Enables: hardware back = quit-confirm in game / back-to-home elsewhere, animated transitions, and an invite deep-link (`mythicpeaks://arena/1234`) that would make Arena invites genuinely good.
