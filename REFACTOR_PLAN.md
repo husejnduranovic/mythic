@@ -9,12 +9,12 @@ Lines below are the **baseline at plan-writing time**; the *Now* column tracks P
 | File | Baseline | Now | Notes |
 |---|---|---|---|
 | `src/components/Game.tsx` | 4,822 | **1,575** | Was a monolith (constants, scoring math, 4 decorative components, ~80 state hooks, all Firebase score-saving, 7 screen states, 1,700+ lines of styles). Steps 1.1–1.6 extracted the dead code, `src/game/` logic, decorative components, score-saving flow, and all 6 screen-states + quit modal. Remaining: core state/effects/handlers + main-board JSX & its styles. |
-| `src/components/Arenascreen.tsx` | 1,520 | 1,577 | Menu + lobby + invite UI + styles in one file. Untouched except Step 1.1 dead-code removal — Step 1.7 target. |
+| `src/components/Arenascreen.tsx` | 1,520 | **271** | Was menu + lobby + invite UI + styles in one file. Step 1.7 split it into a thin container (state/effects/handlers) + `src/components/arena/` presentational components. |
 | `src/components/Profile.tsx` | 1,066 | 1,133 | Includes the multi-collection rename logic (Bug 1). Consumer imports updated in Step 1.4; otherwise untouched. |
 | `src/components/Scoreboard.tsx` | 851 | 884 | `saveScore` moved out to `LocalScoreService.ts` in Step 1.4. |
 | Services | ~750 | — | Split/cleaned in Step 1.4 (`ScoreService`, `DailyQuestService`, `LocalScoreService`, `collections.ts`, `storageKeys.ts`, `logError.ts`); `saveGameResults` added in Step 1.5. Components still call Firestore directly (App, Game, Profile, Authscreen). |
 
-**Phase 1 progress:** Steps 1.0–1.6 done (✅). Remaining: **1.7** (App.tsx screen map + presence hooks, Arenascreen split) and optional **1.8** (data-driven layouts). Then Phase 2 bug fixes (separate approval).
+**Phase 1 progress:** Steps 1.0–1.7 done (✅). Remaining: optional **1.8** (data-driven layouts). Then Phase 2 bug fixes (separate approval).
 
 Cross-cutting issues found:
 
@@ -132,6 +132,8 @@ New folder, pure TypeScript, no React imports — this becomes unit-testable for
 - Arenascreen: split menu view / lobby view / invite-modal into components; remove the `roomCode || "1234"` fallback **only as part of Phase 2** (it's a behavior change).
 - Risk: low.
 
+**Status: ✅ DONE** — refactor/v1.4, two commits. **App.tsx** (305 → 234): presence logic (`isOnline` AppState writes + online-count `onSnapshot`) extracted to `src/hooks/usePresence.ts` (returns `onlineCount`); streak load extracted to `src/hooks/useUserStats.ts` (returns `{ currentStreak, bestStreak }`). The screen if-chain replaced by a `Record<Screen, () => ReactElement>` map keyed off `screen`, wrapped once in `<StatusBar hidden />`; the `showRules` overlay stays a guard above the map (it's orthogonal to `screen` and never co-occurs with `screen === "armory"`, so precedence is unchanged). `handleLogout`'s explicit offline write kept inline (identical behavior). **Arenascreen.tsx** (1,577 → 271): now a thin container holding all state/effects/handlers, rendering `ArenaMenu` or `ArenaLobby`. New `src/components/arena/`: `ArenaMenu`, `ArenaLobby`, `InviteModal`, `BackgroundDecor`, and `arenaStyles.ts` (StyleSheet moved verbatim — pre-existing dead style keys left as-is, not swept, to keep the move behavior-neutral). Animated values threaded as props; the `roomCode || "1234"` fallback left intact for Phase 2. `tsc --noEmit` passes after each commit; manual smoke test pending.
+
 ### Step 1.8 (optional, last) — Data-driven layouts
 - `Layout1–9.tsx` (~1,800 lines total) are structurally identical position tables. Could collapse into one component + 9 data files. Defer unless needed — touching card positioning right before bug-fix work isn't worth it.
 
@@ -201,5 +203,6 @@ Proposed fix direction (for approval later): subscribe to invites at App level (
 | 5 | refactor: split services, collections.ts, storageKeys, logError, exists() | low-med | ✅ |
 | 6 | refactor: ScoreService.saveGameResults | medium | ✅ |
 | 7–12 | refactor: one screen-state extraction per commit (+ dead-style sweep) | medium | ✅ |
-| 13 | refactor: App screen map + presence hooks | low | ⬜ next |
+| 13 | refactor: App screen map + presence hooks | low | ✅ |
+| 14 | refactor: split Arenascreen into menu/lobby/invite | low | ✅ |
 | — | Phase 2 fixes (separate approval, separate branch ok) | — | ⬜ |
