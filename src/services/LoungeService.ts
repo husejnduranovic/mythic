@@ -1,7 +1,10 @@
 import firestore from "@react-native-firebase/firestore"
 import AsyncStorage from "@react-native-async-storage/async-storage"
+import { Collections, loungeScoreId } from "./collections"
+import { StorageKeys } from "./storageKeys"
+import { logError } from "./logError"
 
-const LOUNGE_KEY = "@mythic_lounge_code"
+const LOUNGE_KEY = StorageKeys.loungeCode
 
 export interface LoungeScore {
   uid: string
@@ -39,7 +42,7 @@ export const joinLounge = async (
 ): Promise<{ success: boolean; lounge?: Lounge; error?: string }> => {
   try {
     const snapshot = await firestore()
-      .collection("lounges")
+      .collection(Collections.lounges)
       .where("code", "==", code.toUpperCase())
       .limit(1)
       .get()
@@ -56,6 +59,7 @@ export const joinLounge = async (
     await AsyncStorage.setItem(LOUNGE_KEY, code.toUpperCase())
     return { success: true, lounge }
   } catch (err) {
+    logError("Lounge.joinLounge", err)
     return { success: false, error: "Failed to join lounge" }
   }
 }
@@ -74,13 +78,14 @@ export const getSavedLoungeCode = async (): Promise<string | null> => {
 export const getLoungeInfo = async (code: string): Promise<Lounge | null> => {
   try {
     const snapshot = await firestore()
-      .collection("lounges")
+      .collection(Collections.lounges)
       .where("code", "==", code)
       .limit(1)
       .get()
 
     return snapshot.empty ? null : (snapshot.docs[0].data() as Lounge)
-  } catch {
+  } catch (err) {
+    logError("Lounge.getLoungeInfo", err)
     return null
   }
 }
@@ -95,12 +100,12 @@ export const submitLoungeScore = async (
 ): Promise<void> => {
   try {
     const weekId = getWeekId()
-    const docId = `${code}_${weekId}_${uid}`
-    const ref = firestore().collection("loungeScores").doc(docId)
+    const docId = loungeScoreId(code, weekId, uid)
+    const ref = firestore().collection(Collections.loungeScores).doc(docId)
     const existing = await ref.get()
 
     // Only update if new score is higher
-    if (!existing.exists || (existing.data()?.score || 0) < score) {
+    if (!existing.exists() || (existing.data()?.score || 0) < score) {
       await ref.set({
         loungeCode: code,
         weekId,
@@ -112,7 +117,7 @@ export const submitLoungeScore = async (
       })
     }
   } catch (err) {
-    console.error("Failed to submit lounge score:", err)
+    logError("Lounge.submitLoungeScore", err)
   }
 }
 
@@ -123,7 +128,7 @@ export const getLoungeLeaderboard = async (
   try {
     const weekId = getWeekId()
     const snapshot = await firestore()
-      .collection("loungeScores")
+      .collection(Collections.loungeScores)
       .where("loungeCode", "==", code)
       .where("weekId", "==", weekId)
       .orderBy("score", "desc")
@@ -132,7 +137,7 @@ export const getLoungeLeaderboard = async (
 
     return snapshot.docs.map((doc) => doc.data() as LoungeScore)
   } catch (err) {
-    console.error("Failed to get lounge leaderboard:", err)
+    logError("Lounge.getLoungeLeaderboard", err)
     return []
   }
 }

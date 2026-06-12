@@ -1,94 +1,22 @@
 import firestore from "@react-native-firebase/firestore"
-import { getTodayString, getYesterdayString } from "./CardService"
 import AsyncStorage from "@react-native-async-storage/async-storage"
-
-export interface DailyScore {
-  uid: string
-  heroName: string
-  score: number
-  bestCombo: number
-  clearedPct: number
-  playedAt: any
-  gamesPlayed: number
-}
-
-// Check if user already played today's challenge
-export const hasPlayedToday = async (
-  uid: string,
-): Promise<{ played: boolean; score?: number }> => {
-  try {
-    const today = getTodayString()
-    const doc = await firestore()
-      .collection("dailyScores")
-      .doc(`${today}_${uid}`)
-      .get()
-    if (doc.exists()) {
-      return { played: true, score: doc.data()?.score || 0 }
-    }
-    return { played: false }
-  } catch {
-    return { played: false }
-  }
-}
-
-// Submit daily challenge score
-export const submitDailyScore = async (
-  uid: string,
-  heroName: string,
-  score: number,
-  bestCombo: number,
-  clearedPct: number,
-): Promise<void> => {
-  try {
-    const today = getTodayString()
-    await firestore().collection("dailyScores").doc(`${today}_${uid}`).set({
-      uid,
-      heroName,
-      score,
-      bestCombo,
-      clearedPct,
-      date: today,
-      playedAt: firestore.FieldValue.serverTimestamp(),
-    })
-    // Increment daily quests count on user profile
-    await firestore()
-      .collection("users")
-      .doc(uid)
-      .update({
-        dailyQuestsPlayed: firestore.FieldValue.increment(1),
-      })
-  } catch (err) {
-    console.error("Failed to submit daily score:", err)
-  }
-}
-
-// Get today's leaderboard (top 50)
-export const getDailyLeaderboard = async (): Promise<DailyScore[]> => {
-  try {
-    const today = getTodayString()
-    const snapshot = await firestore()
-      .collection("dailyScores")
-      .where("date", "==", today)
-      .orderBy("score", "desc")
-      .limit(50)
-      .get()
-    return snapshot.docs.map((doc) => doc.data() as DailyScore)
-  } catch (err) {
-    console.error("Failed to fetch daily leaderboard:", err)
-    return []
-  }
-}
+import { getTodayString, getYesterdayString } from "./CardService"
+import { Collections } from "./collections"
+import { StorageKeys } from "./storageKeys"
+import { logError } from "./logError"
+import type { DailyScore } from "./DailyQuestService"
 
 // Get all-time best scores (top 50)
 export const getAllTimeLeaderboard = async (): Promise<DailyScore[]> => {
   try {
     const snapshot = await firestore()
-      .collection("gameScores")
+      .collection(Collections.gameScores)
       .orderBy("score", "desc")
       .limit(50)
       .get()
     return snapshot.docs.map((doc) => doc.data() as DailyScore)
-  } catch {
+  } catch (err) {
+    logError("Score.getAllTimeLeaderboard", err)
     return []
   }
 }
@@ -101,12 +29,18 @@ export const submitAllTimeScore = async (
   bestCombo: number,
 ): Promise<void> => {
   try {
-    const userDoc = await firestore().collection("users").doc(uid).get()
+    const userDoc = await firestore()
+      .collection(Collections.users)
+      .doc(uid)
+      .get()
     const gamesPlayed = userDoc.data()?.gamesPlayed || 0
 
-    const doc = await firestore().collection("allTimeScores").doc(uid).get()
-    if (!doc.exists || (doc.data()?.score || 0) < score) {
-      await firestore().collection("allTimeScores").doc(uid).set({
+    const doc = await firestore()
+      .collection(Collections.allTimeScores)
+      .doc(uid)
+      .get()
+    if (!doc.exists() || (doc.data()?.score || 0) < score) {
+      await firestore().collection(Collections.allTimeScores).doc(uid).set({
         uid,
         heroName,
         score,
@@ -116,12 +50,12 @@ export const submitAllTimeScore = async (
       })
     } else if (doc.exists()) {
       // Always update gamesPlayed even if score didn't change
-      await firestore().collection("allTimeScores").doc(uid).update({
+      await firestore().collection(Collections.allTimeScores).doc(uid).update({
         gamesPlayed,
       })
     }
   } catch (err) {
-    console.error("Failed to submit all-time score:", err)
+    logError("Score.submitAllTimeScore", err)
   }
 }
 
@@ -133,10 +67,13 @@ export const submitGameScore = async (
   isDaily: boolean,
 ): Promise<void> => {
   try {
-    const userDoc = await firestore().collection("users").doc(uid).get()
+    const userDoc = await firestore()
+      .collection(Collections.users)
+      .doc(uid)
+      .get()
     const gamesPlayed = userDoc.data()?.gamesPlayed || 0
 
-    await firestore().collection("gameScores").add({
+    await firestore().collection(Collections.gameScores).add({
       uid,
       heroName,
       score,
@@ -147,13 +84,13 @@ export const submitGameScore = async (
     })
 
     await firestore()
-      .collection("users")
+      .collection(Collections.users)
       .doc(uid)
       .update({
         totalScore: firestore.FieldValue.increment(score),
       })
   } catch (err) {
-    console.error("Failed to submit game score:", err)
+    logError("Score.submitGameScore", err)
   }
 }
 
@@ -164,7 +101,7 @@ export const updateUserProfile = async (
   cardsCleared: number,
 ): Promise<void> => {
   try {
-    const ref = firestore().collection("users").doc(uid)
+    const ref = firestore().collection(Collections.users).doc(uid)
     const doc = await ref.get()
     const data = doc.data() || {}
 
@@ -201,17 +138,21 @@ export const updateUserProfile = async (
       },
       { merge: true },
     )
-    await AsyncStorage.setItem("@mythic_best_streak", bestStreak.toString())
+    await AsyncStorage.setItem(StorageKeys.bestStreak, bestStreak.toString())
   } catch (err) {
-    console.error("Failed to update user profile:", err)
+    logError("Score.updateUserProfile", err)
   }
 }
 
 export const getUserProfile = async (uid: string): Promise<any> => {
   try {
-    const doc = await firestore().collection("users").doc(uid).get()
+    const doc = await firestore()
+      .collection(Collections.users)
+      .doc(uid)
+      .get()
     return doc.exists() ? doc.data() : null
-  } catch {
+  } catch (err) {
+    logError("Score.getUserProfile", err)
     return null
   }
 }

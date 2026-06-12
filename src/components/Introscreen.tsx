@@ -8,8 +8,9 @@ import {
 } from "react-native"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import ReturnToCastle from "./ReturnToCastle"
+import { StorageKeys } from "../services/storageKeys"
 
-const INTRO_KEY = "@mythic_intro_seen"
+const INTRO_KEY = StorageKeys.introSeen
 
 interface IntroScreenProps {
   onComplete: () => void

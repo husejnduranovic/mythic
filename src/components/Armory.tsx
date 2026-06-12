@@ -9,6 +9,8 @@ import {
 } from "react-native"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import { SoundService } from "../services/SoundService"
+import { StorageKeys } from "../services/storageKeys"
+import { logError } from "../services/logError"
 import ReturnToCastle from "./ReturnToCastle"
 
 interface ArmoryProps {
@@ -474,13 +476,13 @@ export const BOUNTY_STYLE_CONFIG: Record<
 }
 
 const STORAGE_KEYS = {
-  gamesPlayed: "@mythic_games_played",
-  selectedBack: "@mythic_card_back",
-  selectedField: "@mythic_battlefield",
-  selectedWild: "@mythic_wild_style",
-  selectedTable: "@mythic_war_table",
-  selectedBounty: "@mythic_bounty_style",
-  bestStreak: "@mythic_best_streak",
+  gamesPlayed: StorageKeys.gamesPlayed,
+  selectedBack: StorageKeys.cardBack,
+  selectedField: StorageKeys.battlefield,
+  selectedWild: StorageKeys.wildStyle,
+  selectedTable: StorageKeys.warTable,
+  selectedBounty: StorageKeys.bountyStyle,
+  bestStreak: StorageKeys.bestStreak,
 }
 
 type TabType = "cards" | "fields" | "bounty" | "table"
@@ -494,7 +496,7 @@ const TAB_CONFIG: { key: TabType; icon: string; label: string }[] = [
 
 // One-time migration: clears legacy cosmetic IDs that no longer exist.
 // Players will see defaults but can re-pick any unlocked item.
-const ARMORY_MIGRATION_KEY = "@mythic_armory_migrated_v2"
+const ARMORY_MIGRATION_KEY = StorageKeys.armoryMigratedV2
 
 export const migrateArmoryIfNeeded = async () => {
   try {
@@ -517,7 +519,9 @@ export const migrateArmoryIfNeeded = async () => {
     }
 
     await AsyncStorage.setItem(ARMORY_MIGRATION_KEY, "1")
-  } catch {}
+  } catch (err) {
+    logError("Armory.migrateArmoryIfNeeded", err)
+  }
 }
 
 export const getSelectedTheme = async (): Promise<ThemeConfig> => {

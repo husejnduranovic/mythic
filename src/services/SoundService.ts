@@ -1,6 +1,7 @@
 import { Audio } from "expo-av"
 import { Asset } from "expo-asset"
 import * as Haptics from "expo-haptics"
+import { logError } from "./logError"
 
 let matchSound1: Audio.Sound | null = null
 let matchSound2: Audio.Sound | null = null
@@ -26,6 +27,7 @@ const loadSound = async (req: any): Promise<Audio.Sound | null> => {
     })
     return sound
   } catch (e) {
+    logError("Sound.loadSound", e)
     return null
   }
 }
@@ -35,7 +37,9 @@ export const SoundService = {
     if (initialized) return
     try {
       await Audio.setAudioModeAsync({ playsInSilentModeIOS: true })
-    } catch {}
+    } catch (err) {
+      logError("Sound", err)
+    }
 
     matchSound1 = await loadSound(require("../../assets/sounds/match.mp3"))
     matchSound2 = await loadSound(require("../../assets/sounds/match.mp3"))
@@ -60,7 +64,9 @@ export const SoundService = {
     if (!sound) return
     try {
       sound.replayAsync()
-    } catch {}
+    } catch (err) {
+      logError("Sound", err)
+    }
   },
 
   async playMatch(combo: number) {
@@ -97,44 +103,58 @@ export const SoundService = {
       } else {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
       }
-    } catch {}
+    } catch (err) {
+      logError("Sound", err)
+    }
   },
 
   async playDeckDraw() {
     try {
       this.play(drawSound)
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid)
-    } catch {}
+    } catch (err) {
+      logError("Sound", err)
+    }
   },
 
   async playLevelComplete() {
     try {
       this.play(levelCompleteSound)
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-    } catch {}
+    } catch (err) {
+      logError("Sound", err)
+    }
   },
 
   async playShuffle() {
     try {
       this.play(shuffleSound)
-    } catch {}
+    } catch (err) {
+      logError("Sound", err)
+    }
   },
 
   async playWild() {
     try {
       this.play(wildSound)
-    } catch {}
+    } catch (err) {
+      logError("Sound", err)
+    }
   },
 
   async playFreeze() {
     try {
       this.play(freezeSound)
-    } catch {}
+    } catch (err) {
+      logError("Sound", err)
+    }
   },
 
   async playTimeWarning() {
     try {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
-    } catch {}
+    } catch (err) {
+      logError("Sound", err)
+    }
   },
 }

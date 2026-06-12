@@ -1,6 +1,7 @@
 import database from "@react-native-firebase/database"
 import { LogBox } from "react-native"
 import { firestore } from "./Firebase"
+import { logError } from "./logError"
 LogBox.ignoreLogs(["This method is deprecated"])
 
 export interface RoomPlayer {
@@ -195,7 +196,9 @@ export const leaveRoom = async (code: string, uid: string): Promise<void> => {
     } else {
       await playerRef(code, uid).remove()
     }
-  } catch {}
+  } catch (err) {
+    logError("Arena.leaveRoom", err)
+  }
 }
 
 // Host starts the game
@@ -242,7 +245,9 @@ export const onRoomUpdate = (
         const snapshot = await roomRef(code).once("value")
         if (!active) break
         callback(snapshot.exists() ? (snapshot.val() as Room) : null)
-      } catch {}
+      } catch (err) {
+        logError("Arena.onRoomUpdate", err)
+      }
       await new Promise((resolve) => setTimeout(resolve, 1000))
     }
   }
@@ -259,7 +264,8 @@ export const getRoomOnce = async (code: string): Promise<Room | null> => {
     // @ts-ignore
     const snapshot = await roomRef(code).once("value")
     return snapshot.exists() ? (snapshot.val() as Room) : null
-  } catch {
+  } catch (err) {
+    logError("Arena.getRoomOnce", err)
     return null
   }
 }
@@ -268,7 +274,9 @@ export const getRoomOnce = async (code: string): Promise<Room | null> => {
 export const deleteRoom = async (code: string): Promise<void> => {
   try {
     await roomRef(code).remove()
-  } catch {}
+  } catch (err) {
+    logError("Arena.deleteRoom", err)
+  }
 }
 
 // Get list of all players currently in arena lobbies (looking for matches)

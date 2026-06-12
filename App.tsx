@@ -16,7 +16,8 @@ import { getLoungeInfo, getSavedLoungeCode } from "./src/services/LoungeService"
 import * as SplashScreen from "expo-splash-screen"
 import { firestore } from "./src/services/Firebase"
 import { AppState, View } from "react-native"
-import { getUserProfile } from "./src/services/Dailychallenge"
+import { getUserProfile } from "./src/services/ScoreService"
+import { logError } from "./src/services/logError"
 import VersionGate from "./src/components/VersionGate"
 
 SplashScreen.preventAutoHideAsync()
@@ -147,7 +148,9 @@ function App() {
       await auth().signOut()
       setUser(null)
       setScreen("home")
-    } catch {}
+    } catch (err) {
+      logError("App.handleLogout", err)
+    }
   }
   if (introSeen === null) return null // loading
   if (introSeen === false)

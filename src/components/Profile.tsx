@@ -10,7 +10,7 @@ import {
   View,
 } from "react-native"
 import firestore from "@react-native-firebase/firestore"
-import { getUserProfile } from "../services/Dailychallenge"
+import { getUserProfile } from "../services/ScoreService"
 import ReturnToCastle from "./ReturnToCastle"
 
 import { Dimensions } from "react-native"

@@ -10,12 +10,8 @@ import {
   ScrollView,
   Dimensions,
 } from "react-native"
-import AsyncStorage from "@react-native-async-storage/async-storage"
-import {
-  DailyScore,
-  getAllTimeLeaderboard,
-  getDailyLeaderboard,
-} from "../services/Dailychallenge"
+import { DailyScore, getDailyLeaderboard } from "../services/DailyQuestService"
+import { getAllTimeLeaderboard } from "../services/ScoreService"
 import { SoundService } from "../services/SoundService"
 import ReturnToCastle from "./ReturnToCastle"
 
@@ -26,21 +22,6 @@ interface ScoreboardProps {
 
 const { width: SCREEN_W } = Dimensions.get("window")
 const isWide = SCREEN_W > 600
-
-const LOCAL_STORAGE_KEY = "@mythic_peaks_scores"
-
-export const saveScore = async (score: number, bestCombo: number = 0) => {
-  try {
-    const raw = await AsyncStorage.getItem(LOCAL_STORAGE_KEY)
-    const scores = raw ? JSON.parse(raw) : []
-    scores.push({ score, bestCombo, date: new Date().toLocaleDateString() })
-    scores.sort((a: any, b: any) => b.score - a.score)
-    await AsyncStorage.setItem(
-      LOCAL_STORAGE_KEY,
-      JSON.stringify(scores.slice(0, 30)),
-    )
-  } catch {}
-}
 
 const getRankTitle = (games: number): string => {
   if (games >= 1000) return "God of the Peaks"

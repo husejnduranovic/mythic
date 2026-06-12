@@ -21,7 +21,7 @@ import Layout1 from "./Layout1"
 import Layout2 from "./Layout2"
 import Layout3 from "./Layout3"
 import Timer from "./Timer"
-import { saveScore } from "./Scoreboard"
+import { saveScore } from "../services/LocalScoreService"
 import {
   BOUNTY_STYLE_CONFIG,
   getSelectedTheme,
@@ -29,13 +29,13 @@ import {
   ThemeConfig,
   WAR_TABLE_CONFIG,
 } from "./Armory"
+import { hasPlayedToday, submitDailyScore } from "../services/DailyQuestService"
 import {
-  hasPlayedToday,
   submitAllTimeScore,
-  submitDailyScore,
   submitGameScore,
   updateUserProfile,
-} from "../services/Dailychallenge"
+} from "../services/ScoreService"
+import { StorageKeys } from "../services/storageKeys"
 import {
   BountyStyleContext,
   CardBackColorContext,
@@ -337,7 +337,7 @@ const Game = ({
             if (doc.exists()) {
               const totalGames = doc.data()?.totalGames || 0
               AsyncStorage.setItem(
-                "@mythic_games_played",
+                StorageKeys.gamesPlayed,
                 totalGames.toString(),
               )
               firestore()
@@ -379,13 +379,13 @@ const Game = ({
         incrementGamesPlayed()
       }
       if (bestCombo > bestComboEver) {
-        AsyncStorage.setItem("@mythic_best_combo_ever", bestCombo.toString())
+        AsyncStorage.setItem(StorageKeys.bestComboEver, bestCombo.toString())
       }
     }
   }, [gameOver])
 
   useEffect(() => {
-    AsyncStorage.getItem("@mythic_best_combo_ever").then((val) => {
+    AsyncStorage.getItem(StorageKeys.bestComboEver).then((val) => {
       if (val) setBestComboEver(parseInt(val))
     })
   }, [])
@@ -402,7 +402,7 @@ const Game = ({
       ) {
         personalBestComboShownRef.current = true
         setBestComboEver(combo)
-        AsyncStorage.setItem("@mythic_best_combo_ever", combo.toString())
+        AsyncStorage.setItem(StorageKeys.bestComboEver, combo.toString())
         showMilestone(`NEW BEST COMBO x${combo}!`, "#FFD700", "👑")
       }
       if (combo >= 10) {
