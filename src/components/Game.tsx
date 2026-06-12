@@ -52,6 +52,7 @@ import Layout8 from "./Layout8"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import ReturnToCastle from "./ReturnToCastle"
 import { AlreadyPlayedScreen } from "./game/AlreadyPlayedScreen"
+import { PausedScreen } from "./game/PausedScreen"
 import Reanimated, {
   useSharedValue,
   useAnimatedStyle,
@@ -1467,44 +1468,20 @@ const Game = ({
 
   if (paused)
     return (
-      <View
-        style={[
-          styles.center,
-          {
-            backgroundColor: theme.battlefieldColor,
-            position: "relative", // add this
-            overflow: "hidden",
-          },
-        ]}
-      >
-        {battlefieldMemo}
-        <Text style={styles.gameTitle}>⏸ PAUSED</Text>
-        <Text style={styles.pauseScore}>{score.toLocaleString()}</Text>
-        <TouchableOpacity
-          style={styles.goldBtn}
-          onPress={() => setPaused(false)}
-        >
-          <Text style={styles.goldBtnText}>▶ Resume</Text>
-        </TouchableOpacity>
-        {!dailyMode && (
-          <TouchableOpacity
-            style={styles.ghostBtn}
-            onPress={() => {
-              setPaused(false)
-              setScore(0)
-              setLevel(1)
-              setRound((r) => r + 1)
-            }}
-          >
-            <Text style={styles.ghostBtnText}>↺ Restart</Text>
-          </TouchableOpacity>
-        )}
-        {onHome && (
-          <TouchableOpacity style={styles.ghostBtn} onPress={onHome}>
-            <Text style={styles.ghostBtnText}>🏰 Home</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+      <PausedScreen
+        theme={theme}
+        background={battlefieldMemo}
+        score={score}
+        dailyMode={dailyMode}
+        onResume={() => setPaused(false)}
+        onRestart={() => {
+          setPaused(false)
+          setScore(0)
+          setLevel(1)
+          setRound((r) => r + 1)
+        }}
+        onHome={onHome}
+      />
     )
 
   return (
@@ -2623,11 +2600,6 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 10,
   },
-  pauseScore: {
-    color: "rgba(232,197,71,0.35)",
-    fontSize: 16,
-    fontWeight: "700",
-  },
   partialText: {
     color: "rgba(255,255,255,0.25)",
     fontSize: 12,
@@ -2766,22 +2738,6 @@ const styles = StyleSheet.create({
   goldBtnDisabled: {
     opacity: 0.4,
     shadowOpacity: 0,
-  },
-  ghostBtn: {
-    paddingHorizontal: 32,
-    paddingVertical: 11,
-    borderRadius: 10,
-    minWidth: 220,
-    alignItems: "center",
-    borderWidth: 1.5,
-    borderColor: "rgba(232,197,71,0.2)",
-    backgroundColor: "rgba(232,197,71,0.04)",
-  },
-  ghostBtnText: {
-    color: "rgba(232,197,71,0.6)",
-    fontSize: 14,
-    fontWeight: "800",
-    letterSpacing: 1.5,
   },
 
   // ═══════════════════════════════════════════
