@@ -3,81 +3,451 @@ import {
   ActivityIndicator,
   Animated,
   Easing,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
-  ScrollView,
-  Dimensions,
 } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { DailyScore, getDailyLeaderboard } from "../services/DailyQuestService"
 import { getAllTimeLeaderboard } from "../services/ScoreService"
 import { SoundService } from "../services/SoundService"
 import ReturnToCastle from "./ReturnToCastle"
+import { Icon, IconName } from "../ui/Icon"
+import { color, font } from "../ui/theme"
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Hall of Glory — "Champions' Cards" (DESIGN_PLAN §4.6)
+//
+// The podium recreates the app icon: the top-3 players are rendered as a fanned
+// trio of honor-cards in the icon's deep green, built from the in-game card-back
+// grammar (corner indices, runes, central crest medallion, double gold frame).
+// Landscape-first composition: left "shrine" column (the trio), right "muster
+// roll" column (tabs, open ledger rows with leader dots, pinned self-standing).
+// ─────────────────────────────────────────────────────────────────────────────
 
 interface ScoreboardProps {
   onBack: () => void
   uid?: string
 }
 
-const { width: SCREEN_W } = Dimensions.get("window")
-const isWide = SCREEN_W > 600
-
-const getRankTitle = (games: number): string => {
-  if (games >= 1000) return "God of the Peaks"
-  if (games >= 750) return "Eternal Overlord"
-  if (games >= 500) return "Titan of War"
-  if (games >= 300) return "Divine Ruler"
-  if (games >= 200) return "Immortal King"
-  if (games >= 150) return "Mythic Conqueror"
-  if (games >= 100) return "Legendary Champion"
-  if (games >= 75) return "Warlord"
-  if (games >= 50) return "Battle Master"
-  if (games >= 25) return "Veteran Warrior"
-  if (games >= 10) return "Proven Fighter"
-  if (games >= 5) return "Apprentice"
-  if (games >= 3) return "Footman"
-  return "Recruit"
+// RN hex+alpha string concat breaks on rgba inputs (Profile blob bug, §5) —
+// alpha is always applied explicitly from plain-hex tier colors.
+const withAlpha = (hex: string, a: number): string => {
+  const h = hex.replace("#", "")
+  const r = parseInt(h.slice(0, 2), 16)
+  const g = parseInt(h.slice(2, 4), 16)
+  const b = parseInt(h.slice(4, 6), 16)
+  return `rgba(${r},${g},${b},${a})`
 }
 
-const getRankIcon = (games: number): string => {
-  if (games >= 100) return "👑"
-  if (games >= 75) return "🔥"
-  if (games >= 50) return "🐉"
-  if (games >= 25) return "⚔"
-  if (games >= 10) return "🛡"
-  if (games >= 5) return "📜"
-  return "🏹"
+// Rank avatars share Profile's five-metal tier ladder (§4.5.1): one MCI icon
+// ladder, on-palette tier colour per games-played bracket.
+const TIER = {
+  bronze: "#B07B4F",
+  iron: "#9BA3AB",
+  steel: "#C9D1D9",
+  gold: color.gold,
+  mystic: color.mystic,
 }
 
-const MEDALS = ["🥇", "🥈", "🥉"]
-
-const PODIUM_COLORS = [
-  {
-    accent: "#FFD700",
-    bg: "rgba(255,215,0,0.05)",
-    border: "rgba(255,215,0,0.2)",
-    text: "#FFD700",
-    pedBg: "rgba(255,215,0,0.08)",
-    pedBorder: "rgba(255,215,0,0.25)",
-  },
-  {
-    accent: "#C0C0C0",
-    bg: "rgba(192,192,192,0.03)",
-    border: "rgba(192,192,192,0.15)",
-    text: "#D4D4D4",
-    pedBg: "rgba(192,192,192,0.06)",
-    pedBorder: "rgba(192,192,192,0.2)",
-  },
-  {
-    accent: "#CD7F32",
-    bg: "rgba(205,127,50,0.03)",
-    border: "rgba(205,127,50,0.15)",
-    text: "#E8A860",
-    pedBg: "rgba(205,127,50,0.06)",
-    pedBorder: "rgba(205,127,50,0.2)",
-  },
+const RANK_VISUALS: { min: number; icon: IconName; color: string }[] = [
+  { min: 0, icon: "bow-arrow", color: TIER.bronze },
+  { min: 3, icon: "sword", color: TIER.bronze },
+  { min: 5, icon: "script-text", color: TIER.iron },
+  { min: 10, icon: "shield-half-full", color: TIER.iron },
+  { min: 25, icon: "sword-cross", color: TIER.steel },
+  { min: 50, icon: "axe-battle", color: TIER.steel },
+  { min: 75, icon: "fire", color: TIER.gold },
+  { min: 100, icon: "crown", color: TIER.gold },
+  { min: 150, icon: "skull", color: TIER.gold },
+  { min: 200, icon: "chess-king", color: TIER.gold },
+  { min: 300, icon: "lightning-bolt", color: TIER.mystic },
+  { min: 500, icon: "fire-alert", color: TIER.mystic },
+  { min: 750, icon: "weather-hurricane", color: TIER.mystic },
+  { min: 1000, icon: "star-four-points", color: TIER.mystic },
 ]
+
+const getRankVisual = (games: number) => {
+  let v = RANK_VISUALS[0]
+  for (const r of RANK_VISUALS) if (games >= r.min) v = r
+  return v
+}
+
+// Honor-card trim per podium place: gold / steel / bronze metals.
+const PLACE = [
+  { trim: color.gold, score: color.gold },
+  { trim: TIER.steel, score: TIER.steel },
+  { trim: TIER.bronze, score: "#E8A860" },
+]
+
+// The icon's card green — deliberately richer than bgRaised so the trio reads
+// as the lit centerpiece of the hall (the cards are the art).
+const CARD_FIELD = "#1A3D2A"
+const CARD_RUNES = ["ᚠ", "ᚦ", "ᚱ", "ᛟ"]
+
+// ── Honor card (one podium plaque) ──────────────────────────────────────────
+
+interface HonorCardProps {
+  item: DailyScore
+  place: 1 | 2 | 3
+  w: number
+  h: number
+  isYou: boolean
+  deal: Animated.Value
+  pulse: Animated.Value
+}
+
+const HonorCard = ({ item, place, w, h, isYou, deal, pulse }: HonorCardProps) => {
+  const p = PLACE[place - 1]
+  const rv = getRankVisual(item.gamesPlayed || 0)
+  const isFirst = place === 1
+  const baseRot = place === 1 ? 0 : place === 2 ? -7 : 7
+  const medal = Math.round(w * 0.42)
+
+  const dealStyle = {
+    opacity: deal,
+    transform: [
+      {
+        translateY: deal.interpolate({
+          inputRange: [0, 1],
+          outputRange: [26, 0],
+        }),
+      },
+      {
+        rotate: deal.interpolate({
+          inputRange: [0, 1],
+          outputRange: [`${baseRot * 2}deg`, `${baseRot}deg`],
+        }),
+      },
+      {
+        scale: deal.interpolate({
+          inputRange: [0, 1],
+          outputRange: [isFirst ? 0.94 : 1, 1],
+        }),
+      },
+    ],
+  }
+
+  return (
+    <Animated.View
+      style={[
+        c.card,
+        {
+          width: w,
+          height: h,
+          borderColor: isFirst ? p.trim : withAlpha(p.trim, 0.7),
+          borderWidth: isFirst ? 2 : 1.5,
+          zIndex: isFirst ? 3 : 1,
+          elevation: isFirst ? 10 : 5,
+          shadowColor: isFirst ? color.gold : "#000",
+        },
+        dealStyle,
+      ]}
+    >
+      {/* engraved double frame (card-back grammar) */}
+      <View style={[c.frame, { borderColor: withAlpha(p.trim, 0.45) }]} />
+      <View style={[c.frameInner, { borderColor: withAlpha(p.trim, 0.22) }]} />
+      {isFirst && <View style={c.shine} />}
+
+      {/* corner runes */}
+      <Text style={[c.rune, { top: 14, left: 15, color: withAlpha(p.trim, 0.3) }]}>
+        {CARD_RUNES[0]}
+      </Text>
+      <Text style={[c.rune, { top: 14, right: 15, color: withAlpha(p.trim, 0.3) }]}>
+        {CARD_RUNES[1]}
+      </Text>
+      <Text style={[c.rune, { bottom: 14, left: 15, color: withAlpha(p.trim, 0.3) }]}>
+        {CARD_RUNES[2]}
+      </Text>
+      <Text style={[c.rune, { bottom: 14, right: 15, color: withAlpha(p.trim, 0.3) }]}>
+        {CARD_RUNES[3]}
+      </Text>
+
+      {/* rank as playing-card corner index (TL + rotated BR) */}
+      <View style={[c.index, { top: 5, left: 8 }]}>
+        <Text style={[c.indexNum, { color: p.trim, fontSize: isFirst ? 17 : 14 }]}>
+          {place}
+        </Text>
+        <Text style={[c.indexDot, { color: withAlpha(p.trim, 0.7) }]}>◆</Text>
+      </View>
+      <View style={[c.index, c.indexBR, { bottom: 5, right: 8 }]}>
+        <Text style={[c.indexNum, { color: p.trim, fontSize: isFirst ? 17 : 14 }]}>
+          {place}
+        </Text>
+        <Text style={[c.indexDot, { color: withAlpha(p.trim, 0.7) }]}>◆</Text>
+      </View>
+
+      {/* crest medallion with breathing halo */}
+      <View style={[c.medalZone, { marginTop: h * 0.13 }]}>
+        <Animated.View
+          style={[
+            c.medalHalo,
+            {
+              width: medal + 16,
+              height: medal + 16,
+              borderRadius: (medal + 16) / 2,
+              backgroundColor: withAlpha(p.trim, 0.12),
+              opacity: pulse,
+            },
+          ]}
+        />
+        <View
+          style={[
+            c.medal,
+            {
+              width: medal,
+              height: medal,
+              borderRadius: medal / 2,
+              backgroundColor: withAlpha(p.trim, 0.1),
+              borderColor: withAlpha(p.trim, 0.8),
+            },
+          ]}
+        >
+          <View
+            style={[c.medalRing, { borderColor: withAlpha(p.trim, 0.4), borderRadius: medal / 2 }]}
+          />
+          <Icon name={rv.icon} size={Math.round(medal * 0.5)} color={p.trim} />
+        </View>
+      </View>
+
+      <View style={{ flex: 1 }} />
+
+      {/* parchment nameplate — the one light surface, like the icon's title */}
+      <View style={c.namePlate}>
+        <Text
+          style={[c.nameTxt, { fontSize: isFirst ? 11 : 10 }]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.7}
+        >
+          {item.heroName || "Unknown"}
+        </Text>
+      </View>
+
+      <Text
+        style={[
+          c.score,
+          {
+            color: p.score,
+            fontSize: isFirst ? 17 : 13,
+            textShadowColor: withAlpha(p.trim, 0.35),
+          },
+        ]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+      >
+        {item.score.toLocaleString()}
+      </Text>
+      <Text style={[c.combo, { color: withAlpha(p.trim, 0.6) }]}>
+        x{item.bestCombo || 0}
+      </Text>
+
+      {isYou && (
+        <View style={c.youBadge}>
+          <Text style={c.youBadgeTxt}>YOU</Text>
+        </View>
+      )}
+    </Animated.View>
+  )
+}
+
+// Empty podium slot — a face-down outline awaiting a champion.
+const GhostCard = ({ w, h }: { w: number; h: number }) => (
+  <View style={[c.ghost, { width: w, height: h }]}>
+    <Icon name="help" size={20} color={withAlpha("#8FA3B0", 0.5)} />
+  </View>
+)
+
+const c = StyleSheet.create({
+  card: {
+    backgroundColor: CARD_FIELD,
+    borderRadius: 12,
+    alignItems: "stretch",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+  },
+  frame: {
+    position: "absolute",
+    top: 4,
+    left: 4,
+    right: 4,
+    bottom: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  frameInner: {
+    position: "absolute",
+    top: 8,
+    left: 8,
+    right: 8,
+    bottom: 8,
+    borderRadius: 5,
+    borderWidth: 0.5,
+  },
+  shine: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: "30%",
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
+    backgroundColor: "rgba(255,255,255,0.04)",
+  },
+  rune: { position: "absolute", fontSize: 8 },
+  index: { position: "absolute", alignItems: "center", zIndex: 4 },
+  indexBR: { transform: [{ rotate: "180deg" }] },
+  indexNum: { fontFamily: font.heading, lineHeight: 18 },
+  indexDot: { fontSize: 6, marginTop: -3 },
+  medalZone: { alignItems: "center", justifyContent: "center" },
+  medalHalo: { position: "absolute" },
+  medal: {
+    borderWidth: 1.5,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  medalRing: {
+    position: "absolute",
+    top: 3,
+    left: 3,
+    right: 3,
+    bottom: 3,
+    borderWidth: 0.5,
+  },
+  namePlate: {
+    backgroundColor: color.parchment,
+    borderRadius: 4,
+    marginHorizontal: 8,
+    paddingVertical: 3,
+    paddingHorizontal: 4,
+  },
+  nameTxt: {
+    color: color.ink,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+    textAlign: "center",
+  },
+  score: {
+    fontWeight: "900",
+    textAlign: "center",
+    marginTop: 4,
+    letterSpacing: 0.5,
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 6,
+  },
+  combo: {
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 1,
+    textAlign: "center",
+    marginTop: 1,
+    marginBottom: 8,
+  },
+  youBadge: {
+    position: "absolute",
+    top: -7,
+    right: -7,
+    backgroundColor: color.parchment,
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderWidth: 1.5,
+    borderColor: color.bgBase,
+    zIndex: 6,
+    elevation: 11,
+  },
+  youBadgeTxt: { color: color.ink, fontSize: 8, fontWeight: "900", letterSpacing: 1 },
+  ghost: {
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderStyle: "dashed",
+    borderColor: color.goldLine,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+})
+
+// ── Ledger row (ranks 4+) ───────────────────────────────────────────────────
+
+const LedgerRow = ({
+  item,
+  index,
+  isYou,
+}: {
+  item: DailyScore
+  index: number
+  isYou: boolean
+}) => {
+  const a = useRef(new Animated.Value(0)).current
+  useEffect(() => {
+    Animated.timing(a, {
+      toValue: 1,
+      duration: 240,
+      delay: Math.min(index - 3, 8) * 36,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    }).start()
+  }, [])
+
+  const rv = getRankVisual(item.gamesPlayed || 0)
+
+  return (
+    <Animated.View
+      style={[
+        z.row,
+        isYou && z.rowYou,
+        {
+          opacity: a,
+          transform: [
+            { translateX: a.interpolate({ inputRange: [0, 1], outputRange: [14, 0] }) },
+          ],
+        },
+      ]}
+    >
+      <Text style={[z.rowPos, isYou && { color: color.gold }]}>{index + 1}</Text>
+
+      <View
+        style={[
+          z.rowRing,
+          {
+            borderColor: withAlpha(rv.color, 0.45),
+            backgroundColor: withAlpha(rv.color, 0.08),
+          },
+        ]}
+      >
+        <Icon name={rv.icon} size={13} color={rv.color} />
+      </View>
+
+      <Text style={[z.rowName, isYou && { color: color.gold }]} numberOfLines={1}>
+        {item.heroName || "Unknown"}
+      </Text>
+      {isYou && (
+        <View style={z.youChip}>
+          <Text style={z.youChipTxt}>YOU</Text>
+        </View>
+      )}
+
+      {/* ledger leader dots */}
+      <Text style={z.rowDots} numberOfLines={1} ellipsizeMode="clip">
+        ································
+      </Text>
+
+      <View style={z.rowComboBadge}>
+        <Text style={z.rowCombo}>x{item.bestCombo || 0}</Text>
+      </View>
+
+      <Text style={z.rowScore} numberOfLines={1} adjustsFontSizeToFit>
+        {item.score.toLocaleString()}
+      </Text>
+    </Animated.View>
+  )
+}
+
+// ── Screen ──────────────────────────────────────────────────────────────────
 
 const Scoreboard = ({ onBack, uid }: ScoreboardProps) => {
   const [tab, setTab] = useState<"daily" | "alltime">("daily")
@@ -85,12 +455,17 @@ const Scoreboard = ({ onBack, uid }: ScoreboardProps) => {
   const [allTimeScores, setAllTimeScores] = useState<DailyScore[]>([])
   const [loadingDaily, setLoadingDaily] = useState(true)
   const [loadingAllTime, setLoadingAllTime] = useState(true)
-  const [switching, setSwitching] = useState(false)
+  const scrollRef = useRef<ScrollView>(null)
+
+  const { width: winW, height: winH } = useWindowDimensions()
+  const insets = useSafeAreaInsets()
 
   const fadeAnim = useRef(new Animated.Value(0)).current
   const slideAnim = useRef(new Animated.Value(15)).current
   const glowPulse = useRef(new Animated.Value(0.3)).current
   const crownPulse = useRef(new Animated.Value(0.7)).current
+  // One deal value per podium place; staggered like dealing a hand.
+  const deals = useRef([new Animated.Value(0), new Animated.Value(0), new Animated.Value(0)]).current
 
   useEffect(() => {
     Animated.parallel([
@@ -154,191 +529,87 @@ const Scoreboard = ({ onBack, uid }: ScoreboardProps) => {
 
   const scores = tab === "daily" ? dailyScores : allTimeScores
   const isLoading = tab === "daily" ? loadingDaily : loadingAllTime
+  const showContent = !isLoading && scores.length > 0
 
-  // Find user's rank
+  // Deal the trio in whenever fresh content shows (mount + tab switch):
+  // sides first, champion lands last. No fade-out needed — the re-deal IS
+  // the tab transition (rows remount and re-stagger via tab-keyed keys).
+  useEffect(() => {
+    if (!showContent) return
+    deals.forEach((d) => d.setValue(0))
+    const t = (i: number, dur = 300) =>
+      Animated.timing(deals[i], {
+        toValue: 1,
+        duration: dur,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      })
+    Animated.stagger(90, [t(1), t(2), t(0, 340)]).start()
+  }, [showContent, tab])
+
   const myIndex = uid ? scores.findIndex((s) => s.uid === uid) : -1
-  const myScore = myIndex >= 0 ? scores[myIndex] : null
 
-  const renderYourRank = () => {
-    if (!uid || !myScore) return null
-    const rank = myIndex + 1
+  // ── Shrine geometry (landscape-first, fits without scrolling) ──
+  const shrineW = Math.min(330, Math.max(250, winW * 0.4))
+  const availH = winH - 118
+  const centerH = Math.round(Math.min(((shrineW - 16) / 2.4) * 1.45, availH - 30, 196))
+  const centerW = Math.round(centerH / 1.45)
+  const sideH = Math.round(centerH * 0.86)
+  const sideW = Math.round(centerW * 0.86)
+  const overlap = Math.round(centerW * 0.14)
+
+  const top = scores.slice(0, 3)
+  const crownOpacity = Animated.multiply(crownPulse, deals[0])
+
+  const switchTab = (next: "daily" | "alltime") => {
+    if (tab === next) return
+    SoundService.playDeckDraw()
+    // Reset before the re-render so the new tab's cards never flash at full
+    // opacity for a frame before the deal effect kicks in.
+    deals.forEach((d) => d.setValue(0))
+    scrollRef.current?.scrollTo({ y: 0, animated: false })
+    setTab(next)
+  }
+
+  const countLine = !showContent
+    ? " "
+    : tab === "daily"
+      ? `${scores.length} WARRIORS ANSWERED TODAY'S CALL`
+      : `${scores.length} LEGENDS ETCHED IN THE HALL`
+
+  const renderTab = (key: "daily" | "alltime", icon: IconName, label: string) => {
+    const on = tab === key
     return (
-      <View style={z.yourRank}>
-        <View style={z.yourRankLeft}>
-          <Text style={z.yourRankPos}>#{rank}</Text>
-          <View style={z.yourRankDivider} />
-          <View>
-            <Text style={z.yourRankName}>{myScore.heroName || "Unknown"}</Text>
-            <Text style={z.yourRankTitle}>
-              {getRankIcon(myScore.gamesPlayed || 0)}{" "}
-              {getRankTitle(myScore.gamesPlayed || 0)}
-            </Text>
-          </View>
-        </View>
-        <View style={z.yourRankRight}>
-          <Text style={z.yourRankScore}>{myScore.score.toLocaleString()}</Text>
-          <Text style={z.yourRankCombo}>x{myScore.bestCombo || 0} combo</Text>
-        </View>
-      </View>
+      <TouchableOpacity
+        style={[z.tab, on && z.tabOn]}
+        onPress={() => switchTab(key)}
+        activeOpacity={0.85}
+      >
+        <Icon name={icon} size={13} color={on ? color.ink : color.goldFaded} />
+        <Text style={[z.tabTxt, on && z.tabTxtOn]}>{label}</Text>
+      </TouchableOpacity>
     )
   }
 
-  const renderPodium = () => {
-    if (scores.length === 0) return null
-    const top = scores.slice(0, Math.min(3, scores.length))
-    const order = top.length >= 3 ? [1, 0, 2] : top.length === 2 ? [1, 0] : [0]
-
-    return (
-      <View style={z.podiumSection}>
-        <View style={z.podium}>
-          {order.map((di) => {
-            const item = top[di]
-            if (!item) return <View key={`e${di}`} style={{ flex: 1 }} />
-            const c = PODIUM_COLORS[di]
-            const isYou = item.uid === uid
-            const isFirst = di === 0
-
-            return (
-              <View
-                key={`p${di}`}
-                style={[
-                  z.podSlot,
-                  isFirst && z.podSlotFirst,
-                  {
-                    backgroundColor: c.bg,
-                    borderRadius: 10,
-                    paddingVertical: 6,
-                    borderWidth: 1,
-                    borderColor: c.border,
-                  },
-                ]}
-              >
-                {isFirst && (
-                  <Animated.Text style={[z.podCrown, { opacity: crownPulse }]}>
-                    👑
-                  </Animated.Text>
-                )}
-
-                <Text style={{ fontSize: isFirst ? 24 : 18, marginBottom: 2 }}>
-                  {MEDALS[di]}
-                </Text>
-
-                <Text
-                  style={[
-                    z.podScore,
-                    {
-                      color: c.text,
-                      fontSize: isFirst ? 22 : 15,
-                      textShadowColor: c.accent + "50",
-                      textShadowRadius: isFirst ? 10 : 4,
-                    },
-                  ]}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                >
-                  {item.score.toLocaleString()}
-                </Text>
-
-                <Text
-                  style={[
-                    z.podName,
-                    {
-                      color: isYou ? c.accent : "rgba(255,255,255,0.7)",
-                      fontSize: isFirst ? 13 : 10,
-                    },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {item.heroName || "Unknown"}
-                </Text>
-
-                <View
-                  style={[z.podComboBadge, { borderColor: c.accent + "30" }]}
-                >
-                  <Text style={[z.podComboText, { color: c.accent + "60" }]}>
-                    x{item.bestCombo || 0}
-                  </Text>
-                </View>
-
-                <View
-                  style={[
-                    z.pedestal,
-                    {
-                      height: isFirst ? 32 : di === 1 ? 24 : 18,
-                      backgroundColor: c.pedBg,
-                      borderColor: c.pedBorder,
-                    },
-                  ]}
-                >
-                  <View
-                    style={[
-                      z.pedestalShine,
-                      { backgroundColor: c.accent + "08" },
-                    ]}
-                  />
-                  <Text
-                    style={[
-                      z.pedestalNum,
-                      { color: c.accent, fontSize: isFirst ? 16 : 12 },
-                    ]}
-                  >
-                    {di + 1}
-                  </Text>
-                </View>
-              </View>
-            )
-          })}
-        </View>
-      </View>
-    )
-  }
-  const renderRow = (item: DailyScore, index: number) => {
-    if (index < 3) return null
-    const isYou = item.uid === uid
-    const pos = index + 1
-
-    return (
-      <View key={`r${index}`} style={[z.row, isYou && z.rowYou]}>
-        <Text style={[z.rowPos, isYou && { color: "#FFD700" }]}>{pos}</Text>
-
-        <View style={[z.rowIcon, isYou && z.rowIconYou]}>
-          <Text style={{ fontSize: 14 }}>
-            {getRankIcon(item.gamesPlayed || 0)}
-          </Text>
-        </View>
-
-        <View style={z.rowInfo}>
-          <Text style={[z.rowName, isYou && z.rowNameYou]} numberOfLines={1}>
-            {item.heroName || "Unknown"}
-          </Text>
-          {/* <Text style={z.rowRank}>{getRankTitle(item.gamesPlayed || 0)}</Text> */}
-        </View>
-
-        <View style={z.rowComboBadge}>
-          <Text style={z.rowCombo}>x{item.bestCombo || 0}</Text>
-        </View>
-
-        <Text
-          style={[z.rowScore, isYou && z.rowScoreYou]}
-          numberOfLines={1}
-          adjustsFontSizeToFit
-        >
-          {item.score.toLocaleString()}
-        </Text>
-      </View>
-    )
-  }
+  const myScore = myIndex >= 3 ? scores[myIndex] : null
 
   return (
-    <View style={z.container}>
-      {/* Background */}
+    <View
+      style={[
+        z.container,
+        {
+          paddingLeft: Math.max(12, insets.left),
+          paddingRight: Math.max(12, insets.right),
+        },
+      ]}
+    >
+      {/* Background — the hall */}
       <View style={z.bg} pointerEvents="none">
         <Animated.View style={[z.bgGlow, { opacity: glowPulse }]} />
         <Text style={[z.bgRune, { top: "6%", left: "4%" }]}>ᚠ</Text>
         <Text style={[z.bgRune, { top: "10%", right: "5%" }]}>ᚦ</Text>
         <Text style={[z.bgRune, { bottom: "18%", left: "6%" }]}>ᚱ</Text>
         <Text style={[z.bgRune, { bottom: "22%", right: "4%" }]}>ᛟ</Text>
-        <View style={z.bgLine} />
       </View>
 
       <Animated.View
@@ -355,8 +626,13 @@ const Scoreboard = ({ onBack, uid }: ScoreboardProps) => {
             <View style={z.hLineS} />
           </View>
           <View style={z.hCenter}>
-            <Text style={z.hIcon}>🏆</Text>
-            <Text style={z.hTitle}>HALL OF GLORY</Text>
+            <View style={z.hTitleRow}>
+              <Icon name="trophy-variant" size={19} color={color.goldBright} />
+              <Text style={z.hTitle}>HALL OF GLORY</Text>
+            </View>
+            <Text style={z.hSub} numberOfLines={1}>
+              {countLine}
+            </Text>
           </View>
           <View style={z.hOrn}>
             <View style={z.hLineS} />
@@ -365,60 +641,19 @@ const Scoreboard = ({ onBack, uid }: ScoreboardProps) => {
           </View>
         </View>
 
-        {/* Tabs */}
-        <View style={z.tabs}>
-          <TouchableOpacity
-            style={[z.tab, tab === "daily" && z.tabOn]}
-            onPress={() => {
-              if (tab === "daily") return
-              SoundService.playDeckDraw()
-              setSwitching(true)
-              setTimeout(() => {
-                setTab("daily")
-                setSwitching(false)
-              }, 50)
-            }}
-            activeOpacity={0.85}
-          >
-            <Text style={[z.tabIco, tab !== "daily" && { opacity: 0.4 }]}>
-              📜
-            </Text>
-            <Text style={[z.tabTxt, tab === "daily" && z.tabTxtOn]}>
-              Daily Quest
-            </Text>
-          </TouchableOpacity>
-          <View style={z.tabDiv} />
-          <TouchableOpacity
-            style={[z.tab, tab === "alltime" && z.tabOn]}
-            onPress={() => {
-              if (tab === "alltime") return
-              SoundService.playDeckDraw()
-              setSwitching(true)
-              setTimeout(() => {
-                setTab("alltime")
-                setSwitching(false)
-              }, 50)
-            }}
-            activeOpacity={0.85}
-          >
-            <Text style={[z.tabIco, tab !== "alltime" && { opacity: 0.4 }]}>
-              ⚔
-            </Text>
-            <Text style={[z.tabTxt, tab === "alltime" && z.tabTxtOn]}>
-              All Time
-            </Text>
-          </TouchableOpacity>
-        </View>
-
         {/* Content */}
-        {isLoading || switching ? (
+        {isLoading ? (
           <View style={z.empty}>
-            <ActivityIndicator size="large" color="#E8C547" />
+            <ActivityIndicator size="large" color={color.gold} />
             <Text style={z.loadText}>Summoning warriors...</Text>
           </View>
         ) : scores.length === 0 ? (
           <View style={z.empty}>
-            <Text style={z.emptyIco}>{tab === "daily" ? "📜" : "⚔"}</Text>
+            <Icon
+              name={tab === "daily" ? "script-text-outline" : "sword-cross"}
+              size={36}
+              color={color.goldFaded}
+            />
             <Text style={z.emptyTxt}>
               {tab === "daily" ? "No warriors today" : "No battles recorded"}
             </Text>
@@ -427,41 +662,116 @@ const Scoreboard = ({ onBack, uid }: ScoreboardProps) => {
                 ? "Be the first to complete today's quest!"
                 : "Complete battles to claim your glory"}
             </Text>
+            <View style={z.emptyTabs}>
+              {renderTab("daily", "script-text-outline", "Daily Quest")}
+              {renderTab("alltime", "sword-cross", "All Time")}
+            </View>
           </View>
         ) : (
-          <ScrollView
-            style={z.scroll}
-            contentContainerStyle={z.scrollInner}
-            showsVerticalScrollIndicator={false}
-          >
-            {renderPodium()}
-
-            {myIndex >= 3 && renderYourRank()}
-
-            {scores.length > 3 && (
-              <View style={z.sep}>
-                <View style={z.sepLine} />
-                <Text style={z.sepDot}>◆</Text>
-                <Text style={z.sepText}>OTHER WARRIORS</Text>
-                <Text style={z.sepDot}>◆</Text>
-                <View style={z.sepLine} />
+          <View style={z.contentRow}>
+            {/* ── Left: the shrine ── */}
+            <View style={[z.shrine, { width: shrineW }]}>
+              <View style={z.trioWrap}>
+                <Animated.View style={[z.crown, { opacity: crownOpacity }]}>
+                  <Icon name="crown" size={20} color={color.goldBright} />
+                </Animated.View>
+                <View style={z.trio}>
+                  {top[1] ? (
+                    <HonorCard
+                      item={top[1]}
+                      place={2}
+                      w={sideW}
+                      h={sideH}
+                      isYou={top[1].uid === uid}
+                      deal={deals[1]}
+                      pulse={glowPulse}
+                    />
+                  ) : (
+                    <GhostCard w={sideW} h={sideH} />
+                  )}
+                  <View style={{ marginHorizontal: -overlap, zIndex: 3 }}>
+                    <HonorCard
+                      item={top[0]}
+                      place={1}
+                      w={centerW}
+                      h={centerH}
+                      isYou={top[0].uid === uid}
+                      deal={deals[0]}
+                      pulse={glowPulse}
+                    />
+                  </View>
+                  {top[2] ? (
+                    <HonorCard
+                      item={top[2]}
+                      place={3}
+                      w={sideW}
+                      h={sideH}
+                      isYou={top[2].uid === uid}
+                      deal={deals[2]}
+                      pulse={glowPulse}
+                    />
+                  ) : (
+                    <GhostCard w={sideW} h={sideH} />
+                  )}
+                </View>
+                {/* shelf the trio stands on */}
+                <View style={z.shelf} />
+                <View style={z.shelfGlow} />
               </View>
-            )}
+            </View>
 
-            {scores.length > 3 && (
-              <View style={z.colHeaders}>
-                <View style={{ width: 28 }} />
-                <View style={{ width: 30 }} />
-                <View style={{ flex: 1 }} />
-                <Text style={[z.colLabel, { width: 40 }]}>COMBO</Text>
-                <Text style={[z.colLabel, { width: 95, textAlign: "right" }]}>
-                  SPOILS
-                </Text>
+            {/* ── Right: the muster roll ── */}
+            <View style={z.roll}>
+              <View style={z.tabs}>
+                {renderTab("daily", "script-text-outline", "Daily Quest")}
+                {renderTab("alltime", "sword-cross", "All Time")}
               </View>
-            )}
 
-            {scores.map((item, i) => renderRow(item, i))}
-          </ScrollView>
+              <ScrollView
+                ref={scrollRef}
+                style={z.scroll}
+                contentContainerStyle={z.scrollInner}
+                showsVerticalScrollIndicator={false}
+              >
+                {scores.map((item, i) =>
+                  i < 3 ? null : (
+                    <LedgerRow
+                      key={`${tab}-${item.uid || i}`}
+                      item={item}
+                      index={i}
+                      isYou={item.uid === uid}
+                    />
+                  ),
+                )}
+                {scores.length <= 3 && (
+                  <View style={z.rollEmpty}>
+                    <Text style={z.rollEmptyTxt}>
+                      The roll awaits more warriors…
+                    </Text>
+                  </View>
+                )}
+              </ScrollView>
+
+              {/* Pinned standing — always visible when you're off the podium */}
+              {myScore && (
+                <View style={z.standing}>
+                  <Text style={z.standingPos}>#{myIndex + 1}</Text>
+                  <View style={z.standingDiv} />
+                  <Text style={z.standingName} numberOfLines={1}>
+                    {myScore.heroName || "Unknown"}
+                  </Text>
+                  <View style={z.youChip}>
+                    <Text style={z.youChipTxt}>YOU</Text>
+                  </View>
+                  <View style={{ flex: 1 }} />
+                  <Text style={z.standingCombo}>x{myScore.bestCombo || 0}</Text>
+                  <Text style={z.standingScore}>
+                    {myScore.score.toLocaleString()}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
         )}
 
         {/* Back */}
@@ -471,24 +781,21 @@ const Scoreboard = ({ onBack, uid }: ScoreboardProps) => {
   )
 }
 
-// ─── REPLACE the entire z StyleSheet in Scoreboard.tsx ───
-
 const z = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0B1410",
+    backgroundColor: color.bgBase,
     paddingTop: 6,
-    paddingHorizontal: 12,
   },
 
   // Background
   bg: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
   bgGlow: {
     position: "absolute",
-    top: "5%",
-    left: "25%",
-    width: "50%",
-    height: "40%",
+    top: "8%",
+    left: "6%",
+    width: "38%",
+    height: "55%",
     borderRadius: 250,
     backgroundColor: "rgba(232,197,71,0.04)",
   },
@@ -496,14 +803,6 @@ const z = StyleSheet.create({
     position: "absolute",
     fontSize: 22,
     color: "rgba(232,197,71,0.05)",
-  },
-  bgLine: {
-    position: "absolute",
-    top: "50%",
-    left: 20,
-    right: 20,
-    height: 1,
-    backgroundColor: "rgba(232,197,71,0.03)",
   },
   inner: { flex: 1 },
 
@@ -515,30 +814,67 @@ const z = StyleSheet.create({
     marginBottom: 6,
     gap: 6,
   },
-  hCenter: { flexDirection: "row", alignItems: "center", gap: 8 },
-  hIcon: { fontSize: 18 },
+  hCenter: { alignItems: "center" },
+  hTitleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   hTitle: {
-    color: "#E8C547",
-    fontSize: 16,
-    fontWeight: "900",
-    letterSpacing: 5,
+    color: color.gold,
+    fontFamily: font.heading,
+    fontSize: 17,
+    letterSpacing: 3,
     textShadowColor: "rgba(232,197,71,0.4)",
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 14,
+  },
+  hSub: {
+    color: color.goldFaded,
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 2,
+    marginTop: 1,
   },
   hOrn: { flexDirection: "row", alignItems: "center", flex: 1, gap: 4 },
   hLine: { flex: 1, height: 1, backgroundColor: "rgba(232,197,71,0.15)" },
   hLineS: { width: 10, height: 1, backgroundColor: "rgba(232,197,71,0.25)" },
   hDot: { color: "rgba(232,197,71,0.4)", fontSize: 6 },
 
-  // Tabs
+  // Two-column content
+  contentRow: { flex: 1, flexDirection: "row", gap: 10 },
+
+  // Shrine (left)
+  shrine: { justifyContent: "center", alignItems: "center" },
+  trioWrap: { alignItems: "center", paddingTop: 22 },
+  crown: { position: "absolute", top: 0, zIndex: 9 },
+  trio: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "center",
+  },
+  shelf: {
+    width: "72%",
+    height: 1.5,
+    backgroundColor: color.goldLine,
+    marginTop: 10,
+    borderRadius: 1,
+  },
+  shelfGlow: {
+    width: "60%",
+    height: 7,
+    backgroundColor: "rgba(232,197,71,0.04)",
+    borderRadius: 4,
+    marginTop: -1,
+  },
+
+  // Roll (right)
+  roll: { flex: 1 },
+
+  // Tabs — face-down / face-up: active tab flips to parchment
   tabs: {
     flexDirection: "row",
     marginBottom: 6,
-    backgroundColor: "rgba(232,197,71,0.03)",
-    borderRadius: 10,
+    backgroundColor: color.bgSunken,
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(232,197,71,0.1)",
+    borderColor: color.goldLine,
     padding: 3,
   },
   tab: {
@@ -547,291 +883,142 @@ const z = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 999,
     gap: 6,
   },
-  tabOn: {
-    backgroundColor: "rgba(232,197,71,0.12)",
-    borderWidth: 1,
-    borderColor: "rgba(232,197,71,0.15)",
-  },
-  tabDiv: {
-    width: 1,
-    height: 16,
-    backgroundColor: "rgba(232,197,71,0.1)",
-    alignSelf: "center",
-  },
-  tabIco: { fontSize: 13 },
+  tabOn: { backgroundColor: color.parchment },
   tabTxt: {
-    color: "rgba(232,197,71,0.4)",
+    color: color.goldFaded,
     fontSize: 12,
     fontWeight: "800",
     letterSpacing: 1,
   },
-  tabTxtOn: { color: "#E8C547" },
+  tabTxtOn: { color: color.ink },
 
   // Scroll
   scroll: { flex: 1 },
-  scrollInner: { paddingBottom: 8 },
+  scrollInner: { paddingBottom: 4 },
 
-  // Your rank
-  yourRank: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "rgba(255,215,0,0.05)",
-    borderWidth: 1,
-    borderColor: "rgba(255,215,0,0.2)",
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginBottom: 6,
-  },
-  yourRankLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    flex: 1,
-  },
-  yourRankPos: {
-    color: "#FFD700",
-    fontSize: 24,
-    fontWeight: "900",
-    textShadowColor: "rgba(255,215,0,0.4)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 8,
-  },
-  yourRankDivider: {
-    width: 1,
-    height: 28,
-    backgroundColor: "rgba(255,215,0,0.15)",
-  },
-  yourRankName: {
-    color: "#FFD700",
-    fontSize: 13,
-    fontWeight: "900",
-    letterSpacing: 1,
-  },
-  yourRankTitle: {
-    color: "rgba(255,215,0,0.45)",
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 1,
-    marginTop: 2,
-  },
-  yourRankRight: { alignItems: "flex-end" },
-  yourRankScore: {
-    color: "#FFD700",
-    fontSize: 18,
-    fontWeight: "900",
-    textShadowColor: "rgba(255,215,0,0.3)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 6,
-  },
-  yourRankCombo: {
-    color: "rgba(100,200,255,0.5)",
-    fontSize: 10,
-    fontWeight: "700",
-    marginTop: 2,
-  },
-
-  // Podium
-  podiumSection: { alignItems: "center", marginBottom: 6 },
-  podium: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "flex-end",
-    gap: 6,
-    width: "100%",
-    paddingTop: 6,
-  },
-  podCrown: {
-    fontSize: 20,
-    marginBottom: -2,
-    textShadowColor: "rgba(255,215,0,0.6)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 10,
-  },
-  podSlot: {
-    flex: 1,
-    alignItems: "center",
-    maxWidth: 160,
-    paddingVertical: 8,
-    paddingHorizontal: 6,
-    borderRadius: 12,
-    borderWidth: 1,
-    gap: 2,
-  },
-  podSlotFirst: { marginTop: -8 },
-  podScore: {
-    fontWeight: "900",
-    letterSpacing: 0.5,
-    textShadowOffset: { width: 0, height: 0 },
-    marginBottom: 1,
-  },
-  podName: {
-    fontWeight: "800",
-    letterSpacing: 0.5,
-    marginBottom: 2,
-  },
-  podComboBadge: {
-    borderWidth: 1,
-    borderRadius: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginTop: 2,
-  },
-  podComboText: { fontSize: 9, fontWeight: "900" },
-  pedestal: {
-    width: "90%",
-    borderWidth: 1,
-    borderBottomWidth: 0,
-    borderTopLeftRadius: 6,
-    borderTopRightRadius: 6,
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 4,
-  },
-  pedestalShine: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: "50%",
-    borderTopLeftRadius: 5,
-    borderTopRightRadius: 5,
-  },
-  pedestalNum: { fontWeight: "900", letterSpacing: 2 },
-  podCard: { width: "100%", alignItems: "center" },
-  podCardFirst: {},
-  podMeta: {},
-  podRankText: {},
-
-  // Separator
-  sep: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginVertical: 8,
-    paddingHorizontal: 4,
-  },
-  sepLine: { flex: 1, height: 1, backgroundColor: "rgba(232,197,71,0.08)" },
-  sepDot: { color: "rgba(232,197,71,0.25)", fontSize: 6 },
-  sepText: {
-    color: "rgba(232,197,71,0.3)",
-    fontSize: 8,
-    fontWeight: "900",
-    letterSpacing: 3,
-  },
-
-  // Column headers
-  colHeaders: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 8,
-    paddingBottom: 4,
-    gap: 6,
-  },
-  colLabel: {
-    color: "rgba(255,255,255,0.18)",
-    fontSize: 7,
-    fontWeight: "900",
-    letterSpacing: 2,
-    textAlign: "center",
-  },
-
-  // Rows
+  // Ledger rows — open lines, no boxes
   row: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    marginBottom: 3,
-    borderRadius: 10,
-    backgroundColor: "rgba(232,197,71,0.02)",
-    borderWidth: 1,
-    borderColor: "rgba(232,197,71,0.06)",
+    paddingVertical: 6,
+    paddingHorizontal: 8,
     gap: 8,
   },
   rowYou: {
-    backgroundColor: "rgba(255,215,0,0.06)",
-    borderColor: "rgba(255,215,0,0.22)",
-    shadowColor: "#FFD700",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    backgroundColor: color.goldWash,
+    borderWidth: 1,
+    borderColor: color.goldLine,
+    borderRadius: 10,
   },
   rowPos: {
     color: "rgba(255,255,255,0.3)",
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "900",
-    width: 28,
-    textAlign: "center",
+    width: 22,
+    textAlign: "right",
   },
-  rowIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "rgba(232,197,71,0.04)",
+  rowRing: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     borderWidth: 1,
-    borderColor: "rgba(232,197,71,0.1)",
     justifyContent: "center",
     alignItems: "center",
   },
-  rowIconYou: {
-    borderColor: "rgba(255,215,0,0.3)",
-    backgroundColor: "rgba(255,215,0,0.07)",
-  },
-  rowInfo: { flex: 1 },
   rowName: {
-    color: "rgba(255,255,255,0.75)",
-    fontSize: 13,
+    color: "rgba(255,255,255,0.78)",
+    fontSize: 12,
     fontWeight: "800",
     letterSpacing: 0.5,
+    flexShrink: 1,
   },
-  rowNameYou: { color: "#FFD700" },
-  rowRank: {
-    color: "rgba(255,255,255,0.2)",
-    fontSize: 7,
-    fontWeight: "700",
-    letterSpacing: 1,
-    marginTop: 1,
+  rowDots: {
+    flex: 1,
+    color: "rgba(232,197,71,0.22)",
+    fontSize: 9,
+    letterSpacing: 3,
+    textAlign: "center",
   },
   rowComboBadge: {
-    width: 44,
+    minWidth: 34,
     alignItems: "center",
-    backgroundColor: "rgba(232,197,71,0.06)",
-    borderRadius: 6,
-    paddingVertical: 3,
+    backgroundColor: color.goldWash,
+    borderRadius: 999,
+    paddingVertical: 2,
+    paddingHorizontal: 6,
     borderWidth: 1,
-    borderColor: "rgba(232,197,71,0.15)",
+    borderColor: color.goldLine,
   },
   rowCombo: {
-    color: "rgba(232,197,71,0.7)",
-    fontSize: 11,
+    color: color.goldFaded,
+    fontSize: 10,
     fontWeight: "900",
   },
   rowScore: {
-    color: "#E8C547",
+    color: color.gold,
     fontSize: 13,
     fontWeight: "900",
-    width: 95,
+    width: 84,
     textAlign: "right",
     letterSpacing: 0.5,
   },
-  rowScoreYou: {
-    color: "#FFD700",
-    fontSize: 14,
-    textShadowColor: "rgba(255,215,0,0.35)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 6,
-  },
-  noMoreRows: { alignItems: "center", paddingVertical: 16 },
-  noMoreText: {
-    color: "rgba(255,255,255,0.12)",
-    fontSize: 10,
+  rollEmpty: { alignItems: "center", paddingVertical: 18 },
+  rollEmptyTxt: {
+    color: "rgba(255,255,255,0.18)",
+    fontSize: 11,
     fontStyle: "italic",
     letterSpacing: 1,
+  },
+
+  // Parchment YOU chip
+  youChip: {
+    backgroundColor: color.parchment,
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  youChipTxt: {
+    color: color.ink,
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+
+  // Pinned standing strip
+  standing: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: color.goldWash,
+    borderWidth: 1,
+    borderColor: color.goldLine,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    marginTop: 6,
+    gap: 8,
+  },
+  standingPos: { color: color.gold, fontSize: 15, fontWeight: "900" },
+  standingDiv: { width: 1, height: 18, backgroundColor: color.goldLine },
+  standingName: {
+    color: color.gold,
+    fontSize: 12,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+    flexShrink: 1,
+  },
+  standingCombo: {
+    color: color.goldFaded,
+    fontSize: 10,
+    fontWeight: "800",
+  },
+  standingScore: {
+    color: color.gold,
+    fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 0.5,
   },
 
   // Empty / Loading
@@ -841,9 +1028,8 @@ const z = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  emptyIco: { fontSize: 36 },
   emptyTxt: {
-    color: "#E8C547",
+    color: color.gold,
     fontSize: 16,
     fontWeight: "800",
     letterSpacing: 1,
@@ -854,31 +1040,22 @@ const z = StyleSheet.create({
     textAlign: "center",
     lineHeight: 18,
   },
+  emptyTabs: {
+    flexDirection: "row",
+    marginTop: 10,
+    backgroundColor: color.bgSunken,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: color.goldLine,
+    padding: 3,
+    width: 280,
+  },
   loadText: {
     color: "rgba(232,197,71,0.35)",
     fontSize: 12,
     marginTop: 6,
     letterSpacing: 2,
   },
-
-  // Back
-  backBtn: {
-    alignSelf: "center",
-    paddingVertical: 6,
-    paddingHorizontal: 20,
-    marginBottom: 4,
-  },
-  backText: {
-    color: "#E8C547",
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 1,
-  },
-
-  // Unused but kept to avoid errors
-  contentRow: {},
-  leftCol: {},
-  rightCol: {},
 })
 
 export default Scoreboard
