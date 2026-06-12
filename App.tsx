@@ -11,6 +11,11 @@ import IntroScreen, { hasSeenIntro } from "./src/components/Introscreen"
 import { SoundService } from "./src/services/SoundService"
 import Profile from "./src/components/Profile"
 import ArenaScreen from "./src/components/Arenascreen"
+import InviteModal from "./src/components/arena/InviteModal"
+import {
+  subscribeToMyInvites,
+  clearArenaInvite,
+} from "./src/services/ArenaService"
 import LoungeScreen from "./src/components/LoungeScreen"
 import { getLoungeInfo, getSavedLoungeCode } from "./src/services/LoungeService"
 import * as SplashScreen from "expo-splash-screen"
@@ -45,6 +50,12 @@ function App() {
   const [user, setUser] = useState<UserData | null>(null)
   const [screen, setScreen] = useState<Screen>("home")
   const [roomCode, setRoomCode] = useState("")
+  // Arena room to auto-join after accepting a global invite.
+  const [arenaAutoJoin, setArenaAutoJoin] = useState<string | null>(null)
+  const [incomingInvite, setIncomingInvite] = useState<{
+    fromName: string
+    roomCode: string
+  } | null>(null)
 
   const [loungeCode, setLoungeCode] = useState<string | null>(null)
   const [loungeName, setLoungeName] = useState<string | null>(null)
@@ -82,6 +93,28 @@ function App() {
       }, 2000)
     }
   }, [introSeen])
+
+  // Listen for arena invites globally, so the modal can appear on any screen —
+  // not only while the recipient happens to be on the Arena menu.
+  useEffect(() => {
+    if (!user?.uid) return
+    const unsub = subscribeToMyInvites(user.uid, setIncomingInvite)
+    return unsub
+  }, [user?.uid])
+
+  const handleAcceptInvite = async () => {
+    if (!incomingInvite || !user) return
+    const code = incomingInvite.roomCode
+    setIncomingInvite(null)
+    await clearArenaInvite(user.uid)
+    setArenaAutoJoin(code)
+    setScreen("arena")
+  }
+
+  const handleDeclineInvite = async () => {
+    setIncomingInvite(null)
+    if (user) await clearArenaInvite(user.uid)
+  }
 
   const handleLogout = async () => {
     try {
@@ -194,6 +227,8 @@ function App() {
         }}
         uid={user.uid}
         heroName={user.heroName}
+        autoJoinCode={arenaAutoJoin}
+        onAutoJoinHandled={() => setArenaAutoJoin(null)}
       />
     ),
     arenaGame: () => (
@@ -221,6 +256,13 @@ function App() {
     <>
       <StatusBar hidden />
       {renderScreen()}
+      {incomingInvite && (
+        <InviteModal
+          invite={incomingInvite}
+          onAccept={handleAcceptInvite}
+          onDecline={handleDeclineInvite}
+        />
+      )}
     </>
   )
 }

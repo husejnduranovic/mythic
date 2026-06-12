@@ -9,7 +9,6 @@ import {
 import { Room, RoomPlayer } from "../../services/ArenaService"
 import ReturnToCastle from "../ReturnToCastle"
 import BackgroundDecor from "./BackgroundDecor"
-import InviteModal from "./InviteModal"
 import { styles } from "./arenaStyles"
 
 interface Props {
@@ -20,15 +19,12 @@ interface Props {
   isHost: boolean
   onlinePlayers: { uid: string; heroName: string }[]
   invitedUids: Set<string>
-  incomingInvite: { fromName: string; roomCode: string } | null
   fadeAnim: Animated.Value
   slideAnim: Animated.Value
   glowPulse: Animated.Value
   onStart: () => void
   onLeave: () => void
   onSendInvite: (toUid: string) => void
-  onAcceptInvite: () => void
-  onDeclineInvite: () => void
   onBack: () => void
 }
 
@@ -40,27 +36,17 @@ const ArenaLobby = ({
   isHost,
   onlinePlayers,
   invitedUids,
-  incomingInvite,
   fadeAnim,
   slideAnim,
   glowPulse,
   onStart,
   onLeave,
   onSendInvite,
-  onAcceptInvite,
-  onDeclineInvite,
   onBack,
 }: Props) => {
   return (
     <View style={styles.container}>
       <BackgroundDecor glowPulse={glowPulse} />
-      {incomingInvite && (
-        <InviteModal
-          invite={incomingInvite}
-          onAccept={onAcceptInvite}
-          onDecline={onDeclineInvite}
-        />
-      )}
       <Animated.View
         style={[
           styles.lobbyContent,

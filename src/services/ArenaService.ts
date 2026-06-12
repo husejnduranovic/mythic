@@ -113,7 +113,8 @@ export const createRoom = async (
     attempts++
   }
 
-  // Then: create the room
+  // Then: create the room. Throw on failure — returning a code for a room that
+  // was never written would point invites/joins at a nonexistent room.
   try {
     await roomRef(code).set({
       code,
@@ -135,7 +136,10 @@ export const createRoom = async (
     })
     // Setup disconnect AFTER successful room creation
     setupDisconnectHandlers(code, uid)
-  } catch (err) {}
+  } catch (err) {
+    logError("Arena.createRoom", err)
+    throw err
+  }
 
   return code
 }

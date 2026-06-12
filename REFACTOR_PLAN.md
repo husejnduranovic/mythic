@@ -137,6 +137,8 @@ New folder, pure TypeScript, no React imports — this becomes unit-testable for
 ### Step 1.8 (optional, last) — Data-driven layouts
 - `Layout1–9.tsx` (~1,800 lines total) are structurally identical position tables. Could collapse into one component + 9 data files. Defer unless needed — touching card positioning right before bug-fix work isn't worth it.
 
+**Status: ⏭️ SKIPPED** — owner elected to skip and proceed to Phase 2. Layouts left as-is.
+
 **Explicitly NOT in Phase 1** (behavior changes, need approval): RTDB polling → listener, leaderboard source change, batched rename, any scoring/gameplay change.
 
 ---
@@ -155,6 +157,8 @@ Root causes, in order of impact — `Profile.tsx:162-232` (`handleNameChange`):
 
 Proposed fix direction (for approval later): make `users/{uid}.heroName` the single source of truth; point the all-time tab at `allTimeScores` (also fixes duplicate-player slots in top 50); rename only `users` + `allTimeScores` (+ current-week `loungeScores`) in a `WriteBatch`; stop renaming historical `gameScores`/`dailyScores` (or do it in a Cloud Function trigger on `users` heroName change).
 
+**Status: ✅ FIXED** — refactor/v1.4. `getAllTimeLeaderboard` now reads `allTimeScores` (one row per player — also dedupes the top-50). New `ScoreService.renameHero(uid, newName)` renames the only docs ever displayed with a frozen heroName — `users`, `allTimeScores`, today's `dailyScores`, current-week `loungeScores` — atomically in a single `WriteBatch` (each non-`users` doc added only if it exists, so the batch never fails on a missing doc). No Cloud Function needed: the daily tab only shows today's doc and the lounge tab only the current week, so historical `gameScores`/`dailyScores` are no longer renamed at all. `Profile.handleNameChange` reduced to a single `renameHero` call; the old serial-loop handler (and Profile's direct `firestore` import) removed.
+
 ### Bug 2: Arena Invite button "not working as expected"
 
 Root causes — `Arenascreen.tsx` + `ArenaService.ts`:
@@ -165,6 +169,8 @@ Root causes — `Arenascreen.tsx` + `ArenaService.ts`:
 4. Minor: `sentAt: Date.now()` is client clock — skewed clocks break the 60s window; invite is a single `pendingInvite` field, so a second invite silently overwrites the first.
 
 Proposed fix direction (for approval later): subscribe to invites at App level (banner/modal on any screen, or at least Home + Arena); remove the `"1234"` fallback and disable invite buttons until `roomCode` is set; make `createRoom` throw on failure; surface send errors; consider a dedicated `invites/{uid}` doc or RTDB node with tight rules instead of writing to the target's user doc.
+
+**Status: ✅ FIXED** — refactor/v1.4. The invite listener (`subscribeToMyInvites`) + `InviteModal` moved to **App.tsx**, so an invite now shows on any screen — previously the modal was wired so it never actually appeared (state was set only on the menu, but rendered only in the lobby). Accepting routes to the Arena screen and auto-joins via a new `autoJoinCode` prop on `ArenaScreen`. `createRoom` now `throw`s on a failed write instead of returning a code for a room that doesn't exist. The `roomCode || "1234"` fallback is gone; `handleSendInvite` guards on `roomCode` and surfaces send failures via `logError` + an on-screen error. (Deferred: client-clock `sentAt`, single-`pendingInvite` overwrite, and moving invites off the target's user doc — left for the Phase 3 deep-link redesign.)
 
 ---
 
@@ -205,4 +211,5 @@ Proposed fix direction (for approval later): subscribe to invites at App level (
 | 7–12 | refactor: one screen-state extraction per commit (+ dead-style sweep) | medium | ✅ |
 | 13 | refactor: App screen map + presence hooks | low | ✅ |
 | 14 | refactor: split Arenascreen into menu/lobby/invite | low | ✅ |
-| — | Phase 2 fixes (separate approval, separate branch ok) | — | ⬜ |
+| — | fix: name change atomic rename + all-time source (Bug 1) | medium | ✅ |
+| — | fix: global arena invites + createRoom throws (Bug 2) | medium | ✅ |

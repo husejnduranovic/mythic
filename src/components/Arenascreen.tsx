@@ -10,10 +10,9 @@ import {
   onRoomUpdate,
   getRoomOnce,
   subscribeToOnlineUsers,
-  subscribeToMyInvites,
-  clearArenaInvite,
   sendArenaInvite,
 } from "../services/ArenaService"
+import { logError } from "../services/logError"
 import database from "@react-native-firebase/database"
 import ArenaMenu from "./arena/ArenaMenu"
 import ArenaLobby from "./arena/ArenaLobby"
@@ -23,6 +22,9 @@ interface ArenaScreenProps {
   onGameStart: (roomCode: string, isHost: boolean) => void
   uid: string
   heroName: string
+  // When set (e.g. from an accepted global invite), auto-join this room on mount.
+  autoJoinCode?: string | null
+  onAutoJoinHandled?: () => void
 }
 
 const ArenaScreen = ({
@@ -30,6 +32,8 @@ const ArenaScreen = ({
   onGameStart,
   uid,
   heroName,
+  autoJoinCode,
+  onAutoJoinHandled,
 }: ArenaScreenProps) => {
   const [mode, setMode] = useState<"menu" | "lobby">("menu")
   const [roomCode, setRoomCode] = useState("")
@@ -42,11 +46,6 @@ const ArenaScreen = ({
   const fadeAnim = useRef(new Animated.Value(0)).current
   const slideAnim = useRef(new Animated.Value(20)).current
   const glowPulse = useRef(new Animated.Value(0.3)).current
-
-  const [incomingInvite, setIncomingInvite] = useState<{
-    fromName: string
-    roomCode: string
-  } | null>(null)
 
   const [invitedUids, setInvitedUids] = useState<Set<string>>(new Set())
 
@@ -62,42 +61,17 @@ const ArenaScreen = ({
     return unsub
   }, [mode, uid])
 
-  useEffect(() => {
-    const unsub = subscribeToMyInvites(uid, (invite) => {
-      // Ne prikazuj poziv ako si već u sobi
-      if (mode === "menu" && invite) setIncomingInvite(invite)
-      else if (!invite) setIncomingInvite(null)
-    })
-    return unsub
-  }, [uid, mode])
-
-  const handleAcceptInvite = async () => {
-    if (!incomingInvite) return
-    const code = incomingInvite.roomCode
-    await clearArenaInvite(uid)
-    setIncomingInvite(null)
-    setJoinCode(code)
-    // joinaj odmah
-    const result = await joinRoom(code, uid, heroName)
-    if (result.success) {
-      setRoomCode(code)
-      const roomData = await getRoomOnce(code)
-      if (roomData) setRoom(roomData)
-      setMode("lobby")
-      subscribeToRoom(code)
-    } else {
-      setError(result.error || "Room no longer available")
-    }
-  }
-
-  const handleDeclineInvite = async () => {
-    await clearArenaInvite(uid)
-    setIncomingInvite(null)
-  }
-
   const handleSendInvite = async (toUid: string) => {
-    await sendArenaInvite(toUid, heroName, roomCode || "1234")
-    setInvitedUids((prev) => new Set(prev).add(toUid))
+    // No room → nothing to invite to. The UI also disables the button, but guard
+    // here so we never write a bogus room code into someone's invite.
+    if (!roomCode) return
+    try {
+      await sendArenaInvite(toUid, heroName, roomCode)
+      setInvitedUids((prev) => new Set(prev).add(toUid))
+    } catch (err) {
+      logError("Arena.handleSendInvite", err)
+      setError("Couldn't send invite")
+    }
   }
 
   useEffect(() => {
@@ -202,6 +176,33 @@ const ArenaScreen = ({
     setLoading(false)
   }
 
+  // Auto-join a room when arriving from an accepted global invite.
+  useEffect(() => {
+    if (!autoJoinCode) return
+    let cancelled = false
+    ;(async () => {
+      setLoading(true)
+      setError("")
+      const result = await joinRoom(autoJoinCode, uid, heroName)
+      if (cancelled) return
+      if (result.success) {
+        setRoomCode(autoJoinCode)
+        const roomData = await getRoomOnce(autoJoinCode)
+        if (cancelled) return
+        if (roomData) setRoom(roomData)
+        setMode("lobby")
+        subscribeToRoom(autoJoinCode)
+      } else {
+        setError(result.error || "Room no longer available")
+      }
+      setLoading(false)
+      onAutoJoinHandled?.()
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [autoJoinCode])
+
   const handleStart = async () => {
     if (!roomCode) return
     await startGame(roomCode)
@@ -235,15 +236,12 @@ const ArenaScreen = ({
         isHost={isHost}
         onlinePlayers={onlinePlayers}
         invitedUids={invitedUids}
-        incomingInvite={incomingInvite}
         fadeAnim={fadeAnim}
         slideAnim={slideAnim}
         glowPulse={glowPulse}
         onStart={handleStart}
         onLeave={handleLeave}
         onSendInvite={handleSendInvite}
-        onAcceptInvite={handleAcceptInvite}
-        onDeclineInvite={handleDeclineInvite}
         onBack={onBack}
       />
     )
