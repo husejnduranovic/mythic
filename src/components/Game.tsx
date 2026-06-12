@@ -51,6 +51,7 @@ import Layout9 from "./Layout9"
 import Layout8 from "./Layout8"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import ReturnToCastle from "./ReturnToCastle"
+import { AlreadyPlayedScreen } from "./game/AlreadyPlayedScreen"
 import Reanimated, {
   useSharedValue,
   useAnimatedStyle,
@@ -840,33 +841,12 @@ const Game = ({
   // Already played daily
   if (alreadyPlayed)
     return (
-      <View
-        style={[
-          styles.center,
-          {
-            backgroundColor: theme.battlefieldColor,
-            position: "relative", // add this
-            overflow: "hidden",
-          },
-        ]}
-      >
-        {battlefieldMemo}
-        <Text style={styles.dailyBadgeIcon}>📜</Text>
-        <Text style={styles.gameTitle}>QUEST COMPLETE</Text>
-        <Text style={styles.partialText}>
-          You already fought today's battle
-        </Text>
-        <View style={styles.divider} />
-        <Text style={styles.scoreLabel}>YOUR SCORE</Text>
-        <Text style={styles.finalScore}>
-          {alreadyPlayedScore.toLocaleString()}
-        </Text>
-        <View style={styles.divider} />
-        <Text style={styles.partialText}>
-          Come back tomorrow for a new quest!
-        </Text>
-        <ReturnToCastle onPress={onHome} />
-      </View>
+      <AlreadyPlayedScreen
+        theme={theme}
+        background={battlefieldMemo}
+        score={alreadyPlayedScore}
+        onHome={onHome}
+      />
     )
 
   if (preBattle && level === 1 && !alreadyPlayed)
@@ -2457,7 +2437,6 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 2,
   },
-  dailyBadgeIcon: { fontSize: 40, marginBottom: 4 },
   dailySubmitted: {
     color: "rgba(123,237,159,0.65)",
     fontSize: 12,
@@ -2628,12 +2607,6 @@ const styles = StyleSheet.create({
   },
 
   // ── Score displays ──
-  scoreLabel: {
-    color: "rgba(232,197,71,0.5)",
-    fontSize: 10,
-    fontWeight: "900",
-    letterSpacing: 4,
-  },
   finalScore: {
     color: "#E8C547",
     fontSize: 40,
