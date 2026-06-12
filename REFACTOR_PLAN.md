@@ -89,9 +89,13 @@ New folder, pure TypeScript, no React imports — this becomes unit-testable for
 - Game.tsx imports these; numbers and formulas copied verbatim.
 - Risk: very low (moves of constants and pure functions).
 
+**Status: ✅ DONE** — commit `850a7c9` (refactor/v1.4). Created `src/game/config.ts`, `src/game/scoring.ts`, and `src/game/match.ts` (`isCardMatch` moved here, re-exported from `CardService.ts`). The three inline scoring sites in Game.tsx now call `getMatchPoints`/`getBountyBonus`/`getTimeBonus`/`getDeckBonus`/`getPerfectClearBonus` — formulas copied verbatim. `tsc --noEmit` passes.
+
 ### Step 1.3 — Extract decorative components out of Game.tsx
 - `src/components/game/Battlefield.tsx` (lines 245–549 + styles `s`), `Battlements` + `WallTexture` (currently exported from Game.tsx — keep re-exports until callers updated), `PulsingCard`, `LayoutEntrance`, `bottomBarStyles`/`bs`.
 - Risk: low (self-contained `React.memo` components).
+
+**Status: ✅ DONE** — commit `ec5b5be` (refactor/v1.4). Created `src/components/game/Battlefield.tsx` (+ `s` styles), `Wall.tsx` (`Battlements`, `WallTexture` + `bs` styles), `LayoutEntrance.tsx`; Game.tsx −833 lines. No external callers existed, so no re-exports were needed. `PulsingCard` and `bottomBarStyles` were dropped instead of moved — both unreferenced (`bottomBarStyles` was a dead duplicate of `styles.*`); the dead `RUNES` import was also removed (Battlefield inlines its own rune subset). `tsc --noEmit` passes.
 
 ### Step 1.4 — Firebase service cleanup (structure only)
 - Rename `Dailychallenge.ts` → split into `src/services/ScoreService.ts` (game/all-time score submission, `updateUserProfile`, rank queries) and `src/services/DailyQuestService.ts` (`hasPlayedToday`, `submitDailyScore`, daily leaderboard). Keep function bodies identical.
