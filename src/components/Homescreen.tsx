@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native"
-import { font } from "../ui/theme"
+import { color, font } from "../ui/theme"
 
 interface HomeScreenProps {
   onPlay: () => void
@@ -241,18 +241,18 @@ const HomeScreen = ({
               styles.cardRight,
               {
                 transform: [{ rotate: card3Rot }],
-                borderColor: "rgba(46,134,193,0.5)",
+                borderColor: "rgba(26,92,138,0.5)",
               },
             ]}
           >
             <View style={styles.cardInner}>
-              <Text style={[styles.cardCorner, { color: "#2E86C1" }]}>4</Text>
+              <Text style={[styles.cardCorner, { color: "#1A5C8A" }]}>4</Text>
               <Text style={styles.cardIcon}>🐺</Text>
               <Text
                 style={[
                   styles.cardCorner,
                   styles.cardCornerBottom,
-                  { color: "#2E86C1" },
+                  { color: "#1A5C8A" },
                 ]}
               >
                 4
@@ -1181,11 +1181,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: "rgba(79,195,247,0.35)",
-    backgroundColor: "rgba(79,195,247,0.07)",
-    shadowColor: "#4FC3F7",
+    borderColor: "rgba(255,140,0,0.35)",
+    backgroundColor: "rgba(255,140,0,0.07)",
+    shadowColor: color.ember,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.2,
     shadowRadius: 10,
     elevation: 4,
     overflow: "hidden",
@@ -1197,21 +1197,21 @@ const styles = StyleSheet.create({
   },
   arenaFeatureIcon: {
     fontSize: 26,
-    textShadowColor: "rgba(79,195,247,0.5)",
+    textShadowColor: "rgba(255,140,0,0.5)",
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 10,
   },
   arenaFeatureLabel: {
     fontFamily: font.heading,
-    color: "#4FC3F7",
+    color: color.ember,
     fontSize: 16,
     letterSpacing: 2,
-    textShadowColor: "rgba(79,195,247,0.4)",
+    textShadowColor: "rgba(255,140,0,0.4)",
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 8,
   },
   arenaFeatureSub: {
-    color: "rgba(79,195,247,0.55)",
+    color: "rgba(255,140,0,0.55)",
     fontSize: 9,
     fontWeight: "700",
     letterSpacing: 1,
