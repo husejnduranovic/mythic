@@ -24,6 +24,7 @@ import { View } from "react-native"
 import { logError } from "./src/services/logError"
 import { usePresence } from "./src/hooks/usePresence"
 import { useUserStats } from "./src/hooks/useUserStats"
+import { useGameFonts } from "./src/hooks/Fonts"
 import VersionGate from "./src/components/VersionGate"
 
 SplashScreen.preventAutoHideAsync()
@@ -62,6 +63,11 @@ function App() {
 
   const [showRules, setShowRules] = useState(false)
 
+  // Cinzel display/heading fonts. Fall back silently to the system face on error
+  // so a font-load failure never blocks the app.
+  const [fontsLoaded, fontError] = useGameFonts()
+  const fontsReady = fontsLoaded || !!fontError
+
   const onlineCount = usePresence(user?.uid)
   const { currentStreak, bestStreak } = useUserStats(user?.uid)
 
@@ -87,12 +93,12 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (introSeen !== null) {
+    if (introSeen !== null && fontsReady) {
       setTimeout(() => {
         SplashScreen.hideAsync()
       }, 2000)
     }
-  }, [introSeen])
+  }, [introSeen, fontsReady])
 
   // Listen for arena invites globally, so the modal can appear on any screen —
   // not only while the recipient happens to be on the Arena menu.
@@ -135,7 +141,7 @@ function App() {
       logError("App.handleLogout", err)
     }
   }
-  if (introSeen === null) return null // loading
+  if (introSeen === null || !fontsReady) return null // loading (splash stays up)
   if (introSeen === false)
     return (
       <>

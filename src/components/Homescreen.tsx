@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native"
+import { font } from "../ui/theme"
 
 interface HomeScreenProps {
   onPlay: () => void
@@ -696,20 +697,20 @@ const styles = StyleSheet.create({
     fontSize: 8,
   },
   titleMain: {
-    fontSize: 42,
-    fontWeight: "900",
+    fontFamily: font.display,
+    fontSize: 40,
     color: "#E8C547",
-    letterSpacing: 10,
+    letterSpacing: 4, // Cinzel carries the weight — no need to fake it with wide tracking
     textShadowColor: "rgba(232,197,71,0.3)",
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 20,
   },
   titleSub: {
-    fontSize: 20,
-    fontWeight: "300",
+    fontFamily: font.heading,
+    fontSize: 18,
     color: "rgba(232,197,71,0.55)",
-    letterSpacing: 16,
-    marginTop: -8,
+    letterSpacing: 8,
+    marginTop: -2,
   },
   tagline: {
     color: "rgba(232,197,71,0.35)",
@@ -818,8 +819,8 @@ const styles = StyleSheet.create({
   },
   playIcon: { fontSize: 22 },
   playText: {
+    fontFamily: font.heading,
     fontSize: 16,
-    fontWeight: "900",
     color: "#1a1a1a",
     letterSpacing: 1.5,
   },
@@ -868,9 +869,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   dailyTitle: {
+    fontFamily: font.heading,
     color: "#E8C547",
     fontSize: 14,
-    fontWeight: "900",
     letterSpacing: 2,
   },
   dailyDesc: {
@@ -1054,9 +1055,9 @@ const styles = StyleSheet.create({
     fontSize: 28,
   },
   prizeModalTitle: {
+    fontFamily: font.heading,
     color: "rgba(255,215,0,0.6)",
-    fontSize: 10,
-    fontWeight: "900",
+    fontSize: 12,
     letterSpacing: 4,
   },
   prizeModalAmount: {
@@ -1117,9 +1118,9 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   prizeModalBtnText: {
+    fontFamily: font.heading,
     color: "#1a1a1a",
     fontSize: 14,
-    fontWeight: "900",
     letterSpacing: 2,
   },
   onlineWrap: {
@@ -1201,9 +1202,9 @@ const styles = StyleSheet.create({
     textShadowRadius: 10,
   },
   arenaFeatureLabel: {
+    fontFamily: font.heading,
     color: "#4FC3F7",
     fontSize: 16,
-    fontWeight: "900",
     letterSpacing: 2,
     textShadowColor: "rgba(79,195,247,0.4)",
     textShadowOffset: { width: 0, height: 0 },
