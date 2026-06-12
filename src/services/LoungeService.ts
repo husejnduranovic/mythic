@@ -22,7 +22,7 @@ export interface Lounge {
 }
 
 // Get current week ID (Monday-Sunday)
-const getWeekId = (): string => {
+export const getWeekId = (): string => {
   const now = new Date()
   const monday = new Date(now)
   monday.setDate(now.getDate() - ((now.getDay() + 6) % 7))

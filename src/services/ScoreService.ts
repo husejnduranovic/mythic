@@ -1,20 +1,27 @@
 import firestore from "@react-native-firebase/firestore"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import { getTodayString, getYesterdayString } from "./CardService"
-import { Collections } from "./collections"
+import { Collections, dailyScoreId, loungeScoreId } from "./collections"
 import { StorageKeys } from "./storageKeys"
 import { logError } from "./logError"
 import { submitDailyScore } from "./DailyQuestService"
-import { getSavedLoungeCode, submitLoungeScore } from "./LoungeService"
+import {
+  getSavedLoungeCode,
+  submitLoungeScore,
+  getWeekId,
+} from "./LoungeService"
 import { updatePlayerScore } from "./ArenaService"
 import { TOTAL_LEVELS } from "../game/config"
 import type { DailyScore } from "./DailyQuestService"
 
-// Get all-time best scores (top 50)
+// Get all-time best scores (top 50).
+// Reads allTimeScores (one doc per user = one row per player), not the raw
+// per-game gameScores collection — so a player appears once and renames only
+// have to touch a single doc.
 export const getAllTimeLeaderboard = async (): Promise<DailyScore[]> => {
   try {
     const snapshot = await firestore()
-      .collection(Collections.gameScores)
+      .collection(Collections.allTimeScores)
       .orderBy("score", "desc")
       .limit(50)
       .get()
@@ -158,6 +165,71 @@ export const getUserProfile = async (uid: string): Promise<any> => {
   } catch (err) {
     logError("Score.getUserProfile", err)
     return null
+  }
+}
+
+// Rename a player's heroName everywhere it's actually displayed.
+// users/{uid} is the source of truth; the only other docs read with a frozen
+// heroName all have deterministic IDs: the all-time row (one per user), the
+// current daily entry, and the current-week lounge entry. We rename exactly
+// those, atomically, in a single WriteBatch — no looping over historical
+// gameScores/dailyScores (the all-time tab no longer reads gameScores, and the
+// daily/lounge tabs only ever show the current period). If any write fails the
+// batch rolls back, so the displayed name never ends up half-renamed.
+export const renameHero = async (
+  uid: string,
+  newName: string,
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const db = firestore()
+
+    // Reject if another user already holds the name.
+    const existing = await db
+      .collection(Collections.users)
+      .where("heroName", "==", newName)
+      .limit(1)
+      .get()
+    if (!existing.empty && existing.docs[0].id !== uid) {
+      return { success: false, error: "Name already taken" }
+    }
+
+    const batch = db.batch()
+
+    // users — always exists, the source of truth.
+    batch.update(db.collection(Collections.users).doc(uid), {
+      heroName: newName,
+    })
+
+    // allTimeScores — one doc per user; only present once they've scored.
+    const allTimeRef = db.collection(Collections.allTimeScores).doc(uid)
+    if ((await allTimeRef.get()).exists()) {
+      batch.update(allTimeRef, { heroName: newName })
+    }
+
+    // Today's daily entry — the only daily doc the leaderboard ever shows.
+    const dailyRef = db
+      .collection(Collections.dailyScores)
+      .doc(dailyScoreId(getTodayString(), uid))
+    if ((await dailyRef.get()).exists()) {
+      batch.update(dailyRef, { heroName: newName })
+    }
+
+    // Current-week lounge entry, if the player is in a lounge.
+    const loungeCode = await getSavedLoungeCode()
+    if (loungeCode) {
+      const loungeRef = db
+        .collection(Collections.loungeScores)
+        .doc(loungeScoreId(loungeCode, getWeekId(), uid))
+      if ((await loungeRef.get()).exists()) {
+        batch.update(loungeRef, { heroName: newName })
+      }
+    }
+
+    await batch.commit()
+    return { success: true }
+  } catch (err) {
+    logError("Score.renameHero", err)
+    return { success: false, error: "Failed to update" }
   }
 }
 

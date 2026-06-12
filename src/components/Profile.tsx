@@ -9,8 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native"
-import firestore from "@react-native-firebase/firestore"
-import { getUserProfile } from "../services/ScoreService"
+import { getUserProfile, renameHero } from "../services/ScoreService"
 import ReturnToCastle from "./ReturnToCastle"
 
 import { Dimensions } from "react-native"
@@ -177,59 +176,14 @@ const Profile = ({ onBack, uid, heroName, onNameChange }: ProfileProps) => {
     setNameSaving(true)
     setNameError("")
 
-    try {
-      const existing = await firestore()
-        .collection("users")
-        .where("heroName", "==", trimmed)
-        .limit(1)
-        .get()
-
-      if (!existing.empty && existing.docs[0].id !== uid) {
-        setNameError("Name already taken")
-        setNameSaving(false)
-        return
-      }
-
-      await firestore()
-        .collection("users")
-        .doc(uid)
-        .update({ heroName: trimmed })
-
-      const allTimeDoc = await firestore()
-        .collection("allTimeScores")
-        .doc(uid)
-        .get()
-      if (allTimeDoc.exists()) {
-        await firestore()
-          .collection("allTimeScores")
-          .doc(uid)
-          .update({ heroName: trimmed })
-      }
-
-      const gameScoreDocs = await firestore()
-        .collection("gameScores")
-        .where("uid", "==", uid)
-        .get()
-      for (const doc of gameScoreDocs.docs) {
-        await doc.ref.update({ heroName: trimmed })
-      }
-
-      const dailyDocs = await firestore()
-        .collection("dailyScores")
-        .where("uid", "==", uid)
-        .get()
-      for (const doc of dailyDocs.docs) {
-        await doc.ref.update({ heroName: trimmed })
-      }
-
-      setEditingName(false)
-      setNameSaving(false)
-      onNameChange?.(trimmed)
-    } catch (err) {
-      setNameError("Failed to update")
-      console.log("err name update", err)
-      setNameSaving(false)
+    const res = await renameHero(uid, trimmed)
+    setNameSaving(false)
+    if (!res.success) {
+      setNameError(res.error || "Failed to update")
+      return
     }
+    setEditingName(false)
+    onNameChange?.(trimmed)
   }
 
   if (loading)
