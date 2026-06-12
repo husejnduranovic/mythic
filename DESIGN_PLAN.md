@@ -51,8 +51,11 @@ Written 2026-06-12 from a full audit of the codebase (branch `refactor/v1.4-phas
 |---|---|---|
 | `be88536` | `src/ui/theme.ts` design tokens; activate Cinzel via `useGameFonts()` in App.tsx (splash held until fonts ready, silent fallback); Cinzel applied to **Home** title + primary CTA labels | ✅ shipped |
 | `b5ad456` | **Home** de-blue: Arena tile `#4FC3F7` → `ember`; fanned wolf card `#2E86C1` → steel `#1A5C8A`; starts consuming `color` tokens | ✅ shipped |
+| `d10ceab` | `src/ui/Icon.tsx` shared icon family (MaterialCommunityIcons, no new dep). Chrome emoji → icons on **Home** + **Arena menu/lobby/invite**; Cinzel on Arena titles + button labels; lobby de-blued (YOU chip parchment/ink, your-row border gold) | ✅ shipped |
 
-Backlog status: **P0-5** (theme.ts) ✅ done. **P0-1** (fonts) 🟡 partial — infra + Home done; remaining screens migrate per-slice. **P0-3** (kill off-palette accents) 🟡 partial — Home done; Arena/lobby/timer/combo/ranks/Free Draw still neon. Everything else not started. Owner signed off on the typography + Home palette direction (2026-06-12).
+Backlog status: **P0-5** (theme.ts) ✅ done. **P0-1** (fonts) 🟡 partial — Home + Arena done; Profile/Scoreboard/Armory/Game still system font. **P0-3** (kill off-palette accents) 🟡 partial — Home + Arena/lobby done; timer/combo/ranks/Free Draw still neon. **P0-4** (icon system) 🟡 partial — `Icon.tsx` built; Home + Arena swapped; Profile/Scoreboard/Armory/Game/Timer still emoji. Owner signed off on typography + Home palette + icon direction (2026-06-12).
+
+Known dead-code carryover: Homescreen's commented-out `menuGrid`/`loungeBtn` blocks still contain old emoji + neon rgba but render nowhere — pending a dedicated cleanup commit.
 
 ---
 
@@ -369,7 +372,7 @@ Direction to bring to that phase (strawman for discussion, not commitment) — o
 - **Heronames containing emoji** (e.g. "LEMON🍋", scoreboard-screen.jpg): user data, leave rendering as-is; optionally strip emoji at rename input later. Note only.
 - **CLAUDE.md drift**: combo milestones are 5/8/12/16/20/24/28/32 in code (CLAUDE.md says 3/5/7/10/15/20/25/30) and multipliers reach 3.5× (says 1–3×) — update CLAUDE.md when convenient.
 - **Build workflow:** fonts + `@expo/vector-icons` = JS-only (safe with `gradlew bundleRelease`). `react-native-safe-area-context` and (later) `react-native-svg` are native but autolink through the existing `android/` folder with a normal gradle build — **do NOT run `expo prebuild`** for them (signing-config wipe). NDK pin untouched.
-- **Suggested commit sequence for Phase 3 implementation:** (1) theme.ts + fonts activated on Home only → visual sign-off ✅ `be88536` (+ Home de-blue ✅ `b5ad456`); (2) icons dep + Home/Arena/Lobby; (3) Profile fix (own commit, test devices); (4) Armory tiles + tabs; (5) Scoreboard; (6) Game board accents (timer/free-draw/combo colors); (7) between-levels/game-over layout rebalance; (8) shared-component migration sweep; (9) "One More Battle" module + share-score button (§6.5, §10 A-1); (10) First Victory celebration (R5) + coach marks (R2); (11) FCM nudge (R1); then store-listing refresh (§10 A-3, non-code). Each slice builds & ships independently per working rules.
+- **Suggested commit sequence for Phase 3 implementation:** (1) theme.ts + fonts activated on Home only → visual sign-off ✅ `be88536` (+ Home de-blue ✅ `b5ad456`); (2) icons dep + Home/Arena/Lobby ✅ `d10ceab`; (3) Profile fix (own commit, test devices); (4) Armory tiles + tabs; (5) Scoreboard; (6) Game board accents (timer/free-draw/combo colors); (7) between-levels/game-over layout rebalance; (8) shared-component migration sweep; (9) "One More Battle" module + share-score button (§6.5, §10 A-1); (10) First Victory celebration (R5) + coach marks (R2); (11) FCM nudge (R1); then store-listing refresh (§10 A-3, non-code). Each slice builds & ships independently per working rules.
 
 ---
 
