@@ -12,6 +12,16 @@ import { SoundService } from "../services/SoundService"
 import { StorageKeys } from "../services/storageKeys"
 import { logError } from "../services/logError"
 import ReturnToCastle from "./ReturnToCastle"
+import { Icon, IconName } from "../ui/Icon"
+import { color, font } from "../ui/theme"
+
+const withAlpha = (hex: string, a: number): string => {
+  const h = hex.replace("#", "")
+  const r = parseInt(h.slice(0, 2), 16)
+  const g = parseInt(h.slice(2, 4), 16)
+  const b = parseInt(h.slice(4, 6), 16)
+  return `rgba(${r},${g},${b},${a})`
+}
 
 interface ArmoryProps {
   onBack: () => void
@@ -44,10 +54,10 @@ export const WILD_STYLE_CONFIG: Record<
 > = {
   spark: { color: "#1C1200", accent: "#FFD700", icon: "⚡" },
   steel: { color: "#1A1A1E", accent: "#C0C8D0", icon: "⚔" },
-  frost: { color: "#061C2A", accent: "#66DDFF", icon: "❄️" },
-  venom: { color: "#081A08", accent: "#44FF66", icon: "☠️" },
-  storm: { color: "#110820", accent: "#AA66FF", icon: "🌩" },
-  inferno_bolt: { color: "#1E0400", accent: "#FF4400", icon: "🔥" }, // 42-day streak
+  frost: { color: "#061C2A", accent: "#8FCDE8", icon: "❄️" },
+  venom: { color: "#081A08", accent: "#57C878", icon: "☠️" },
+  storm: { color: "#110820", accent: "#9A7FD4", icon: "🌩" },
+  inferno_bolt: { color: "#1E0400", accent: "#E85A2A", icon: "🔥" }, // 42-day streak
 }
 
 export const WAR_TABLE_CONFIG: Record<
@@ -257,7 +267,7 @@ const WILD_STYLES: {
     name: "Frost Strike",
     icon: "❄️",
     color: "#061C2A",
-    accent: "#66DDFF",
+    accent: "#8FCDE8",
     unlockReq: 5,
     unlockLabel: "5 battles",
   },
@@ -266,7 +276,7 @@ const WILD_STYLES: {
     name: "Venom Fang",
     icon: "☠️",
     color: "#081A08",
-    accent: "#44FF66",
+    accent: "#57C878",
     unlockReq: 20,
     unlockLabel: "20 battles",
   },
@@ -275,7 +285,7 @@ const WILD_STYLES: {
     name: "Storm Surge",
     icon: "🌩",
     color: "#110820",
-    accent: "#AA66FF",
+    accent: "#9A7FD4",
     unlockReq: 60,
     unlockLabel: "60 battles",
   },
@@ -284,7 +294,7 @@ const WILD_STYLES: {
     name: "Inferno Bolt",
     icon: "🔥",
     color: "#1E0400",
-    accent: "#FF4400",
+    accent: "#E85A2A",
     unlockReq: 0,
     streakReq: 42,
     unlockLabel: "42 day streak",
@@ -487,11 +497,11 @@ const STORAGE_KEYS = {
 
 type TabType = "cards" | "fields" | "bounty" | "table"
 
-const TAB_CONFIG: { key: TabType; icon: string; label: string }[] = [
-  { key: "cards", icon: "🃏", label: "Backs" },
-  { key: "fields", icon: "🏟", label: "Fields" },
-  { key: "bounty", icon: "💰", label: "Bounty" },
-  { key: "table", icon: "⚒", label: "Table" },
+const TAB_CONFIG: { key: TabType; icon: IconName; label: string }[] = [
+  { key: "cards", icon: "cards", label: "Backs" },
+  { key: "fields", icon: "image-filter-hdr", label: "Fields" },
+  { key: "bounty", icon: "sack", label: "Bounty" },
+  { key: "table", icon: "table-furniture", label: "Table" },
 ]
 
 // One-time migration: clears legacy cosmetic IDs that no longer exist.
@@ -704,8 +714,6 @@ const Armory = ({ onBack }: ArmoryProps) => {
         <Text style={[z.bgRune, { top: "12%", right: "5%" }]}>ᚦ</Text>
         <Text style={[z.bgRune, { bottom: "15%", left: "8%" }]}>ᚱ</Text>
         <Text style={[z.bgRune, { bottom: "18%", right: "6%" }]}>ᛟ</Text>
-        <Text style={[z.bgBeast, { top: "25%", left: "12%" }]}>🛡</Text>
-        <Text style={[z.bgBeast, { bottom: "28%", right: "10%" }]}>⚔</Text>
         <View style={z.bgHLine} />
       </View>
 
@@ -721,10 +729,16 @@ const Armory = ({ onBack }: ArmoryProps) => {
             <Text style={z.headerDot}>◆</Text>
             <View style={z.headerLine} />
           </View>
-          <Text style={z.title}>🛡 ARMORY</Text>
-          <Text style={z.statsText}>
-            ⚔ {gamesPlayed} battles · {unlockedCount}/{items.length} unlocked
-          </Text>
+          <View style={z.titleRow}>
+            <Icon name="shield-half-full" size={20} color={color.goldFaded} />
+            <Text style={z.title}>ARMORY</Text>
+          </View>
+          <View style={z.statsRow}>
+            <Icon name="sword-cross" size={11} color={color.goldFaded} />
+            <Text style={z.statsText}>
+              {gamesPlayed} battles · {unlockedCount}/{items.length} unlocked
+            </Text>
+          </View>
           {nextLock && (
             <Text style={z.nextUnlock}>
               {(nextLock as any).streakReq
@@ -746,9 +760,11 @@ const Armory = ({ onBack }: ArmoryProps) => {
                 }}
                 activeOpacity={0.85}
               >
-                <Text style={[z.tabIco, tab !== t.key && { opacity: 0.4 }]}>
-                  {t.icon}
-                </Text>
+                <Icon
+                  name={t.icon}
+                  size={14}
+                  color={tab === t.key ? color.gold : color.goldFaded}
+                />
                 <Text style={[z.tabTxt, tab === t.key && z.tabTxtOn]}>
                   {t.label}
                 </Text>
@@ -780,16 +796,16 @@ const Armory = ({ onBack }: ArmoryProps) => {
                         ? "rgba(40,10,0,0.6)"
                         : "rgba(10,15,12,0.5)",
                     borderColor: isSel
-                      ? item.accent
+                      ? color.gold
                       : unlocked
-                        ? "rgba(232,197,71,0.15)"
+                        ? color.goldLine
                         : item.streakReq
                           ? "rgba(255,100,0,0.15)"
                           : "rgba(255,255,255,0.05)",
                     borderWidth: isSel ? 2 : 1,
                   },
                   isSel && {
-                    shadowColor: item.accent,
+                    shadowColor: color.gold,
                     shadowOffset: { width: 0, height: 0 },
                     shadowOpacity: 0.5,
                     shadowRadius: 8,
@@ -802,53 +818,24 @@ const Armory = ({ onBack }: ArmoryProps) => {
               >
                 {unlocked && (
                   <>
-                    <Text
-                      style={[
-                        z.corn,
-                        { top: 2, left: 3, color: item.accent + "60" },
-                      ]}
-                    >
-                      ✦
-                    </Text>
-                    <Text
-                      style={[
-                        z.corn,
-                        { top: 2, right: 3, color: item.accent + "60" },
-                      ]}
-                    >
-                      ✦
-                    </Text>
-                    <Text
-                      style={[
-                        z.corn,
-                        { bottom: 2, left: 3, color: item.accent + "60" },
-                      ]}
-                    >
-                      ✦
-                    </Text>
-                    <Text
-                      style={[
-                        z.corn,
-                        { bottom: 2, right: 3, color: item.accent + "60" },
-                      ]}
-                    >
-                      ✦
-                    </Text>
+                    <Text style={[z.corn, { top: 2, left: 3 }]}>◆</Text>
+                    <Text style={[z.corn, { top: 2, right: 3 }]}>◆</Text>
+                    <Text style={[z.corn, { bottom: 2, left: 3 }]}>◆</Text>
+                    <Text style={[z.corn, { bottom: 2, right: 3 }]}>◆</Text>
                   </>
                 )}
 
-                <Text
-                  style={[
-                    z.itemIcon,
-                    unlocked && {
-                      textShadowColor: item.accent,
-                      textShadowOffset: { width: 0, height: 0 },
-                      textShadowRadius: 8,
-                    },
-                  ]}
-                >
-                  {unlocked ? item.icon : item.streakReq ? "🗝" : "🔒"}
-                </Text>
+                <View style={z.iconWell}>
+                  {unlocked ? (
+                    <Text style={z.itemIcon}>{item.icon}</Text>
+                  ) : (
+                    <Icon
+                      name={item.streakReq ? "key-variant" : "lock"}
+                      size={22}
+                      color={color.steel}
+                    />
+                  )}
+                </View>
 
                 <Text
                   style={[
@@ -864,8 +851,8 @@ const Armory = ({ onBack }: ArmoryProps) => {
                 </Text>
 
                 {isSel && (
-                  <View style={[z.check, { backgroundColor: item.accent }]}>
-                    <Text style={z.checkTxt}>✓</Text>
+                  <View style={z.check}>
+                    <Icon name="check" size={12} color={color.ink} />
                   </View>
                 )}
 
@@ -885,7 +872,7 @@ const Armory = ({ onBack }: ArmoryProps) => {
                         item.streakReq && { color: "rgba(255,140,0,0.5)" },
                       ]}
                     >
-                      {item.streakReq ? "🔥 STREAK" : "LOCKED"}
+                      {item.streakReq ? "STREAK" : "LOCKED"}
                     </Text>
                   </View>
                 )}
@@ -922,11 +909,6 @@ const z = StyleSheet.create({
     fontSize: 22,
     color: "rgba(232,197,71,0.04)",
   },
-  bgBeast: {
-    position: "absolute",
-    fontSize: 42,
-    color: "rgba(232,197,71,0.03)",
-  },
   bgHLine: {
     position: "absolute",
     top: "50%",
@@ -946,21 +928,27 @@ const z = StyleSheet.create({
   },
   headerLine: { width: 30, height: 1, backgroundColor: "rgba(232,197,71,0.2)" },
   headerDot: { color: "rgba(232,197,71,0.4)", fontSize: 7 },
+  titleRow: { flexDirection: "row", alignItems: "center", gap: 7 },
   title: {
-    color: "#E8C547",
+    color: color.gold,
     fontSize: 18,
-    fontWeight: "900",
-    letterSpacing: 5,
+    fontFamily: font.heading,
+    letterSpacing: 3,
     textShadowColor: "rgba(232,197,71,0.3)",
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 12,
+  },
+  statsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 3,
   },
   statsText: {
     color: "rgba(232,197,71,0.45)",
     fontSize: 10,
     fontWeight: "700",
     letterSpacing: 2,
-    marginTop: 3,
   },
   nextUnlock: {
     color: "rgba(232,197,71,0.25)",
@@ -995,7 +983,6 @@ const z = StyleSheet.create({
     backgroundColor: "rgba(232,197,71,0.1)",
     alignSelf: "center",
   },
-  tabIco: { fontSize: 11 },
   tabTxt: {
     color: "rgba(232,197,71,0.4)",
     fontSize: 9,
@@ -1023,8 +1010,17 @@ const z = StyleSheet.create({
     overflow: "hidden",
     padding: 4,
   },
-  corn: { position: "absolute", fontSize: 6 },
-  itemIcon: { fontSize: 26, marginBottom: 4 },
+  corn: { position: "absolute", fontSize: 6, color: color.goldLine },
+  iconWell: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: color.bgSunken,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  itemIcon: { fontSize: 24 },
   itemName: {
     color: "rgba(255,255,255,0.7)",
     fontSize: 9,
@@ -1045,12 +1041,12 @@ const z = StyleSheet.create({
     width: 18,
     height: 18,
     borderRadius: 9,
+    backgroundColor: color.gold,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2,
-    borderColor: "#0B1410",
+    borderColor: color.bgBase,
   },
-  checkTxt: { fontSize: 10, fontWeight: "900", color: "#0B1410" },
 
   lockBadge: {
     position: "absolute",
