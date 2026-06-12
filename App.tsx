@@ -26,6 +26,7 @@ import { usePresence } from "./src/hooks/usePresence"
 import { useUserStats } from "./src/hooks/useUserStats"
 import { useGameFonts } from "./src/hooks/Fonts"
 import VersionGate from "./src/components/VersionGate"
+import { SafeAreaProvider } from "react-native-safe-area-context"
 
 SplashScreen.preventAutoHideAsync()
 
@@ -274,9 +275,11 @@ function App() {
 }
 
 const AppWithGate = () => (
-  <VersionGate>
-    <App />
-  </VersionGate>
+  <SafeAreaProvider>
+    <VersionGate>
+      <App />
+    </VersionGate>
+  </SafeAreaProvider>
 )
 
 export default AppWithGate
