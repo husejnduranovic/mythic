@@ -227,6 +227,7 @@ const Profile = ({ onBack, uid, heroName, onNameChange }: ProfileProps) => {
       onNameChange?.(trimmed)
     } catch (err) {
       setNameError("Failed to update")
+      console.log("err name update", err)
       setNameSaving(false)
     }
   }
