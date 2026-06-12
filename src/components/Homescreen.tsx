@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native"
 import { color, font } from "../ui/theme"
+import { Icon } from "../ui/Icon"
 
 interface HomeScreenProps {
   onPlay: () => void
@@ -263,7 +264,9 @@ const HomeScreen = ({
         {/* Hero greeting */}
         <Animated.View style={[styles.greetingWrap, { opacity: titleOpacity }]}>
           <View style={styles.greetingLine} />
-          <Text style={styles.greetingText}>⚔ {heroName} ⚔</Text>
+          <Icon name="sword-cross" size={12} color={color.gold} />
+          <Text style={styles.greetingText}>{heroName}</Text>
+          <Icon name="sword-cross" size={12} color={color.gold} />
           <View style={styles.greetingLine} />
         </Animated.View>
         {(currentStreak || 0) > 0 && (
@@ -283,7 +286,7 @@ const HomeScreen = ({
           onPress={() => setPrizeModalVisible(true)}
           activeOpacity={0.8}
         >
-          <Text style={styles.prizeTagIcon}>🏆</Text>
+          <Icon name="trophy-variant" size={13} color="rgba(255,215,0,0.8)" />
           <Text style={styles.prizeTagText}>
             6 Battlefields · 4 Beast Clans · €100 Monthly Prize
           </Text>
@@ -307,7 +310,7 @@ const HomeScreen = ({
           activeOpacity={0.85}
         >
           <View style={styles.playBtnInner}>
-            <Text style={styles.playIcon}>⚔</Text>
+            <Icon name="sword-cross" size={22} color="#1a1a1a" />
             <View>
               <Text style={styles.playText}>Enter Battle</Text>
               <Text style={styles.playSubtext}>Start a new conquest</Text>
@@ -322,7 +325,12 @@ const HomeScreen = ({
           activeOpacity={0.85}
         >
           <View style={styles.dailyHeader}>
-            <Text style={styles.dailyBadge}>📜 TODAY</Text>
+            <Icon
+              name="script-text-outline"
+              size={11}
+              color="rgba(232,197,71,0.6)"
+            />
+            <Text style={styles.dailyBadge}>TODAY</Text>
             <View style={styles.dailyLiveDot} />
           </View>
           <Text style={styles.dailyTitle}>Daily Quest</Text>
@@ -445,7 +453,7 @@ const HomeScreen = ({
           activeOpacity={0.85}
         >
           <View style={styles.arenaFeatureLeft}>
-            <Text style={styles.arenaFeatureIcon}>🏟</Text>
+            <Icon name="sword-cross" size={26} color={color.ember} />
             <View>
               <Text style={styles.arenaFeatureLabel}>Arena</Text>
               <Text style={styles.arenaFeatureSub}>Real-time multiplayer</Text>
@@ -466,7 +474,7 @@ const HomeScreen = ({
             onPress={onScoreboard}
             activeOpacity={0.7}
           >
-            <Text style={styles.railIcon}>🏆</Text>
+            <Icon name="trophy-variant" size={20} color={color.goldFaded} />
             <Text style={styles.railLabel}>Glory</Text>
           </TouchableOpacity>
           <View style={styles.railDivider} />
@@ -475,7 +483,7 @@ const HomeScreen = ({
             onPress={onProfile}
             activeOpacity={0.7}
           >
-            <Text style={styles.railIcon}>👤</Text>
+            <Icon name="shield-account" size={20} color={color.goldFaded} />
             <Text style={styles.railLabel}>Profile</Text>
           </TouchableOpacity>
           <View style={styles.railDivider} />
@@ -484,7 +492,7 @@ const HomeScreen = ({
             onPress={onArmory}
             activeOpacity={0.7}
           >
-            <Text style={styles.railIcon}>🛡</Text>
+            <Icon name="shield-half-full" size={20} color={color.goldFaded} />
             <Text style={styles.railLabel}>Armory</Text>
           </TouchableOpacity>
           <View style={styles.railDivider} />
@@ -493,7 +501,11 @@ const HomeScreen = ({
             onPress={onHowToPlay}
             activeOpacity={0.7}
           >
-            <Text style={styles.railIcon}>📜</Text>
+            <Icon
+              name="script-text-outline"
+              size={20}
+              color={color.goldFaded}
+            />
             <Text style={styles.railLabel}>Guide</Text>
           </TouchableOpacity>
         </View>
@@ -521,7 +533,8 @@ const HomeScreen = ({
       {/* Logout */}
       {onLogout && (
         <TouchableOpacity style={styles.logoutBtn} onPress={onLogout}>
-          <Text style={styles.logoutText}>🚪 Sign Out</Text>
+          <Icon name="logout-variant" size={11} color="rgba(255,255,255,0.3)" />
+          <Text style={styles.logoutText}>Sign Out</Text>
         </TouchableOpacity>
       )}
 
@@ -542,21 +555,45 @@ const HomeScreen = ({
                 <Text style={styles.prizeModalOrnDot}>◆</Text>
                 <View style={styles.prizeModalOrnLine} />
               </View>
-              <Text style={styles.prizeModalTrophy}>🏆</Text>
+              <Icon
+                name="trophy-variant"
+                size={30}
+                color={color.gold}
+                style={{ marginBottom: 2 }}
+              />
               <Text style={styles.prizeModalTitle}>MONTHLY PRIZES</Text>
               <Text style={styles.prizeModalAmount}>€100</Text>
               <View style={styles.prizeModalDivider} />
               <Text style={styles.prizeModalHow}>HOW IT WORKS</Text>
               <View style={styles.prizeModalSteps}>
-                <Text style={styles.prizeModalStep}>
-                  ⚔ Play battles and earn spoils
-                </Text>
-                <Text style={styles.prizeModalStep}>
-                  📜 Complete Daily Quests for bonus
-                </Text>
-                <Text style={styles.prizeModalStep}>🥇 1st place — €50</Text>
-                <Text style={styles.prizeModalStep}>🥈 2nd place — €30</Text>
-                <Text style={styles.prizeModalStep}>🥉 3rd place — €20</Text>
+                <View style={styles.prizeModalStepRow}>
+                  <Icon name="sword-cross" size={13} color={color.goldFaded} />
+                  <Text style={styles.prizeModalStep}>
+                    Play battles and earn spoils
+                  </Text>
+                </View>
+                <View style={styles.prizeModalStepRow}>
+                  <Icon
+                    name="script-text-outline"
+                    size={13}
+                    color={color.goldFaded}
+                  />
+                  <Text style={styles.prizeModalStep}>
+                    Complete Daily Quests for bonus
+                  </Text>
+                </View>
+                <View style={styles.prizeModalStepRow}>
+                  <Icon name="medal" size={13} color="#E8C547" />
+                  <Text style={styles.prizeModalStep}>1st place — €50</Text>
+                </View>
+                <View style={styles.prizeModalStepRow}>
+                  <Icon name="medal" size={13} color="#C9D1D9" />
+                  <Text style={styles.prizeModalStep}>2nd place — €30</Text>
+                </View>
+                <View style={styles.prizeModalStepRow}>
+                  <Icon name="medal" size={13} color="#B07B4F" />
+                  <Text style={styles.prizeModalStep}>3rd place — €20</Text>
+                </View>
               </View>
               <View style={styles.prizeModalDivider} />
               <Text style={styles.prizeModalNote}>
@@ -567,7 +604,8 @@ const HomeScreen = ({
                 onPress={() => setPrizeModalVisible(false)}
                 activeOpacity={0.85}
               >
-                <Text style={styles.prizeModalBtnText}>⚔ Understood</Text>
+                <Icon name="sword-cross" size={14} color="#1a1a1a" />
+                <Text style={styles.prizeModalBtnText}>Understood</Text>
               </TouchableOpacity>
               <View style={styles.prizeModalOrn}>
                 <View style={styles.prizeModalOrnLine} />
@@ -817,7 +855,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
-  playIcon: { fontSize: 22 },
   playText: {
     fontFamily: font.heading,
     fontSize: 16,
@@ -940,6 +977,9 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 8,
     right: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 6,
@@ -978,9 +1018,6 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderWidth: 1,
     borderColor: "rgba(255,215,0,0.15)",
-  },
-  prizeTagIcon: {
-    fontSize: 12,
   },
   prizeTagText: {
     color: "rgba(255,215,0,0.7)",
@@ -1051,9 +1088,6 @@ const styles = StyleSheet.create({
     color: "rgba(255,215,0,0.35)",
     fontSize: 6,
   },
-  prizeModalTrophy: {
-    fontSize: 28,
-  },
   prizeModalTitle: {
     fontFamily: font.heading,
     color: "rgba(255,215,0,0.6)",
@@ -1088,6 +1122,11 @@ const styles = StyleSheet.create({
     alignContent: "center",
     alignItems: "center",
   },
+  prizeModalStepRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   prizeModalStep: {
     color: "rgba(255,255,255,0.5)",
     fontSize: 11,
@@ -1107,7 +1146,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 10,
     minWidth: 200,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
     marginTop: 4,
     borderWidth: 1.5,
     borderColor: "#D4A017",
@@ -1195,12 +1237,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
-  arenaFeatureIcon: {
-    fontSize: 26,
-    textShadowColor: "rgba(255,140,0,0.5)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 10,
-  },
   arenaFeatureLabel: {
     fontFamily: font.heading,
     color: color.ember,
@@ -1262,10 +1298,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 3,
     paddingVertical: 2,
-  },
-  railIcon: {
-    fontSize: 18,
-    opacity: 0.85,
   },
   railLabel: {
     color: "rgba(232,197,71,0.6)",

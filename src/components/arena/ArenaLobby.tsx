@@ -10,6 +10,8 @@ import { Room, RoomPlayer } from "../../services/ArenaService"
 import ReturnToCastle from "../ReturnToCastle"
 import BackgroundDecor from "./BackgroundDecor"
 import { styles } from "./arenaStyles"
+import { Icon } from "../../ui/Icon"
+import { color } from "../../ui/theme"
 
 interface Props {
   room: Room
@@ -90,7 +92,7 @@ const ArenaLobby = ({
                   disabled={players.length < 2}
                   activeOpacity={0.85}
                 >
-                  <Text style={styles.goldBtnIcon}>⚔</Text>
+                  <Icon name="sword-cross" size={16} color="#1a1a1a" />
                   <Text style={styles.goldBtnText}>
                     {players.length < 2 ? "Need 2+ warriors" : "Start Battle"}
                   </Text>
@@ -102,7 +104,12 @@ const ArenaLobby = ({
                 </View>
               )}
               <TouchableOpacity style={styles.leaveBtn} onPress={onLeave}>
-                <Text style={styles.leaveBtnText}>🚪 Leave Room</Text>
+                <Icon
+                  name="door-open"
+                  size={12}
+                  color="rgba(255,100,100,0.6)"
+                />
+                <Text style={styles.leaveBtnText}>Leave Room</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -138,9 +145,15 @@ const ArenaLobby = ({
                         isPlayerHost && styles.playerAvatarHost,
                       ]}
                     >
-                      <Text style={styles.playerIcon}>
-                        {isPlayerHost ? "👑" : "⚔"}
-                      </Text>
+                      {isPlayerHost ? (
+                        <Icon name="crown" size={14} color={color.goldBright} />
+                      ) : (
+                        <Icon
+                          name="sword-cross"
+                          size={13}
+                          color={color.goldFaded}
+                        />
+                      )}
                     </View>
                     <Text
                       style={[styles.playerName, isYou && styles.playerNameYou]}
@@ -164,7 +177,11 @@ const ArenaLobby = ({
                 (_, i) => (
                   <View key={`empty-${i}`} style={styles.playerRowEmpty}>
                     <View style={styles.playerAvatarEmpty}>
-                      <Text style={styles.emptySlotIcon}>?</Text>
+                      <Icon
+                        name="help"
+                        size={14}
+                        color="rgba(232,197,71,0.3)"
+                      />
                     </View>
                     <Text style={styles.emptySlotText}>
                       Waiting for warrior...
@@ -204,7 +221,11 @@ const ArenaLobby = ({
                       return (
                         <View key={`${p.uid}-${i}`} style={styles.inviteRow}>
                           <View style={styles.onlineCardAvatar}>
-                            <Text style={styles.onlineCardAvatarText}>⚔</Text>
+                            <Icon
+                              name="sword-cross"
+                              size={11}
+                              color={color.goldFaded}
+                            />
                           </View>
                           <Text style={styles.inviteName} numberOfLines={1}>
                             {p.heroName}

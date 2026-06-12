@@ -1,4 +1,5 @@
 import { StyleSheet } from "react-native"
+import { color, font } from "../../ui/theme"
 
 export const styles = StyleSheet.create({
   // Two-column layout
@@ -56,10 +57,6 @@ export const styles = StyleSheet.create({
     borderStyle: "dashed",
     gap: 6,
   },
-  emptyOnlineIcon: {
-    fontSize: 20,
-    opacity: 0.3,
-  },
   emptyOnlineText: {
     color: "rgba(232,197,71,0.4)",
     fontSize: 9,
@@ -93,10 +90,6 @@ export const styles = StyleSheet.create({
     borderColor: "rgba(232,197,71,0.2)",
     justifyContent: "center",
     alignItems: "center",
-  },
-  onlineCardAvatarText: {
-    fontSize: 10,
-    color: "rgba(232,197,71,0.6)",
   },
   onlineCardName: {
     flex: 1,
@@ -338,11 +331,16 @@ export const styles = StyleSheet.create({
     color: "rgba(232,197,71,0.4)",
     fontSize: 8,
   },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
   title: {
+    fontFamily: font.display,
     color: "#E8C547",
-    fontSize: 26,
-    fontWeight: "900",
-    letterSpacing: 6,
+    fontSize: 28,
+    letterSpacing: 3,
     textShadowColor: "rgba(232,197,71,0.3)",
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 15,
@@ -368,7 +366,6 @@ export const styles = StyleSheet.create({
     paddingVertical: 6,
     marginBottom: 12,
   },
-  errorIcon: { fontSize: 12 },
   errorText: { color: "#FF6B6B", fontSize: 11, fontWeight: "700" },
 
   // Menu cards
@@ -404,11 +401,10 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 2, // was 4
   },
-  menuCardIcon: { fontSize: 22 }, // was 26
   menuCardTitle: {
+    fontFamily: font.heading,
     color: "#E8C547",
-    fontSize: 12, // was 14
-    fontWeight: "900",
+    fontSize: 13, // was 14
     letterSpacing: 2,
   },
   menuCardDesc: {
@@ -427,9 +423,9 @@ export const styles = StyleSheet.create({
     alignItems: "center",
   },
   menuCardAction: {
+    fontFamily: font.heading,
     color: "#E8C547",
-    fontSize: 10,
-    fontWeight: "900",
+    fontSize: 11,
     letterSpacing: 2,
   },
 
@@ -465,9 +461,9 @@ export const styles = StyleSheet.create({
   },
   joinBtnDisabled: { opacity: 0.3, shadowOpacity: 0 },
   joinBtnText: {
+    fontFamily: font.heading,
     color: "#1a1a1a",
     fontSize: 11,
-    fontWeight: "900",
     letterSpacing: 2,
   },
 
@@ -477,10 +473,10 @@ export const styles = StyleSheet.create({
     marginBottom: 12,
   },
   lobbyTitle: {
+    fontFamily: font.display,
     color: "#E8C547",
-    fontSize: 18,
-    fontWeight: "900",
-    letterSpacing: 5,
+    fontSize: 20,
+    letterSpacing: 3,
     marginTop: 2,
     textShadowColor: "rgba(232,197,71,0.3)",
     textShadowOffset: { width: 0, height: 0 },
@@ -567,7 +563,7 @@ export const styles = StyleSheet.create({
     borderColor: "rgba(232,197,71,0.2)",
   },
   playerRowYou: {
-    borderColor: "rgba(79,195,247,0.3)",
+    borderColor: "rgba(232,197,71,0.35)",
   },
   playerRowEmpty: {
     flexDirection: "row",
@@ -604,12 +600,6 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  playerIcon: { fontSize: 13 },
-  emptySlotIcon: {
-    color: "rgba(232,197,71,0.2)",
-    fontSize: 14,
-    fontWeight: "900",
-  },
   playerName: {
     color: "rgba(255,255,255,0.7)",
     fontSize: 13,
@@ -637,13 +627,13 @@ export const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   youBadge: {
-    backgroundColor: "rgba(79,195,247,0.15)",
+    backgroundColor: color.parchment,
     borderRadius: 4,
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
   youBadgeText: {
-    color: "#4FC3F7",
+    color: color.ink,
     fontSize: 8,
     fontWeight: "900",
     letterSpacing: 1,
@@ -667,11 +657,10 @@ export const styles = StyleSheet.create({
     elevation: 8,
   },
   goldBtnDisabled: { opacity: 0.4, shadowOpacity: 0 },
-  goldBtnIcon: { fontSize: 16 },
   goldBtnText: {
+    fontFamily: font.heading,
     color: "#1a1a1a",
     fontSize: 14,
-    fontWeight: "900",
     letterSpacing: 2,
   },
 
@@ -700,6 +689,9 @@ export const styles = StyleSheet.create({
   },
 
   leaveBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
     paddingHorizontal: 18,
     paddingVertical: 6,
     borderRadius: 8,
@@ -904,11 +896,10 @@ export const styles = StyleSheet.create({
     gap: 6,
     maxWidth: 320,
   },
-  inviteModalIcon: { fontSize: 32 },
   inviteModalTitle: {
+    fontFamily: font.heading,
     color: "#E8C547",
     fontSize: 14,
-    fontWeight: "900",
     letterSpacing: 3,
   },
   inviteModalText: {
@@ -931,15 +922,18 @@ export const styles = StyleSheet.create({
   },
   inviteModalBtns: { flexDirection: "row", gap: 10, marginTop: 4 },
   inviteAcceptBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
     backgroundColor: "#E8C547",
     borderRadius: 10,
     paddingHorizontal: 24,
     paddingVertical: 8,
   },
   inviteAcceptText: {
+    fontFamily: font.heading,
     color: "#1a1a1a",
     fontSize: 13,
-    fontWeight: "900",
     letterSpacing: 1,
   },
   inviteDeclineBtn: {

@@ -10,6 +10,8 @@ import {
 import ReturnToCastle from "../ReturnToCastle"
 import BackgroundDecor from "./BackgroundDecor"
 import { styles } from "./arenaStyles"
+import { Icon } from "../../ui/Icon"
+import { color } from "../../ui/theme"
 
 interface Props {
   uid: string
@@ -57,7 +59,10 @@ const ArenaMenu = ({
             <Text style={styles.headerDiamond}>◆</Text>
             <View style={styles.headerLine} />
           </View>
-          <Text style={styles.title}>🏟 ARENA</Text>
+          <View style={styles.titleRow}>
+            <Icon name="sword-cross" size={26} color={color.ember} />
+            <Text style={styles.title}>ARENA</Text>
+          </View>
           <Text style={styles.subtitle}>
             Same deck · Same battle · One champion
           </Text>
@@ -65,7 +70,7 @@ const ArenaMenu = ({
 
         {error !== "" && (
           <View style={styles.errorBox}>
-            <Text style={styles.errorIcon}>⚠</Text>
+            <Icon name="alert-circle-outline" size={13} color="#FF6B6B" />
             <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
@@ -83,7 +88,7 @@ const ArenaMenu = ({
             >
               <View style={styles.menuCardGlow} />
               <View style={styles.menuCardIconWrap}>
-                <Text style={styles.menuCardIcon}>⚔</Text>
+                <Icon name="sword-cross" size={24} color={color.gold} />
               </View>
               <Text style={styles.menuCardTitle}>Host Battle</Text>
               <Text style={styles.menuCardDesc}>
@@ -98,7 +103,7 @@ const ArenaMenu = ({
             <View style={styles.menuCard}>
               <View style={styles.menuCardGlow} />
               <View style={styles.menuCardIconWrap}>
-                <Text style={styles.menuCardIcon}>🛡</Text>
+                <Icon name="shield" size={24} color={color.gold} />
               </View>
               <Text style={styles.menuCardTitle}>Join Battle</Text>
               <Text style={styles.menuCardDesc}>Enter room code to join</Text>
@@ -142,7 +147,7 @@ const ArenaMenu = ({
 
             {onlinePlayers.length === 0 ? (
               <View style={styles.emptyOnline}>
-                <Text style={styles.emptyOnlineIcon}>⚔</Text>
+                <Icon name="sword-cross" size={20} color={color.steel} />
                 <Text style={styles.emptyOnlineText}>No warriors waiting</Text>
               </View>
             ) : (
@@ -154,7 +159,11 @@ const ArenaMenu = ({
                 {onlinePlayers.map((p, i) => (
                   <View key={`${p.uid}-${i}`} style={styles.onlineCard}>
                     <View style={styles.onlineCardAvatar}>
-                      <Text style={styles.onlineCardAvatarText}>⚔</Text>
+                      <Icon
+                        name="sword-cross"
+                        size={11}
+                        color={color.goldFaded}
+                      />
                     </View>
                     <Text style={styles.onlineCardName} numberOfLines={1}>
                       {p.uid === uid ? `${p.heroName} (you)` : p.heroName}
