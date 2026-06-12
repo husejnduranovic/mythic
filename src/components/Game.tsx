@@ -54,6 +54,7 @@ import { AlreadyPlayedScreen } from "./game/AlreadyPlayedScreen"
 import { PausedScreen } from "./game/PausedScreen"
 import { PreBattleScreen } from "./game/PreBattleScreen"
 import { GameOverScreen } from "./game/GameOverScreen"
+import { BetweenLevelsScreen } from "./game/BetweenLevelsScreen"
 import Reanimated, {
   useSharedValue,
   useAnimatedStyle,
@@ -923,243 +924,22 @@ const Game = ({
       cards.slice(0, config.fieldCards).filter((c) => !c.visible).length
 
     return (
-      <View
-        style={[
-          styles.center,
-          {
-            flex: 1,
-            backgroundColor: theme.battlefieldColor,
-            flexDirection: "row",
-            paddingHorizontal: 24,
-            gap: 20,
-            position: "relative", // add this
-            overflow: "hidden",
-          },
-        ]}
-      >
-        {battlefieldMemo}
-
-        {/* Left — Result + Score */}
-        <View
-          style={{
-            flex: 1,
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 4,
-          }}
-        >
-          <Text style={{ fontSize: 36 }}>{cleared ? "⚔" : "🛡"}</Text>
-          <View style={styles.banner}>
-            <View style={styles.bannerEdge} />
-            <View style={styles.bannerBody}>
-              <Text style={styles.bannerTitle}>
-                {cleared ? "FIELD CLEARED" : "RETREAT"}
-              </Text>
-              <Text style={styles.bannerSub}>
-                Battlefield {level} of {TOTAL_LEVELS}
-              </Text>
-            </View>
-            <View style={styles.bannerEdge} />
-          </View>
-          {!cleared && (
-            <Text style={styles.partialText}>
-              {rem} beast{rem !== 1 ? "s" : ""} remained
-            </Text>
-          )}
-          <View style={styles.divider} />
-          <View style={styles.spoilsCard}>
-            <Text style={styles.spoilsCardLabel}>TOTAL SPOILS</Text>
-            <Text style={styles.spoilsCardValue}>{score.toLocaleString()}</Text>
-          </View>
-
-          {/* Consolidated achievement banner — shows the single most exciting thing
-    that happened this layout, prioritized */}
-          {(() => {
-            const cleared = cards
-              .slice(0, config.fieldCards)
-              .every((c) => !c.visible)
-            // Priority: Perfect Clear > Glory Hunt
-            if (cleared) {
-              return (
-                <View
-                  style={[styles.achievementBanner, styles.achievementPerfect]}
-                >
-                  <Text style={{ fontSize: 18 }}>✨</Text>
-                  <View style={styles.achievementCenter}>
-                    <Text style={styles.achievementTitle}>PERFECT CLEAR</Text>
-                    <Text style={styles.achievementSub}>
-                      +50,000 spoils bonus
-                    </Text>
-                  </View>
-                  <Text style={{ fontSize: 18 }}>✨</Text>
-                </View>
-              )
-            }
-            if (gloryActive) {
-              return (
-                <View
-                  style={[styles.achievementBanner, styles.achievementGlory]}
-                >
-                  <Text style={{ fontSize: 18 }}>⚡</Text>
-                  <View style={styles.achievementCenter}>
-                    <Text
-                      style={[styles.achievementTitle, { color: "#FF8C00" }]}
-                    >
-                      GLORY HUNT ACTIVE
-                    </Text>
-                    <Text
-                      style={[
-                        styles.achievementSub,
-                        { color: "rgba(255,140,0,0.6)" },
-                      ]}
-                    >
-                      2× spoils until end of run
-                    </Text>
-                  </View>
-                  <Text style={{ fontSize: 18 }}>⚡</Text>
-                </View>
-              )
-            }
-            return null
-          })()}
-
-          {/* Progress dots */}
-          <View style={styles.progressRow}>
-            {Array.from({ length: TOTAL_LEVELS }).map((_, i) => (
-              <View
-                key={i}
-                style={[
-                  styles.progressDot,
-                  i < level && styles.progressDotFilled,
-                ]}
-              >
-                {i < level && <Text style={styles.progressCheck}>✓</Text>}
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Right — Actions */}
-        <View
-          style={{
-            flex: 1,
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 10,
-          }}
-        >
-          {/* Arena scoreboard */}
-          {arenaMode && arenaPlayers.length > 0 && (
-            <View style={styles.arenaBoard}>
-              <Text style={styles.arenaBoardTitle}>⚔ ARENA STANDINGS</Text>
-              <ScrollView style={styles.arenaScroll} nestedScrollEnabled>
-                {arenaPlayers.map((p: any, i: number) => (
-                  <View
-                    key={p.uid || i}
-                    style={[
-                      styles.arenaRow,
-                      p.uid === uid && styles.arenaRowYou,
-                    ]}
-                  >
-                    <Text style={styles.arenaRank}>
-                      {i === 0
-                        ? "🥇"
-                        : i === 1
-                          ? "🥈"
-                          : i === 2
-                            ? "🥉"
-                            : `${i + 1}.`}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.arenaName,
-                        p.uid === uid && styles.arenaNameYou,
-                      ]}
-                    >
-                      {p.heroName}
-                    </Text>
-                    <Text style={styles.arenaScore}>
-                      {(p.currentLevel || 0) >= 1
-                        ? (p.score || 0).toLocaleString()
-                        : "..."}
-                    </Text>
-                  </View>
-                ))}
-              </ScrollView>
-            </View>
-          )}
-
-          {/* Info card — next multiplier */}
-          {level < TOTAL_LEVELS && (
-            <View style={styles.nextBattleInfo}>
-              <Text style={styles.nextBattleLabel}>NEXT BATTLEFIELD</Text>
-              <Text style={styles.nextBattleMultiplier}>
-                {(1 + level * 0.5).toFixed(1)}x spoils
-              </Text>
-            </View>
-          )}
-
-          {/* Glory Hunt */}
-          {level < TOTAL_LEVELS && gloryCharges > 0 && !gloryActive && (
-            <TouchableOpacity
-              style={styles.gloryBtn}
-              onPress={activateGloryHunt}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.gloryBtnIcon}>⚡</Text>
-              <View>
-                <Text style={styles.gloryBtnText}>Glory Hunt</Text>
-                <Text style={styles.gloryBtnSub}>
-                  2x points · 50% time ({gloryCharges} left)
-                </Text>
-              </View>
-            </TouchableOpacity>
-          )}
-
-          {/* Next Battle / Arena */}
-          {arenaMode ? (
-            (() => {
-              const allReady =
-                arenaPlayers.length > 0 &&
-                arenaPlayers.every((p: any) => (p.currentLevel || 0) >= level)
-              return allReady ? (
-                <View style={styles.countdownBox}>
-                  <Text style={styles.countdownText}>
-                    {arenaCountdown || "GO!"}
-                  </Text>
-                  <Text style={styles.countdownLabel}>NEXT BATTLE IN</Text>
-                </View>
-              ) : (
-                <View style={styles.waitingBox}>
-                  <Text style={styles.waitingArenaText}>
-                    Waiting... (
-                    {
-                      arenaPlayers.filter(
-                        (p: any) =>
-                          (p.currentLevel || 0) >= level || p.disconnected,
-                      ).length
-                    }
-                    /{arenaPlayers.length})
-                  </Text>
-                </View>
-              )
-            })()
-          ) : (
-            <TouchableOpacity
-              style={styles.nextBattleBtn}
-              onPress={handleNextLevel}
-            >
-              <Text style={styles.nextBattleBtnText}>
-                {level >= TOTAL_LEVELS
-                  ? "🏆 Claim Victory"
-                  : gloryActive
-                    ? "⚡ Begin Glory Hunt"
-                    : "⚔ Next Battle"}
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
+      <BetweenLevelsScreen
+        theme={theme}
+        background={battlefieldMemo}
+        cleared={cleared}
+        remaining={rem}
+        level={level}
+        score={score}
+        gloryActive={gloryActive}
+        gloryCharges={gloryCharges}
+        arenaMode={arenaMode}
+        arenaPlayers={arenaPlayers}
+        uid={uid}
+        arenaCountdown={arenaCountdown}
+        onActivateGlory={activateGloryHunt}
+        onNextLevel={handleNextLevel}
+      />
     )
   }
 
