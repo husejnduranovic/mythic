@@ -29,12 +29,8 @@ import {
   ThemeConfig,
   WAR_TABLE_CONFIG,
 } from "./Armory"
-import { hasPlayedToday, submitDailyScore } from "../services/DailyQuestService"
-import {
-  submitAllTimeScore,
-  submitGameScore,
-  updateUserProfile,
-} from "../services/ScoreService"
+import { hasPlayedToday } from "../services/DailyQuestService"
+import { saveGameResults } from "../services/ScoreService"
 import { StorageKeys } from "../services/storageKeys"
 import {
   BountyStyleContext,
@@ -47,10 +43,6 @@ import {
   setPlayerRematch,
   updatePlayerScore,
 } from "../services/ArenaService"
-import {
-  getSavedLoungeCode,
-  submitLoungeScore,
-} from "../services/LoungeService"
 import { firestore } from "../services/Firebase"
 import RecordCelebration from "./RecordCelebration"
 import Layout5 from "./Layout5"
@@ -285,94 +277,28 @@ const Game = ({
           ? Math.round((totalCleared / totalFieldCards) * 100)
           : 0
       if (uid && heroName) {
-        // Check if this is a new ALL-TIME record before saving
-        firestore()
-          .collection("allTimeScores")
-          .orderBy("score", "desc")
-          .limit(1)
-          .get()
-          .then((snap) => {
-            if (snap.empty || score > (snap.docs[0].data().score || 0)) {
-              setIsAllTimeRecord(true)
-              setShowCelebration(true)
-            }
-          })
-          .catch(() => {})
-
-        // Check if this is a new PERSONAL best
-        firestore()
-          .collection("users")
-          .doc(uid)
-          .get()
-          .then((doc) => {
-            const prevBest = doc.exists() ? doc.data()?.bestScore || 0 : 0
-            // Only show personal-best celebration if score beats it AND it's not an all-time record
-            // (all-time record already shows its own celebration)
-            if (score > prevBest && prevBest > 0) {
-              setPreviousBest(prevBest)
-              setIsPersonalBest(true)
-            }
-          })
-          .catch(() => {})
-
-        submitGameScore(uid, heroName, score, bestCombo, dailyMode)
-        submitAllTimeScore(uid, heroName, score, bestCombo)
-        getSavedLoungeCode()
-          .then((code) => {
-            if (code && uid && heroName) {
-              // Example for lounge submission:
-
-              submitLoungeScore(code, uid, heroName, score, bestCombo).catch(
-                () => {},
-              )
-            }
-          })
-          .catch(() => {})
-        updateUserProfile(uid, score, bestCombo, totalCleared)
-        firestore()
-          .collection("users")
-          .doc(uid)
-          .get()
-          .then((doc) => {
-            if (doc.exists()) {
-              const totalGames = doc.data()?.totalGames || 0
-              AsyncStorage.setItem(
-                StorageKeys.gamesPlayed,
-                totalGames.toString(),
-              )
-              firestore()
-                .collection("allTimeScores")
-                .doc(uid)
-                .update({ gamesPlayed: totalGames })
-                .catch(() => {})
-            }
-          })
-          .catch(() => {})
-        if (dailyMode) {
-          submitDailyScore(uid, heroName, score, bestCombo, clearPct)
-            .then(() =>
-              firestore()
-                .collection("dailyScores")
-                .where("date", "==", getTodayString())
-                .where("score", ">", score)
-                .get(),
-            )
-            .then((snap) => setDailyRank(snap.size + 1))
-            .catch(() => setDailyRank(null))
-        }
-        if (arenaMode && roomCode) {
-          updatePlayerScore(roomCode, uid, score, bestCombo, TOTAL_LEVELS, true)
-        }
-
-        // Fetch rank for this game
-        firestore()
-          .collection("gameScores")
-          .where("score", ">", score)
-          .get()
-          .then((snap) => {
-            setRank(snap.size + 1)
-          })
-          .catch(() => setRank(null))
+        saveGameResults({
+          uid,
+          heroName,
+          score,
+          bestCombo,
+          totalCleared,
+          clearPct,
+          dailyMode,
+          arenaMode,
+          roomCode,
+        }).then((results) => {
+          if (results.isAllTimeRecord) {
+            setIsAllTimeRecord(true)
+            setShowCelebration(true)
+          }
+          if (results.isPersonalBest) {
+            setPreviousBest(results.previousBest)
+            setIsPersonalBest(true)
+          }
+          setRank(results.rank)
+          setDailyRank(results.dailyRank)
+        })
       }
       if (score > 0) {
         saveScore(score, bestCombo)
