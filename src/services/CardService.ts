@@ -93,10 +93,5 @@ export const getYesterdayString = (): string => {
   return d.toISOString().split("T")[0]
 }
 
-export const isCardMatch = (a: ICard, b: ICard): boolean => {
-  const av = parseInt(a.value)
-  const bv = parseInt(b.value)
-  if (av === 1) return bv === 2 || bv === 13
-  if (bv === 1) return av === 2 || av === 13
-  return Math.abs(av - bv) === 1
-}
+// Moved to src/game/match.ts — re-exported here for compatibility.
+export { isCardMatch } from "../game/match"

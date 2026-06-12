@@ -67,6 +67,20 @@ import Reanimated, {
   runOnJS,
 } from "react-native-reanimated"
 import PersonalBestBanner from "./PersonalBestBanner"
+import {
+  COMBO_MILESTONES,
+  LEVEL_CONFIG,
+  RUNES,
+  SECOND_CARD_COMBO,
+  TOTAL_LEVELS,
+} from "../game/config"
+import {
+  getBountyBonus,
+  getDeckBonus,
+  getMatchPoints,
+  getPerfectClearBonus,
+  getTimeBonus,
+} from "../game/scoring"
 
 interface GameProps {
   onHome: () => void
@@ -76,79 +90,6 @@ interface GameProps {
   arenaMode?: boolean
   roomCode?: string
 }
-
-const LEVEL_CONFIG: Record<
-  number,
-  { fieldCards: number; deckStart: number; time: number; layout: number }
-> = {
-  1: { fieldCards: 29, deckStart: 29, time: 75, layout: 1 },
-  2: { fieldCards: 32, deckStart: 32, time: 85, layout: 9 },
-  3: { fieldCards: 30, deckStart: 30, time: 80, layout: 7 },
-  4: { fieldCards: 32, deckStart: 32, time: 80, layout: 8 },
-  5: { fieldCards: 32, deckStart: 32, time: 85, layout: 2 },
-  6: { fieldCards: 28, deckStart: 28, time: 75, layout: 5 },
-}
-
-const TOTAL_LEVELS = Object.keys(LEVEL_CONFIG).length
-const BASE_CARD_VALUE = 500
-const SECOND_CARD_COMBO = 2
-
-const COMBO_MILESTONES: Record<
-  number,
-  { text: string; color: string; icon: string }
-> = {
-  5: { text: "WORTHY!", color: "#7BED9F", icon: "⚔" },
-  8: { text: "VALIANT!", color: "#FFD700", icon: "🛡" },
-  12: { text: "GLORIOUS!", color: "#FF6B35", icon: "👑" },
-  16: { text: "LEGENDARY!", color: "#FF4757", icon: "🐉" },
-  20: { text: "RAMPAGE!", color: "#FF00FF", icon: "⚡" },
-  24: { text: "UNSTOPPABLE!", color: "#FF1493", icon: "🔥" },
-  28: { text: "DIVINE!", color: "#7DF9FF", icon: "👁" },
-  32: { text: "MASTER OF PEAKS!", color: "#FFFFFF", icon: "⚜️" },
-}
-
-const getComboMultiplier = (c: number) => {
-  if (c >= 32) return 300
-  if (c >= 30) return 260
-  if (c >= 28) return 220
-  if (c >= 26) return 185
-  if (c >= 24) return 155
-  if (c >= 22) return 128
-  if (c >= 20) return 105
-  if (c >= 18) return 84
-  if (c >= 16) return 66
-  if (c >= 14) return 50
-  if (c >= 12) return 37
-  if (c >= 10) return 27
-  if (c >= 8) return 18
-  if (c >= 6) return 11
-  if (c >= 5) return 8
-  if (c >= 4) return 5.5
-  if (c >= 3) return 3.5
-  if (c >= 2) return 2
-  return 1
-}
-
-const RUNES = [
-  "ᚠ",
-  "ᚢ",
-  "ᚦ",
-  "ᚨ",
-  "ᚱ",
-  "ᚲ",
-  "ᚷ",
-  "ᚹ",
-  "ᚺ",
-  "ᚾ",
-  "ᛁ",
-  "ᛃ",
-  "ᛈ",
-  "ᛊ",
-  "ᛏ",
-  "ᛒ",
-  "ᛞ",
-  "ᛟ",
-]
 
 const PulsingCard = ({ children }: { children: React.ReactNode }) => {
   const pulse = useRef(new Animated.Value(1)).current
@@ -1383,21 +1324,18 @@ const Game = ({
     setTotalFieldCards((p) => p + config.fieldCards)
 
     // Time bonus — 50 points per second remaining
-    const gloryMult = gloryActiveRef.current ? 2 : 1
-    const timeBonus = timeLeftRef.current * 50 * gloryMult
+    const timeBonus = getTimeBonus(timeLeftRef.current, gloryActiveRef.current)
     if (timeBonus > 0) setScore((s) => s + timeBonus)
 
     const deckRemaining = cards.length - deckIndex
-    const deckBonus = deckRemaining * 200 * gloryMult
+    const deckBonus = getDeckBonus(deckRemaining, gloryActiveRef.current)
     if (deckBonus > 0) setScore((s) => s + deckBonus)
 
     const allCleared = cards
       .slice(0, config.fieldCards)
       .every((c) => !c.visible)
     if (allCleared) {
-      const layoutMultiplier = 1 + (level - 1) * 0.5
-      const gloryMult = gloryActiveRef.current ? 2 : 1
-      const perfectBonus = Math.round(50000 * layoutMultiplier * gloryMult)
+      const perfectBonus = getPerfectClearBonus(level, gloryActiveRef.current)
       setScore((s) => s + perfectBonus)
       showMilestone("PERFECT CLEAR!", "#7BED9F", "✨")
     }
@@ -1543,17 +1481,10 @@ const Game = ({
     }
 
     const nc = combo + 1
-    const layoutMultiplier = 1 + (level - 1) * 0.5
-    const gloryMultiplier = gloryActiveRef.current ? 2 : 1
     const isBounty = bountyIndices.has(index)
-    const pts = Math.round(
-      BASE_CARD_VALUE *
-        getComboMultiplier(nc) *
-        layoutMultiplier *
-        gloryMultiplier,
-    )
+    const pts = getMatchPoints(nc, level, gloryActiveRef.current)
     // Bounty = fiksni bonus, ne množi se s comboom
-    const bountyBonus = isBounty ? Math.round(5000 * layoutMultiplier) : 0
+    const bountyBonus = isBounty ? getBountyBonus(level) : 0
 
     if (isBounty) showMilestone("BOUNTY!", "#FFD700", "💰")
     SoundService.playMatch(nc)
