@@ -37,7 +37,7 @@ Cross-cutting issues found:
 - **Gate:** confirm wild cards / carry combo / insurance are intentionally retired (CLAUDE.md disagrees with code). If they may return, keep the blocks in git history only — that's what history is for.
 - Risk: none (comments only). Biggest payoff per line for later steps.
 
-**Status: APPROVED (retired — delete). Full inventory verified, deletion NOT yet executed.** All line numbers refer to Game.tsx at commit `8e9aa10` unless noted.
+**Status: ✅ DONE** — executed in commit `158f5c9` (refactor/v1.4). 798 lines removed across Game.tsx + Arenascreen.tsx; `tsc --noEmit` passes. Inventory below is retained for reference. All line numbers refer to Game.tsx at commit `8e9aa10` unless noted.
 
 Confirmed safe to delete — commented-out code:
 - 87, 91 — old `LEVEL_CONFIG` variants
