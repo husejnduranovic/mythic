@@ -15,9 +15,10 @@ import LoungeScreen from "./src/components/LoungeScreen"
 import { getLoungeInfo, getSavedLoungeCode } from "./src/services/LoungeService"
 import * as SplashScreen from "expo-splash-screen"
 import { firestore } from "./src/services/Firebase"
-import { AppState, View } from "react-native"
-import { getUserProfile } from "./src/services/ScoreService"
+import { View } from "react-native"
 import { logError } from "./src/services/logError"
+import { usePresence } from "./src/hooks/usePresence"
+import { useUserStats } from "./src/hooks/useUserStats"
 import VersionGate from "./src/components/VersionGate"
 
 SplashScreen.preventAutoHideAsync()
@@ -28,20 +29,21 @@ interface UserData {
   email: string
 }
 
+type Screen =
+  | "home"
+  | "game"
+  | "scores"
+  | "armory"
+  | "daily"
+  | "profile"
+  | "arena"
+  | "arenaGame"
+  | "lounge"
+
 function App() {
   const [introSeen, setIntroSeen] = useState<boolean | null>(null)
   const [user, setUser] = useState<UserData | null>(null)
-  const [screen, setScreen] = useState<
-    | "home"
-    | "game"
-    | "scores"
-    | "armory"
-    | "daily"
-    | "profile"
-    | "arena"
-    | "arenaGame"
-    | "lounge"
-  >("home")
+  const [screen, setScreen] = useState<Screen>("home")
   const [roomCode, setRoomCode] = useState("")
 
   const [loungeCode, setLoungeCode] = useState<string | null>(null)
@@ -49,8 +51,8 @@ function App() {
 
   const [showRules, setShowRules] = useState(false)
 
-  const [currentStreak, setCurrentStreak] = useState(0)
-  const [bestStreak, setBestStreak] = useState(0)
+  const onlineCount = usePresence(user?.uid)
+  const { currentStreak, bestStreak } = useUserStats(user?.uid)
 
   useEffect(() => {
     NavigationBar.setVisibilityAsync("hidden")
@@ -80,58 +82,6 @@ function App() {
       }, 2000)
     }
   }, [introSeen])
-
-  // Add this useEffect after the existing useEffects, before handleLogout:
-  useEffect(() => {
-    if (!user) return
-
-    // Set online when app is active
-    const setOnline = (online: boolean) => {
-      firestore()
-        .collection("users")
-        .doc(user.uid)
-        .update({
-          isOnline: online,
-          lastSeen: firestore.FieldValue.serverTimestamp(),
-        })
-        .catch(() => {})
-    }
-
-    setOnline(true)
-
-    const sub = AppState.addEventListener("change", (state) => {
-      setOnline(state === "active")
-    })
-
-    return () => {
-      sub.remove()
-      setOnline(false)
-    }
-  }, [user])
-
-  const [onlineCount, setOnlineCount] = useState(0)
-
-  useEffect(() => {
-    if (!user) return
-    const unsub = firestore()
-      .collection("users")
-      .where("isOnline", "==", true)
-      .onSnapshot(
-        (snap) => {
-          setOnlineCount(snap.size)
-        },
-        () => {},
-      )
-    return () => unsub()
-  }, [user])
-
-  useEffect(() => {
-    if (!user) return
-    getUserProfile(user.uid).then((data) => {
-      setCurrentStreak(data?.currentStreak || 0)
-      setBestStreak(data?.bestStreak || 0)
-    })
-  }, [user])
 
   const handleLogout = async () => {
     try {
@@ -169,17 +119,8 @@ function App() {
       </>
     )
 
-  // Logged in — normal game flow
-  if (screen === "armory")
-    return (
-      <>
-        <StatusBar hidden />
-        <Armory onBack={() => setScreen("home")} />
-      </>
-    )
-
-  // Already exists:
-  if (showRules) {
+  // "How to play" is an overlay independent of the active screen
+  if (showRules)
     return (
       <>
         <StatusBar hidden />
@@ -193,97 +134,10 @@ function App() {
         </View>
       </>
     )
-  }
 
-  if (screen === "daily")
-    return (
-      <>
-        <StatusBar hidden />
-        <Game
-          onHome={() => setScreen("home")}
-          dailyMode
-          uid={user.uid}
-          heroName={user.heroName}
-        />
-      </>
-    )
-  if (screen === "game")
-    return (
-      <>
-        <StatusBar hidden />
-        <Game
-          onHome={() => setScreen("home")}
-          uid={user.uid}
-          heroName={user.heroName}
-        />
-      </>
-    )
-  if (screen === "scores")
-    return (
-      <>
-        <StatusBar hidden />
-        <Scoreboard onBack={() => setScreen("home")} uid={user?.uid} />
-      </>
-    )
-  if (screen === "profile")
-    return (
-      <>
-        <StatusBar hidden />
-        <Profile
-          onBack={() => setScreen("home")}
-          uid={user.uid}
-          heroName={user.heroName}
-          onNameChange={(newName) =>
-            setUser((prev) => (prev ? { ...prev, heroName: newName } : prev))
-          }
-        />
-      </>
-    )
-  if (screen === "arena")
-    return (
-      <>
-        <StatusBar hidden />
-        <ArenaScreen
-          onBack={() => setScreen("home")}
-          onGameStart={(code, isHost) => {
-            setRoomCode(code)
-            setScreen("arenaGame")
-          }}
-          uid={user.uid}
-          heroName={user.heroName}
-        />
-      </>
-    )
-
-  if (screen === "arenaGame")
-    return (
-      <>
-        <StatusBar hidden />
-        <Game
-          onHome={() => setScreen("home")}
-          uid={user.uid}
-          heroName={user.heroName}
-          arenaMode
-          roomCode={roomCode}
-        />
-      </>
-    )
-
-  if (screen === "lounge")
-    return (
-      <>
-        <StatusBar hidden />
-        <LoungeScreen
-          onBack={() => setScreen("home")}
-          onPlay={() => setScreen("game")}
-          uid={user.uid}
-          heroName={user.heroName}
-        />
-      </>
-    )
-  return (
-    <>
-      <StatusBar hidden />
+  // Logged in — normal game flow
+  const screens: Record<Screen, () => React.ReactElement> = {
+    home: () => (
       <HomeScreen
         onPlay={() => setScreen("game")}
         onScoreboard={() => setScreen("scores")}
@@ -301,6 +155,72 @@ function App() {
         bestStreak={bestStreak}
         onHowToPlay={() => setShowRules(true)}
       />
+    ),
+    game: () => (
+      <Game
+        onHome={() => setScreen("home")}
+        uid={user.uid}
+        heroName={user.heroName}
+      />
+    ),
+    daily: () => (
+      <Game
+        onHome={() => setScreen("home")}
+        dailyMode
+        uid={user.uid}
+        heroName={user.heroName}
+      />
+    ),
+    scores: () => (
+      <Scoreboard onBack={() => setScreen("home")} uid={user?.uid} />
+    ),
+    armory: () => <Armory onBack={() => setScreen("home")} />,
+    profile: () => (
+      <Profile
+        onBack={() => setScreen("home")}
+        uid={user.uid}
+        heroName={user.heroName}
+        onNameChange={(newName) =>
+          setUser((prev) => (prev ? { ...prev, heroName: newName } : prev))
+        }
+      />
+    ),
+    arena: () => (
+      <ArenaScreen
+        onBack={() => setScreen("home")}
+        onGameStart={(code, isHost) => {
+          setRoomCode(code)
+          setScreen("arenaGame")
+        }}
+        uid={user.uid}
+        heroName={user.heroName}
+      />
+    ),
+    arenaGame: () => (
+      <Game
+        onHome={() => setScreen("home")}
+        uid={user.uid}
+        heroName={user.heroName}
+        arenaMode
+        roomCode={roomCode}
+      />
+    ),
+    lounge: () => (
+      <LoungeScreen
+        onBack={() => setScreen("home")}
+        onPlay={() => setScreen("game")}
+        uid={user.uid}
+        heroName={user.heroName}
+      />
+    ),
+  }
+
+  const renderScreen = screens[screen] ?? screens.home
+
+  return (
+    <>
+      <StatusBar hidden />
+      {renderScreen()}
     </>
   )
 }
