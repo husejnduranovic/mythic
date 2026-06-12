@@ -11,6 +11,16 @@ import {
 import { color, font } from "../ui/theme"
 import { Icon } from "../ui/Icon"
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Home — "Crest Gate & War Table" (DESIGN_PLAN §4.1)
+//
+// Left column recreates the app icon: a fanned trio of big crest cards in the
+// honor-card grammar (green fields, suit trims, Cinzel corner indices, runes,
+// medallion crests), with identity (name/streak/prize) consolidated beneath.
+// Right column is the war table: Enter Battle CTA, the Daily/Arena mode-card
+// pair, and the five-slot meta rail (incl. the restored Lounge entry).
+// ─────────────────────────────────────────────────────────────────────────────
+
 interface HomeScreenProps {
   onPlay: () => void
   onScoreboard: () => void
@@ -30,6 +40,135 @@ interface HomeScreenProps {
   onHowToPlay?: () => void
 }
 
+const withAlpha = (hex: string, a: number): string => {
+  const h = hex.replace("#", "")
+  const r = parseInt(h.slice(0, 2), 16)
+  const g = parseInt(h.slice(2, 4), 16)
+  const b = parseInt(h.slice(4, 6), 16)
+  return `rgba(${r},${g},${b},${a})`
+}
+
+// The icon's card green (shared visual language with the Hall of Glory podium).
+const CARD_FIELD = "#1A3D2A"
+const CARD_RUNES = ["ᚠ", "ᚦ", "ᚱ", "ᛟ"]
+// The icon's signature teal-patina — used only for the center eagle crest.
+// (Deliberate display-card accent; the icon itself breaks suit colour here.)
+const VERDIGRIS = "#5E9E8A"
+
+// ── Crest card (one card of the marquee fan) ────────────────────────────────
+
+interface CrestCardProps {
+  value: string
+  beast: string
+  trim: string
+  w: number
+  h: number
+  isCenter?: boolean
+}
+
+const CrestCard = ({ value, beast, trim, w, h, isCenter }: CrestCardProps) => {
+  const medal = Math.round(w * 0.5)
+  return (
+    <View
+      style={[
+        f.card,
+        {
+          width: w,
+          height: h,
+          borderColor: withAlpha(trim, isCenter ? 0.8 : 0.6),
+          borderWidth: isCenter ? 2 : 1.5,
+          elevation: isCenter ? 10 : 6,
+        },
+      ]}
+    >
+      {/* engraved inner pinstripe */}
+      <View style={[f.frame, { borderColor: withAlpha(trim, 0.3) }]} />
+
+      {/* corner runes */}
+      <Text style={[f.rune, { top: 9, right: 9, color: withAlpha(trim, 0.28) }]}>
+        {CARD_RUNES[1]}
+      </Text>
+      <Text style={[f.rune, { bottom: 9, left: 9, color: withAlpha(trim, 0.28) }]}>
+        {CARD_RUNES[2]}
+      </Text>
+
+      {/* Cinzel corner index (TL + rotated BR, like a real card) */}
+      <View style={[f.index, { top: 4, left: 7 }]}>
+        <Text style={[f.indexNum, { color: trim }]}>{value}</Text>
+        <Text style={[f.indexDot, { color: withAlpha(trim, 0.7) }]}>◆</Text>
+      </View>
+      <View style={[f.index, f.indexBR, { bottom: 4, right: 7 }]}>
+        <Text style={[f.indexNum, { color: trim }]}>{value}</Text>
+        <Text style={[f.indexDot, { color: withAlpha(trim, 0.7) }]}>◆</Text>
+      </View>
+
+      {/* beast crest in a medallion ring */}
+      <View
+        style={[
+          f.medal,
+          {
+            width: medal,
+            height: medal,
+            borderRadius: medal / 2,
+            backgroundColor: withAlpha(trim, 0.1),
+            borderColor: withAlpha(trim, 0.55),
+          },
+        ]}
+      >
+        <View
+          style={[
+            f.medalRing,
+            { borderColor: withAlpha(trim, 0.3), borderRadius: medal / 2 },
+          ]}
+        />
+        <Text style={{ fontSize: Math.round(medal * 0.52) }}>{beast}</Text>
+      </View>
+    </View>
+  )
+}
+
+const f = StyleSheet.create({
+  card: {
+    backgroundColor: CARD_FIELD,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+  },
+  frame: {
+    position: "absolute",
+    top: 4,
+    left: 4,
+    right: 4,
+    bottom: 4,
+    borderRadius: 7,
+    borderWidth: 1,
+  },
+  rune: { position: "absolute", fontSize: 8 },
+  index: { position: "absolute", alignItems: "center", zIndex: 2 },
+  indexBR: { transform: [{ rotate: "180deg" }] },
+  indexNum: { fontFamily: font.heading, fontSize: 13, lineHeight: 16 },
+  indexDot: { fontSize: 5, marginTop: -2 },
+  medal: {
+    borderWidth: 1.5,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  medalRing: {
+    position: "absolute",
+    top: 3,
+    left: 3,
+    right: 3,
+    bottom: 3,
+    borderWidth: 0.5,
+  },
+})
+
+// ── Screen ──────────────────────────────────────────────────────────────────
+
 const HomeScreen = ({
   onPlay,
   onScoreboard,
@@ -41,10 +180,8 @@ const HomeScreen = ({
   onArena,
   onLounge,
   loungeCode,
-  loungeName,
   onlineCount,
   currentStreak,
-  bestStreak,
   onHowToPlay,
 }: HomeScreenProps) => {
   const titleOpacity = useRef(new Animated.Value(0)).current
@@ -56,6 +193,8 @@ const HomeScreen = ({
   const menuOpacity = useRef(new Animated.Value(0)).current
   const menuX = useRef(new Animated.Value(30)).current
   const glowPulse = useRef(new Animated.Value(0.3)).current
+  const fanFloat = useRef(new Animated.Value(0)).current
+  const dotPulse = useRef(new Animated.Value(0.55)).current
 
   const [prizeModalVisible, setPrizeModalVisible] = useState(false)
 
@@ -75,7 +214,7 @@ const HomeScreen = ({
       }),
     ]).start()
 
-    // Cards fade in and rotate to their positions
+    // Cards fade in and fan out to their positions
     Animated.sequence([
       Animated.delay(300),
       Animated.parallel([
@@ -138,6 +277,40 @@ const HomeScreen = ({
         }),
       ]),
     ).start()
+
+    // The fan levitates gently — the marquee breathes
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(fanFloat, {
+          toValue: 1,
+          duration: 2200,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(fanFloat, {
+          toValue: 0,
+          duration: 2200,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ]),
+    ).start()
+
+    // Live dots breathe (daily + arena online)
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(dotPulse, {
+          toValue: 1,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+        Animated.timing(dotPulse, {
+          toValue: 0.55,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+      ]),
+    ).start()
   }, [])
 
   const card1Rot = card1Rotate.interpolate({
@@ -152,6 +325,23 @@ const HomeScreen = ({
     inputRange: [0, 1],
     outputRange: ["0deg", "15deg"],
   })
+  const fanY = fanFloat.interpolate({ inputRange: [0, 1], outputRange: [0, -4] })
+
+  const railItem = (
+    icon: React.ComponentProps<typeof Icon>["name"],
+    label: string,
+    onPress?: () => void,
+    dot?: boolean,
+  ) =>
+    onPress ? (
+      <TouchableOpacity style={styles.railItem} onPress={onPress} activeOpacity={0.7}>
+        <View>
+          <Icon name={icon} size={20} color={color.goldFaded} />
+          {dot && <View style={styles.railDot} />}
+        </View>
+        <Text style={styles.railLabel}>{label}</Text>
+      </TouchableOpacity>
+    ) : null
 
   return (
     <View style={styles.container}>
@@ -166,7 +356,7 @@ const HomeScreen = ({
         <View style={styles.bgHLine} />
       </View>
 
-      {/* LEFT — Dramatic display */}
+      {/* LEFT — the crest gate */}
       <View style={styles.leftSection}>
         {/* Title */}
         <Animated.View
@@ -184,84 +374,32 @@ const HomeScreen = ({
           <Text style={styles.titleSub}>PEAKS</Text>
           <Text style={styles.tagline}>A Card Game of Beasts & Glory</Text>
         </Animated.View>
-        {/* Fanned cards display */}
-        <Animated.View style={[styles.cardsDisplay, { opacity: cardsOpacity }]}>
-          <Animated.View
-            style={[
-              styles.card,
-              styles.cardLeft,
-              {
-                transform: [{ rotate: card1Rot }],
-                borderColor: "rgba(192,57,43,0.5)",
-              },
-            ]}
-          >
-            <View style={styles.cardInner}>
-              <Text style={[styles.cardCorner, { color: "#C0392B" }]}>9</Text>
-              <Text style={styles.cardIcon}>🐉</Text>
-              <Text
-                style={[
-                  styles.cardCorner,
-                  styles.cardCornerBottom,
-                  { color: "#C0392B" },
-                ]}
-              >
-                9
-              </Text>
-            </View>
-          </Animated.View>
 
+        {/* Fanned crest cards — the icon, recreated */}
+        <Animated.View
+          style={[
+            styles.cardsDisplay,
+            { opacity: cardsOpacity, transform: [{ translateY: fanY }] },
+          ]}
+        >
           <Animated.View
-            style={[
-              styles.card,
-              styles.cardCenter,
-              {
-                transform: [{ rotate: card2Rot }, { translateY: -10 }],
-                borderColor: "rgba(212,160,23,0.5)",
-              },
-            ]}
+            style={[styles.cardLeft, { transform: [{ rotate: card1Rot }] }]}
           >
-            <View style={styles.cardInner}>
-              <Text style={[styles.cardCorner, { color: "#D4A017" }]}>K</Text>
-              <Text style={styles.cardIcon}>🦅</Text>
-              <Text
-                style={[
-                  styles.cardCorner,
-                  styles.cardCornerBottom,
-                  { color: "#D4A017" },
-                ]}
-              >
-                K
-              </Text>
-            </View>
+            <CrestCard value="9" beast="🐉" trim="#C0392B" w={72} h={102} />
           </Animated.View>
-
           <Animated.View
-            style={[
-              styles.card,
-              styles.cardRight,
-              {
-                transform: [{ rotate: card3Rot }],
-                borderColor: "rgba(26,92,138,0.5)",
-              },
-            ]}
+            style={[styles.cardCenter, { transform: [{ rotate: card2Rot }, { translateY: -8 }] }]}
           >
-            <View style={styles.cardInner}>
-              <Text style={[styles.cardCorner, { color: "#1A5C8A" }]}>4</Text>
-              <Text style={styles.cardIcon}>🐺</Text>
-              <Text
-                style={[
-                  styles.cardCorner,
-                  styles.cardCornerBottom,
-                  { color: "#1A5C8A" },
-                ]}
-              >
-                4
-              </Text>
-            </View>
+            <CrestCard value="K" beast="🦅" trim={VERDIGRIS} w={82} h={116} isCenter />
+          </Animated.View>
+          <Animated.View
+            style={[styles.cardRight, { transform: [{ rotate: card3Rot }] }]}
+          >
+            <CrestCard value="4" beast="🐺" trim="#1A5C8A" w={72} h={102} />
           </Animated.View>
         </Animated.View>
-        {/* Hero greeting */}
+
+        {/* Identity — name, streak, prize */}
         <Animated.View style={[styles.greetingWrap, { opacity: titleOpacity }]}>
           <View style={styles.greetingLine} />
           <Icon name="sword-cross" size={12} color={color.gold} />
@@ -269,34 +407,33 @@ const HomeScreen = ({
           <Icon name="sword-cross" size={12} color={color.gold} />
           <View style={styles.greetingLine} />
         </Animated.View>
+
         {(currentStreak || 0) > 0 && (
           <TouchableOpacity
             style={styles.streakBadge}
             onPress={onProfile}
             activeOpacity={0.8}
           >
+            <Icon name="fire" size={13} color={color.ember} />
             <Text style={styles.streakBadgeCount}>{currentStreak}</Text>
-            <Text style={styles.streakBadgeLabel}>day streak</Text>
+            <Text style={styles.streakBadgeLabel}>DAY STREAK</Text>
           </TouchableOpacity>
         )}
 
-        {/* Monthly Prize — below hero name */}
         <TouchableOpacity
           style={styles.prizeTag}
           onPress={() => setPrizeModalVisible(true)}
           activeOpacity={0.8}
         >
-          <Icon name="trophy-variant" size={13} color="rgba(255,215,0,0.8)" />
-          <Text style={styles.prizeTagText}>
-            6 Battlefields · 4 Beast Clans · €100 Monthly Prize
-          </Text>
+          <Icon name="trophy-variant" size={14} color="rgba(255,215,0,0.85)" />
+          <Text style={styles.prizeTagText}>€100 MONTHLY PRIZE</Text>
           <View style={styles.prizeTagLive}>
             <Text style={styles.prizeTagLiveText}>LIVE</Text>
           </View>
         </TouchableOpacity>
       </View>
 
-      {/* RIGHT — Organized menu */}
+      {/* RIGHT — the war table */}
       <Animated.View
         style={[
           styles.rightSection,
@@ -309,6 +446,7 @@ const HomeScreen = ({
           onPress={onPlay}
           activeOpacity={0.85}
         >
+          <View style={styles.playPinstripe} pointerEvents="none" />
           <View style={styles.playBtnInner}>
             <Icon name="sword-cross" size={22} color="#1a1a1a" />
             <View>
@@ -318,216 +456,70 @@ const HomeScreen = ({
           </View>
           <Text style={styles.playArrow}>›</Text>
         </TouchableOpacity>
-        {/* Daily Quest — featured */}
-        <TouchableOpacity
-          style={styles.dailyBtn}
-          onPress={onDailyQuest}
-          activeOpacity={0.85}
-        >
-          <View style={styles.dailyHeader}>
-            <Icon
-              name="script-text-outline"
-              size={11}
-              color="rgba(232,197,71,0.6)"
+
+        {/* Mode pair — Daily Quest | Arena */}
+        <View style={styles.modeRow}>
+          <TouchableOpacity
+            style={[styles.modeCard, styles.modeCardGold]}
+            onPress={onDailyQuest}
+            activeOpacity={0.85}
+          >
+            <View
+              style={[styles.modePinstripe, { borderColor: "rgba(232,197,71,0.14)" }]}
+              pointerEvents="none"
             />
-            <Text style={styles.dailyBadge}>TODAY</Text>
-            <View style={styles.dailyLiveDot} />
-          </View>
-          <Text style={styles.dailyTitle}>Daily Quest</Text>
-          <Text style={styles.dailyDesc}>Same deck for all warriors</Text>
-        </TouchableOpacity>
+            <View style={styles.modeHeader}>
+              <Icon name="script-text-outline" size={12} color={color.goldFaded} />
+              <Text style={styles.modeBadgeGold}>TODAY</Text>
+              <Animated.View style={[styles.liveDot, { opacity: dotPulse }]} />
+            </View>
+            <Text style={styles.modeTitleGold}>Daily Quest</Text>
+            <Text style={styles.modeDesc}>Same deck for all</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.modeCard, styles.modeCardEmber]}
+            onPress={onArena}
+            activeOpacity={0.85}
+          >
+            <View
+              style={[styles.modePinstripe, { borderColor: "rgba(255,140,0,0.14)" }]}
+              pointerEvents="none"
+            />
+            <View style={styles.modeHeader}>
+              <Icon name="sword-cross" size={12} color="rgba(255,140,0,0.7)" />
+              <Text style={styles.modeBadgeEmber}>2–6 PLAYERS</Text>
+              {onlineCount > 0 && (
+                <View style={styles.onlineBadge}>
+                  <Animated.View style={[styles.liveDot, { opacity: dotPulse }]} />
+                  <Text style={styles.onlineBadgeText}>{onlineCount}</Text>
+                </View>
+              )}
+            </View>
+            <Text style={styles.modeTitleEmber}>Arena</Text>
+            <Text style={styles.modeDesc}>Real-time duels</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Section divider */}
         <View style={styles.sectionDivider}>
           <View style={styles.divLine} />
           <Text style={styles.divText}>REALM</Text>
           <View style={styles.divLine} />
         </View>
-        {/* <View style={styles.menuGrid}>
-          <View style={styles.menuGridRow}>
-            <TouchableOpacity
-              style={[
-                styles.gridBtn,
-                {
-                  borderColor: "rgba(79,195,247,0.2)",
-                  backgroundColor: "rgba(79,195,247,0.04)",
-                },
-              ]}
-              onPress={onArena}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.gridIcon}>🏟</Text>
-              <Text
-                style={[styles.gridLabel, { color: "rgba(79,195,247,0.7)" }]}
-              >
-                Arena
-              </Text>
-              <Text style={styles.gridSub}>Multiplayer</Text>
-            </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[
-                styles.gridBtn,
-                {
-                  borderColor: "rgba(255,215,0,0.2)",
-                  backgroundColor: "rgba(255,215,0,0.04)",
-                },
-              ]}
-              onPress={onScoreboard}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.gridIcon}>🏆</Text>
-              <Text
-                style={[styles.gridLabel, { color: "rgba(255,215,0,0.7)" }]}
-              >
-                Glory
-              </Text>
-              <Text style={styles.gridSub}>Leaderboard</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.gridBtn,
-                {
-                  borderColor: "rgba(123,237,159,0.2)",
-                  backgroundColor: "rgba(123,237,159,0.04)",
-                },
-              ]}
-              onPress={onProfile}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.gridIcon}>👤</Text>
-              <Text
-                style={[styles.gridLabel, { color: "rgba(123,237,159,0.7)" }]}
-              >
-                Profile
-              </Text>
-              <Text style={styles.gridSub}>Stats & Rank</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.menuGridRow}>
-            <TouchableOpacity
-              style={[
-                styles.gridBtn,
-                {
-                  borderColor: "rgba(232,197,71,0.2)",
-                  backgroundColor: "rgba(232,197,71,0.04)",
-                },
-              ]}
-              onPress={onArmory}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.gridIcon}>🛡</Text>
-              <Text
-                style={[styles.gridLabel, { color: "rgba(232,197,71,0.7)" }]}
-              >
-                Armory
-              </Text>
-              <Text style={styles.gridSub}>Cosmetics</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.gridBtn,
-                {
-                  borderColor: "rgba(200,150,255,0.2)",
-                  backgroundColor: "rgba(200,150,255,0.04)",
-                },
-              ]}
-              onPress={onHowToPlay}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.gridIcon}>📜</Text>
-              <Text
-                style={[styles.gridLabel, { color: "rgba(200,150,255,0.7)" }]}
-              >
-                Guide
-              </Text>
-              <Text style={styles.gridSub}>How to play</Text>
-            </TouchableOpacity>
-          </View>
-        </View> */}
-        {/* Arena — feature tile */}
-        <TouchableOpacity
-          style={styles.arenaFeature}
-          onPress={onArena}
-          activeOpacity={0.85}
-        >
-          <View style={styles.arenaFeatureLeft}>
-            <Icon name="sword-cross" size={26} color={color.ember} />
-            <View>
-              <Text style={styles.arenaFeatureLabel}>Arena</Text>
-              <Text style={styles.arenaFeatureSub}>Real-time multiplayer</Text>
-            </View>
-          </View>
-          {onlineCount > 0 && (
-            <View style={styles.arenaFeatureBadge}>
-              <View style={styles.arenaFeatureBadgeDot} />
-              <Text style={styles.arenaFeatureBadgeText}>{onlineCount}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-
-        {/* Icon rail — secondary actions */}
+        {/* Meta rail — Glory · Profile · Armory · Lounge · Guide */}
         <View style={styles.iconRail}>
-          <TouchableOpacity
-            style={styles.railItem}
-            onPress={onScoreboard}
-            activeOpacity={0.7}
-          >
-            <Icon name="trophy-variant" size={20} color={color.goldFaded} />
-            <Text style={styles.railLabel}>Glory</Text>
-          </TouchableOpacity>
+          {railItem("trophy-variant", "Glory", onScoreboard)}
           <View style={styles.railDivider} />
-          <TouchableOpacity
-            style={styles.railItem}
-            onPress={onProfile}
-            activeOpacity={0.7}
-          >
-            <Icon name="shield-account" size={20} color={color.goldFaded} />
-            <Text style={styles.railLabel}>Profile</Text>
-          </TouchableOpacity>
+          {railItem("shield-account", "Profile", onProfile)}
           <View style={styles.railDivider} />
-          <TouchableOpacity
-            style={styles.railItem}
-            onPress={onArmory}
-            activeOpacity={0.7}
-          >
-            <Icon name="shield-half-full" size={20} color={color.goldFaded} />
-            <Text style={styles.railLabel}>Armory</Text>
-          </TouchableOpacity>
+          {railItem("shield-half-full", "Armory", onArmory)}
+          {onLounge && <View style={styles.railDivider} />}
+          {railItem("pillar", "Lounge", onLounge, !!loungeCode)}
           <View style={styles.railDivider} />
-          <TouchableOpacity
-            style={styles.railItem}
-            onPress={onHowToPlay}
-            activeOpacity={0.7}
-          >
-            <Icon
-              name="script-text-outline"
-              size={20}
-              color={color.goldFaded}
-            />
-            <Text style={styles.railLabel}>Guide</Text>
-          </TouchableOpacity>
+          {railItem("script-text-outline", "Guide", onHowToPlay)}
         </View>
-        {/* Tournament — special callout */}
-        {/* <TouchableOpacity
-          style={[styles.loungeBtn, loungeCode && styles.loungeBtnActive]}
-          onPress={onLounge}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.loungeIcon}>🏛</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.loungeLabel}>
-              {loungeCode ? loungeName : "Tournament"}
-            </Text>
-            <Text style={styles.loungeSubtext}>
-              {loungeCode
-                ? "Joined — compete for prizes"
-                : "Join a lounge tournament"}
-            </Text>
-          </View>
-          <Text style={styles.loungeArrow}>›</Text>
-        </TouchableOpacity> */}
       </Animated.View>
 
       {/* Logout */}
@@ -537,11 +529,6 @@ const HomeScreen = ({
           <Text style={styles.logoutText}>Sign Out</Text>
         </TouchableOpacity>
       )}
-
-      {/* Footer */}
-      <Text style={styles.footer}>
-        6 Battlefields · 4 Beast Clans · €100 Monthly Prize
-      </Text>
 
       {prizeModalVisible && (
         <View style={styles.prizeOverlay}>
@@ -623,59 +610,10 @@ const HomeScreen = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0B1410",
+    backgroundColor: color.bgBase,
     flexDirection: "row",
     paddingHorizontal: 24,
     paddingVertical: 12,
-  },
-
-  // Replace streakBadge styles
-  streakBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    marginTop: 6,
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-  },
-  streakBadgeCount: {
-    color: "rgba(232,197,71,0.7)",
-    fontSize: 12,
-    fontWeight: "900",
-  },
-  streakBadgeLabel: {
-    color: "rgba(232,197,71,0.4)",
-    fontSize: 11,
-    fontWeight: "600",
-    letterSpacing: 0.5,
-  },
-
-  // Replace menuGrid and add menuGridRow
-  menuGrid: {
-    gap: 5,
-    width: "100%",
-  },
-  menuGridRow: {
-    flexDirection: "row",
-    gap: 5,
-  },
-  gridBtn: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "rgba(232,197,71,0.1)",
-    backgroundColor: "rgba(232,197,71,0.03)",
-    gap: 2,
-  },
-  gridIcon: { fontSize: 18 },
-  gridLabel: {
-    fontSize: 9,
-    fontWeight: "700",
-    color: "rgba(232,197,71,0.55)",
-    letterSpacing: 1,
   },
 
   // Background
@@ -737,7 +675,7 @@ const styles = StyleSheet.create({
   titleMain: {
     fontFamily: font.display,
     fontSize: 40,
-    color: "#E8C547",
+    color: color.gold,
     letterSpacing: 4, // Cinzel carries the weight — no need to fake it with wide tracking
     textShadowColor: "rgba(232,197,71,0.3)",
     textShadowOffset: { width: 0, height: 0 },
@@ -758,62 +696,24 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
-  // Cards display
+  // Crest fan
   cardsDisplay: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 12,
-    height: 90,
+    marginTop: 10,
+    height: 126,
   },
-  card: {
-    width: 52,
-    height: 74,
-    borderRadius: 6,
-    backgroundColor: "#F2E8D5", // was #F5F5DC — match our parchment
-    borderWidth: 1.5,
-    borderColor: "rgba(232,197,71,0.3)", // was 0.6 — subtler
-    padding: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  cardLeft: {
-    marginRight: -12,
-  },
-  cardCenter: {
-    zIndex: 2,
-  },
-  cardRight: {
-    marginLeft: -12,
-  },
-  cardInner: {
-    flex: 1,
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  cardCorner: {
-    fontSize: 11,
-    fontWeight: "900",
-    color: "#8B1A1A",
-    alignSelf: "flex-start",
-  },
-  cardCornerBottom: {
-    alignSelf: "flex-end",
-    transform: [{ rotate: "180deg" }],
-  },
-  cardIcon: {
-    fontSize: 22,
-  },
+  cardLeft: { marginRight: -16, zIndex: 1 },
+  cardCenter: { zIndex: 2 },
+  cardRight: { marginLeft: -16, zIndex: 1 },
 
   // Greeting
   greetingWrap: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    marginTop: 14,
+    marginTop: 12,
   },
   greetingLine: {
     width: 24,
@@ -821,16 +721,71 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(232,197,71,0.2)",
   },
   greetingText: {
-    color: "#E8C547",
+    color: color.gold,
     fontSize: 13,
     fontWeight: "800",
     letterSpacing: 3,
   },
 
+  // Streak chip
+  streakBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 6,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+  },
+  streakBadgeCount: {
+    color: "rgba(255,140,0,0.85)",
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  streakBadgeLabel: {
+    color: "rgba(255,140,0,0.5)",
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+  },
+
+  // Prize tag
+  prizeTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    marginTop: 9,
+    backgroundColor: "rgba(255,215,0,0.05)",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: "rgba(255,215,0,0.15)",
+  },
+  prizeTagText: {
+    color: "rgba(255,215,0,0.75)",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 2,
+  },
+  prizeTagLive: {
+    backgroundColor: "rgba(123,237,159,0.15)",
+    borderRadius: 3,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderWidth: 1,
+    borderColor: "rgba(123,237,159,0.3)",
+  },
+  prizeTagLiveText: {
+    color: color.sage,
+    fontSize: 6,
+    fontWeight: "900",
+    letterSpacing: 2,
+  },
+
   // RIGHT SECTION
   rightSection: {
     flex: 1,
-    gap: 7,
+    gap: 8,
     justifyContent: "center",
     maxWidth: 340,
   },
@@ -840,15 +795,25 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#E8C547",
-    paddingVertical: 10,
+    backgroundColor: color.gold,
+    paddingVertical: 11,
     paddingHorizontal: 16,
     borderRadius: 12,
-    shadowColor: "#E8C547",
+    shadowColor: color.gold,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 12,
     elevation: 8,
+  },
+  playPinstripe: {
+    position: "absolute",
+    top: 3,
+    left: 3,
+    right: 3,
+    bottom: 3,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: "rgba(26,26,26,0.18)",
   },
   playBtnInner: {
     flexDirection: "row",
@@ -858,7 +823,7 @@ const styles = StyleSheet.create({
   playText: {
     fontFamily: font.heading,
     fontSize: 16,
-    color: "#1a1a1a",
+    color: color.ink,
     letterSpacing: 1.5,
   },
   playSubtext: {
@@ -871,51 +836,110 @@ const styles = StyleSheet.create({
   playArrow: {
     fontSize: 24,
     fontWeight: "900",
-    color: "#1a1a1a",
+    color: color.ink,
+    marginRight: 4,
   },
 
-  // Daily quest
-  dailyBtn: {
-    backgroundColor: "rgba(232,197,71,0.05)",
-    borderWidth: 1,
-    borderColor: "rgba(232,197,71,0.2)",
-    borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+  // Mode pair
+  modeRow: {
+    flexDirection: "row",
+    gap: 8,
   },
-  dailyHeader: {
+  modeCard: {
+    flex: 1,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+  },
+  modeCardGold: {
+    backgroundColor: "rgba(232,197,71,0.05)",
+    borderColor: "rgba(232,197,71,0.22)",
+  },
+  modeCardEmber: {
+    backgroundColor: "rgba(255,140,0,0.06)",
+    borderColor: "rgba(255,140,0,0.3)",
+    shadowColor: color.ember,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  modePinstripe: {
+    position: "absolute",
+    top: 3,
+    left: 3,
+    right: 3,
+    bottom: 3,
+    borderRadius: 7,
+    borderWidth: 1,
+  },
+  modeHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginBottom: 1,
+    marginBottom: 2,
   },
-  dailyBadge: {
+  modeBadgeGold: {
     color: "rgba(232,197,71,0.6)",
     fontSize: 8,
     fontWeight: "900",
     letterSpacing: 2,
+    flex: 1,
   },
-  dailyLiveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#7BED9F",
-    shadowColor: "#7BED9F",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 4,
-  },
-  dailyTitle: {
-    fontFamily: font.heading,
-    color: "#E8C547",
-    fontSize: 14,
+  modeBadgeEmber: {
+    color: "rgba(255,140,0,0.55)",
+    fontSize: 8,
+    fontWeight: "900",
     letterSpacing: 2,
+    flex: 1,
   },
-  dailyDesc: {
+  modeTitleGold: {
+    fontFamily: font.heading,
+    color: color.gold,
+    fontSize: 14,
+    letterSpacing: 1.5,
+  },
+  modeTitleEmber: {
+    fontFamily: font.heading,
+    color: color.ember,
+    fontSize: 14,
+    letterSpacing: 1.5,
+    textShadowColor: "rgba(255,140,0,0.35)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
+  },
+  modeDesc: {
     color: "rgba(255,255,255,0.35)",
     fontSize: 9,
     fontWeight: "600",
     marginTop: 1,
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: color.sage,
+    shadowColor: color.sage,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+  },
+  onlineBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(123,237,159,0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(123,237,159,0.3)",
+    borderRadius: 6,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  onlineBadgeText: {
+    color: color.sage,
+    fontSize: 9,
+    fontWeight: "900",
   },
 
   // Section divider
@@ -937,39 +961,43 @@ const styles = StyleSheet.create({
     letterSpacing: 3,
   },
 
-  // Lounge
-  loungeBtn: {
+  // Meta rail
+  iconRail: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    justifyContent: "space-between",
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    backgroundColor: "rgba(232,197,71,0.02)",
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(79,195,247,0.2)",
-    backgroundColor: "rgba(79,195,247,0.04)",
-    gap: 10,
+    borderColor: "rgba(232,197,71,0.06)",
   },
-  loungeBtnActive: {
-    borderColor: "rgba(79,195,247,0.5)",
-    backgroundColor: "rgba(79,195,247,0.1)",
+  railItem: {
+    flex: 1,
+    alignItems: "center",
+    gap: 3,
+    paddingVertical: 2,
   },
-  loungeIcon: { fontSize: 22 },
-  loungeLabel: {
-    fontSize: 13,
-    fontWeight: "900",
-    color: "#4FC3F7",
+  railLabel: {
+    color: "rgba(232,197,71,0.6)",
+    fontSize: 8,
+    fontWeight: "800",
     letterSpacing: 1.5,
   },
-  loungeSubtext: {
-    fontSize: 8,
-    fontWeight: "600",
-    color: "rgba(79,195,247,0.5)",
-    letterSpacing: 1,
+  railDivider: {
+    width: 1,
+    height: 22,
+    backgroundColor: "rgba(232,197,71,0.08)",
   },
-  loungeArrow: {
-    fontSize: 18,
-    fontWeight: "900",
-    color: "rgba(79,195,247,0.6)",
+  railDot: {
+    position: "absolute",
+    top: -2,
+    right: -4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: color.sage,
   },
 
   // Logout
@@ -992,52 +1020,6 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: "600",
     letterSpacing: 1,
-  },
-
-  // Footer
-  footer: {
-    position: "absolute",
-    bottom: 10,
-    alignSelf: "center",
-    color: "rgba(255,255,255,0.12)",
-    fontSize: 9,
-    fontWeight: "600",
-    letterSpacing: 2,
-    left: 20,
-  },
-
-  // Prize tag — below hero name
-  prizeTag: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 8,
-    backgroundColor: "rgba(255,215,0,0.05)",
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderWidth: 1,
-    borderColor: "rgba(255,215,0,0.15)",
-  },
-  prizeTagText: {
-    color: "rgba(255,215,0,0.7)",
-    fontSize: 9,
-    fontWeight: "900",
-    letterSpacing: 2,
-  },
-  prizeTagLive: {
-    backgroundColor: "rgba(123,237,159,0.15)",
-    borderRadius: 3,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderWidth: 1,
-    borderColor: "rgba(123,237,159,0.3)",
-  },
-  prizeTagLiveText: {
-    color: "#7BED9F",
-    fontSize: 6,
-    fontWeight: "900",
-    letterSpacing: 2,
   },
 
   // Prize modal
@@ -1095,7 +1077,7 @@ const styles = StyleSheet.create({
     letterSpacing: 4,
   },
   prizeModalAmount: {
-    color: "#FFD700",
+    color: color.goldBright,
     fontSize: 30,
     fontWeight: "900",
     letterSpacing: 3,
@@ -1141,7 +1123,7 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
   },
   prizeModalBtn: {
-    backgroundColor: "#E8C547",
+    backgroundColor: color.gold,
     paddingHorizontal: 28,
     paddingVertical: 10,
     borderRadius: 10,
@@ -1152,8 +1134,8 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 4,
     borderWidth: 1.5,
-    borderColor: "#D4A017",
-    shadowColor: "#E8C547",
+    borderColor: color.goldDeep,
+    shadowColor: color.gold,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 12,
@@ -1161,171 +1143,9 @@ const styles = StyleSheet.create({
   },
   prizeModalBtnText: {
     fontFamily: font.heading,
-    color: "#1a1a1a",
+    color: color.ink,
     fontSize: 14,
     letterSpacing: 2,
-  },
-  onlineWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    marginTop: 6,
-  },
-  onlineDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#7BED9F",
-    shadowColor: "#7BED9F",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 4,
-  },
-  onlineText: {
-    color: "rgba(255,255,255,0.3)",
-    fontSize: 9,
-    fontWeight: "600",
-    letterSpacing: 1,
-  },
-  streakBadgeIcon: {
-    fontSize: 24,
-  },
-  streakBadgeCenter: {
-    flex: 1,
-    alignItems: "center",
-  },
-  streakBadgeMilestone: {
-    backgroundColor: "rgba(255,255,255,0.04)",
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-  },
-  streakBadgeMilestoneText: {
-    color: "rgba(255,255,255,0.4)",
-    fontSize: 8,
-    fontWeight: "900",
-    letterSpacing: 1,
-  },
-  gridSub: {
-    fontSize: 7,
-    fontWeight: "600",
-    color: "rgba(255,255,255,0.2)",
-    letterSpacing: 0.5,
-  },
-  // Arena feature tile — the eye magnet of the secondary menu
-  arenaFeature: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: "rgba(255,140,0,0.35)",
-    backgroundColor: "rgba(255,140,0,0.07)",
-    shadowColor: color.ember,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 4,
-    overflow: "hidden",
-  },
-  arenaFeatureLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  arenaFeatureLabel: {
-    fontFamily: font.heading,
-    color: color.ember,
-    fontSize: 16,
-    letterSpacing: 2,
-    textShadowColor: "rgba(255,140,0,0.4)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 8,
-  },
-  arenaFeatureSub: {
-    color: "rgba(255,140,0,0.55)",
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 1,
-    marginTop: 1,
-  },
-  arenaFeatureBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: "rgba(123,237,159,0.12)",
-    borderWidth: 1,
-    borderColor: "rgba(123,237,159,0.3)",
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  arenaFeatureBadgeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#7BED9F",
-    shadowColor: "#7BED9F",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 4,
-  },
-  arenaFeatureBadgeText: {
-    color: "#7BED9F",
-    fontSize: 11,
-    fontWeight: "900",
-    letterSpacing: 0.5,
-  },
-
-  // Icon rail — clean horizontal strip of secondary actions
-  iconRail: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 10,
-    paddingHorizontal: 4,
-    backgroundColor: "rgba(232,197,71,0.02)",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "rgba(232,197,71,0.06)",
-  },
-  railItem: {
-    flex: 1,
-    alignItems: "center",
-    gap: 3,
-    paddingVertical: 2,
-  },
-  railLabel: {
-    color: "rgba(232,197,71,0.6)",
-    fontSize: 8,
-    fontWeight: "800",
-    letterSpacing: 1.5,
-  },
-  railDivider: {
-    width: 1,
-    height: 22,
-    backgroundColor: "rgba(232,197,71,0.08)",
-  },
-  testCrashBtn: {
-    position: "absolute",
-    bottom: 8,
-    left: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-    backgroundColor: "rgba(255,0,0,0.3)",
-    borderWidth: 1,
-    borderColor: "rgba(255,0,0,0.6)",
-  },
-  testCrashText: {
-    color: "#fff",
-    fontSize: 9,
-    fontWeight: "900",
-    letterSpacing: 1,
   },
 })
 
