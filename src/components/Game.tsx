@@ -1061,11 +1061,16 @@ const Game = ({
                       </View>
                     </TouchableOpacity>
                   )}
-                <View style={styles.spoilsBox}>
-                  <Text style={styles.label}>SPOILS</Text>
-                  <Reanimated.Text style={[styles.scoreValue, scorePulseStyle]}>
-                    {score.toLocaleString()}
-                  </Reanimated.Text>
+                <View style={styles.treasury}>
+                  <Icon name="sack" size={13} color={palette.goldDeep} />
+                  <View>
+                    <Text style={styles.label}>SPOILS</Text>
+                    <Reanimated.Text
+                      style={[styles.scoreValue, scorePulseStyle]}
+                    >
+                      {score.toLocaleString()}
+                    </Reanimated.Text>
+                  </View>
                 </View>
               </View>
               <View style={styles.centerCards}>
@@ -1351,8 +1356,18 @@ const styles = StyleSheet.create({
     gap: 8,
     zIndex: 2,
   },
-  spoilsBox: {
-    justifyContent: "center",
+  // SPOILS treasury — a framed cartouche set into the war table, not floating text.
+  treasury: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    backgroundColor: "rgba(8,16,9,0.45)",
+    borderWidth: 1,
+    borderColor: palette.goldLine,
+    borderRadius: 8,
+    paddingLeft: 9,
+    paddingRight: 12,
+    paddingVertical: 4,
   },
 
   // Center active cards
@@ -1383,12 +1398,18 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
   },
 
-  // Timer + Combo
+  // Timer + Combo gauge station — a framed instrument panel mirroring the treasury.
   rightBox: {
-    alignItems: "flex-end",
+    alignItems: "center",
     gap: 2,
-    minWidth: 70,
+    minWidth: 84,
     zIndex: 2,
+    backgroundColor: "rgba(8,16,9,0.45)",
+    borderWidth: 1,
+    borderColor: palette.goldLine,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
   },
   label: {
     color: palette.goldFaded,
@@ -1470,7 +1491,7 @@ const styles = StyleSheet.create({
 
   // ── Combo Display — Bottom bar ──
   comboWrap: {
-    alignItems: "flex-end",
+    alignItems: "center",
     height: 30,
     justifyContent: "center",
   },
@@ -1493,7 +1514,7 @@ const styles = StyleSheet.create({
     fontSize: Math.round(6 * CARD_SCALE),
     fontWeight: "900",
     letterSpacing: 2,
-    textAlign: "right",
+    textAlign: "center",
     marginTop: -1,
   },
 
