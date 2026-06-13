@@ -1,7 +1,20 @@
-// Quit / retreat confirmation modal. Extracted from Game.tsx (Step 1.6).
+// Quit / retreat confirmation modal (DESIGN_PLAN §4.x, recomposed).
+// Composed to the engraved language: a medallion in a crimson ring, Cinzel
+// title, a spoils-at-stake cartouche, primary Keep Fighting + danger Retreat —
+// no emoji. Scales in on mount.
 
-import React from "react"
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native"
+import React, { useEffect, useRef } from "react"
+import {
+  Animated,
+  Easing,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native"
+import { Icon } from "../../ui/Icon"
+import { color, font } from "../../ui/theme"
+import { withAlpha } from "../../ui/honor"
 
 export const QuitConfirmModal = ({
   dailyMode,
@@ -13,113 +26,114 @@ export const QuitConfirmModal = ({
   score: number
   onResume: () => void
   onConfirmQuit: () => void
-}) => (
-  <View style={styles.quitOverlay}>
-    <View style={styles.quitCard}>
-      {/* Animated glow behind card — atmospheric */}
-      <View style={styles.quitGlow} />
+}) => {
+  const scale = useRef(new Animated.Value(0.9)).current
+  const fade = useRef(new Animated.Value(0)).current
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(scale, {
+        toValue: 1,
+        duration: 220,
+        easing: Easing.out(Easing.back(1.4)),
+        useNativeDriver: true,
+      }),
+      Animated.timing(fade, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start()
+  }, [])
 
-      {/* Top rune row */}
-      <View style={styles.quitRuneRow}>
-        <Text style={styles.quitRune}>ᚠ</Text>
-        <View style={styles.quitOrnLine} />
-        <Text style={styles.quitRune}>ᚦ</Text>
-        <View style={styles.quitOrnLine} />
-        <Text style={styles.quitRune}>ᚱ</Text>
-      </View>
+  return (
+    <Animated.View style={[q.overlay, { opacity: fade }]}>
+      <Animated.View style={[q.card, { transform: [{ scale }] }]}>
+        <View style={q.glow} />
 
-      {/* Main icon — skull on crossed swords */}
-      <View style={styles.quitIconWrap}>
-        <Text style={styles.quitIconBehind}>⚔️</Text>
-        <Text style={styles.quitIconFront}>💀</Text>
-      </View>
-
-      {/* Title */}
-      <Text style={styles.quitTitle}>RETREAT?</Text>
-      <Text style={styles.quitSubtitle}>Your battle will be abandoned</Text>
-
-      <View style={styles.quitDivider} />
-
-      {/* Warning for daily */}
-      {dailyMode && (
-        <View style={styles.quitWarningBox}>
-          <Text style={styles.quitWarningIcon}>⚠️</Text>
-          <Text style={styles.quitWarningText}>
-            Daily attempt will be lost!
-          </Text>
+        {/* top rune row */}
+        <View style={q.runeRow}>
+          <Text style={q.rune}>ᚠ</Text>
+          <View style={q.ornLine} />
+          <Text style={q.rune}>ᚦ</Text>
+          <View style={q.ornLine} />
+          <Text style={q.rune}>ᚱ</Text>
         </View>
-      )}
 
-      {/* Score at stake */}
-      {score > 0 && (
-        <View style={styles.quitScoreBox}>
-          <Text style={styles.quitScoreLabel}>⚔ SPOILS AT STAKE</Text>
-          <Text style={styles.quitScoreValue}>{score.toLocaleString()}</Text>
+        {/* medallion */}
+        <View style={q.medal}>
+          <View style={q.medalRing} />
+          <Icon name="skull" size={26} color={color.crimson} />
         </View>
-      )}
 
-      <View style={styles.quitDivider} />
+        <Text style={q.title}>RETREAT?</Text>
+        <Text style={q.subtitle}>Your battle will be abandoned</Text>
 
-      {/* Keep fighting — primary */}
-      <TouchableOpacity
-        style={styles.quitFightBtn}
-        onPress={onResume}
-        activeOpacity={0.85}
-      >
-        <Text style={styles.quitFightIcon}>⚔️</Text>
-        <Text style={styles.quitFightText}>KEEP FIGHTING</Text>
-        <Text style={styles.quitFightIcon}>⚔️</Text>
-      </TouchableOpacity>
+        <View style={q.divider} />
 
-      {/* Retreat — secondary */}
-      <TouchableOpacity
-        style={styles.quitLeaveBtn}
-        onPress={onConfirmQuit}
-        activeOpacity={0.85}
-      >
-        <Text style={styles.quitLeaveIcon}>🏰</Text>
-        <Text style={styles.quitLeaveText}>Retreat to Castle</Text>
-      </TouchableOpacity>
+        {dailyMode && (
+          <View style={q.warning}>
+            <Icon name="alert" size={13} color="#D9604F" />
+            <Text style={q.warningTxt}>Daily attempt will be lost</Text>
+          </View>
+        )}
 
-      {/* Bottom rune row */}
-      <View style={styles.quitRuneRow}>
-        <Text style={styles.quitRune}>ᛟ</Text>
-        <View style={styles.quitOrnLine} />
-        <Text style={styles.quitRuneDot}>◆</Text>
-        <View style={styles.quitOrnLine} />
-        <Text style={styles.quitRune}>ᛏ</Text>
-      </View>
-    </View>
-  </View>
-)
+        {score > 0 && (
+          <View style={q.stakeBox}>
+            <Text style={q.stakeLabel}>SPOILS AT STAKE</Text>
+            <Text style={q.stakeValue}>{score.toLocaleString()}</Text>
+          </View>
+        )}
 
-const styles = StyleSheet.create({
-  quitOverlay: {
+        <View style={q.divider} />
+
+        <TouchableOpacity style={q.fightBtn} onPress={onResume} activeOpacity={0.85}>
+          <Icon name="sword-cross" size={14} color={color.ink} />
+          <Text style={q.fightTxt}>KEEP FIGHTING</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={q.leaveBtn} onPress={onConfirmQuit} activeOpacity={0.85}>
+          <Icon name="castle" size={14} color="#D9604F" />
+          <Text style={q.leaveTxt}>Retreat to Castle</Text>
+        </TouchableOpacity>
+
+        {/* bottom rune row */}
+        <View style={q.runeRow}>
+          <Text style={q.rune}>ᛟ</Text>
+          <View style={q.ornLine} />
+          <Text style={q.runeDot}>◆</Text>
+          <View style={q.ornLine} />
+          <Text style={q.rune}>ᛏ</Text>
+        </View>
+      </Animated.View>
+    </Animated.View>
+  )
+}
+
+const q = StyleSheet.create({
+  overlay: {
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    height: "100%",
-    width: "100%",
     backgroundColor: "rgba(0,0,0,0.92)",
     justifyContent: "center",
     alignItems: "center",
     zIndex: 1000,
     elevation: 1000,
   },
-  quitCard: {
+  card: {
     alignItems: "center",
-    gap: 4,
+    gap: 5,
     backgroundColor: "#0D0907",
-    borderRadius: 20,
+    borderRadius: 18,
     borderWidth: 1.5,
-    borderColor: "rgba(232,197,71,0.25)",
-    paddingHorizontal: 36,
-    paddingVertical: 20,
+    borderColor: color.goldLine,
+    paddingHorizontal: 34,
+    paddingVertical: 16,
     minWidth: 300,
     maxWidth: 340,
-    maxHeight: "90%",
+    maxHeight: "92%",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.9,
@@ -127,160 +141,140 @@ const styles = StyleSheet.create({
     elevation: 30,
     overflow: "hidden",
   },
-  quitGlow: {
+  glow: {
     position: "absolute",
     top: -40,
     left: "20%",
     width: "60%",
     height: 120,
     borderRadius: 60,
-    backgroundColor: "rgba(232,197,71,0.04)",
+    backgroundColor: withAlpha(color.crimson, 0.06),
   },
-  quitRuneRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    width: "100%",
-  },
-  quitOrnLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "rgba(232,197,71,0.1)",
-  },
-  quitRune: {
-    color: "rgba(232,197,71,0.3)",
-    fontSize: 14,
-    fontWeight: "400",
-  },
-  quitRuneDot: {
-    color: "rgba(232,197,71,0.2)",
-    fontSize: 7,
-  },
-  quitIconWrap: {
-    position: "relative",
-    width: 56,
-    height: 56,
+  runeRow: { flexDirection: "row", alignItems: "center", gap: 8, width: "100%" },
+  ornLine: { flex: 1, height: 1, backgroundColor: color.goldLine },
+  rune: { color: "rgba(232,197,71,0.3)", fontSize: 14 },
+  runeDot: { color: "rgba(232,197,71,0.2)", fontSize: 7 },
+
+  medal: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: withAlpha(color.crimson, 0.1),
+    borderWidth: 1.5,
+    borderColor: withAlpha(color.crimson, 0.55),
     justifyContent: "center",
     alignItems: "center",
-    marginVertical: 2,
+    marginVertical: 3,
   },
-  quitIconBehind: {
+  medalRing: {
     position: "absolute",
-    fontSize: 40,
-    opacity: 0.25,
+    top: 3,
+    left: 3,
+    right: 3,
+    bottom: 3,
+    borderRadius: 22,
+    borderWidth: 0.5,
+    borderColor: withAlpha(color.crimson, 0.3),
   },
-  quitIconFront: {
-    fontSize: 34,
-    zIndex: 2,
-  },
-  quitTitle: {
-    color: "#E8C547",
-    fontSize: 14,
-    fontWeight: "900",
-    letterSpacing: 8,
+  title: {
+    color: color.gold,
+    fontFamily: font.display,
+    fontSize: 22,
+    letterSpacing: 4,
     textShadowColor: "rgba(232,197,71,0.4)",
     textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 16,
+    textShadowRadius: 14,
   },
-  quitSubtitle: {
-    color: "rgba(255,255,255,0.25)",
-    fontSize: 8,
+  subtitle: {
+    color: "rgba(255,255,255,0.3)",
+    fontSize: 9,
     fontWeight: "600",
     letterSpacing: 1,
-    marginTop: -4,
   },
-  quitDivider: {
-    width: "70%",
-    height: 1,
-    backgroundColor: "rgba(232,197,71,0.08)",
-  },
-  quitWarningBox: {
+  divider: { width: "70%", height: 1, backgroundColor: "rgba(232,197,71,0.08)" },
+  warning: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    backgroundColor: "rgba(255,80,80,0.07)",
+    gap: 7,
+    backgroundColor: withAlpha(color.crimson, 0.08),
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "rgba(255,80,80,0.2)",
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    width: "100%",
+    borderColor: withAlpha(color.crimson, 0.25),
+    paddingHorizontal: 12,
+    paddingVertical: 5,
   },
-  quitWarningIcon: { fontSize: 16 },
-  quitWarningText: {
-    color: "rgba(255,120,120,0.8)",
-    fontSize: 8,
+  warningTxt: {
+    color: "#D9806F",
+    fontSize: 10,
     fontWeight: "800",
     letterSpacing: 0.5,
   },
-  quitScoreBox: {
+  stakeBox: {
     alignItems: "center",
-    backgroundColor: "rgba(232,197,71,0.04)",
+    backgroundColor: color.goldWash,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(232,197,71,0.12)",
+    borderColor: color.goldLine,
     paddingHorizontal: 28,
     paddingVertical: 6,
     width: "100%",
   },
-  quitScoreLabel: {
-    color: "rgba(232,197,71,0.45)",
+  stakeLabel: {
+    color: color.goldFaded,
     fontSize: 9,
     fontWeight: "900",
     letterSpacing: 4,
     marginBottom: 2,
   },
-  quitScoreValue: {
-    color: "#E8C547",
+  stakeValue: {
+    color: color.gold,
     fontSize: 20,
     fontWeight: "900",
-    textShadowColor: "rgba(232,197,71,0.5)",
+    textShadowColor: withAlpha(color.gold, 0.5),
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 12,
   },
-  quitFightBtn: {
+  fightBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 12,
-    backgroundColor: "#E8C547",
+    gap: 10,
+    backgroundColor: color.gold,
     paddingHorizontal: 28,
     paddingVertical: 10,
     borderRadius: 12,
     width: "100%",
     borderWidth: 1.5,
-    borderColor: "#D4A017",
-    shadowColor: "#E8C547",
+    borderColor: color.goldDeep,
+    shadowColor: color.gold,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
     shadowRadius: 12,
     elevation: 8,
   },
-  quitFightIcon: { fontSize: 12 },
-  quitFightText: {
-    color: "#1a1a1a",
-    fontSize: 12,
+  fightTxt: {
+    color: color.ink,
+    fontSize: 13,
     fontWeight: "900",
-    letterSpacing: 3,
+    letterSpacing: 2,
   },
-  quitLeaveBtn: {
+  leaveBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 10,
+    gap: 9,
     paddingHorizontal: 28,
     paddingVertical: 8,
     borderRadius: 12,
     width: "100%",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(255,255,255,0.03)",
+    borderColor: withAlpha(color.crimson, 0.4),
+    backgroundColor: withAlpha(color.crimson, 0.08),
   },
-  quitLeaveIcon: { fontSize: 16 },
-  quitLeaveText: {
-    color: "rgba(255,255,255,0.4)",
-    fontSize: 13,
-    fontWeight: "700",
-    letterSpacing: 2,
+  leaveTxt: {
+    color: "#D9604F",
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 1.5,
   },
 })
