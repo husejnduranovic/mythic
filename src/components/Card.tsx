@@ -11,6 +11,7 @@ import Animated, {
   useSharedValue,
   withTiming,
   withSequence,
+  withDelay,
   withRepeat,
   Easing,
   runOnJS,
@@ -821,12 +822,27 @@ const FallingCard = ({
     sc = useSharedValue(1),
     r = useSharedValue(0)
   useEffect(() => {
-    y.value = withTiming(80, { duration: 180, easing: Easing.in(Easing.quad) })
-    sc.value = withTiming(0.6, { duration: 180 })
-    r.value = withTiming((Math.random() - 0.5) * 30, { duration: 180 })
-    o.value = withTiming(0, { duration: 170 }, () => {
-      runOnJS(onDone)()
-    })
+    // Vanquish — a quick recoil pop (which punches up the combo feel), then the
+    // card shrinks and rises as it dissolves, instead of a flat drop-and-fade.
+    // One card at a time, entirely on the UI thread (transform + opacity).
+    sc.value = withSequence(
+      withTiming(1.12, { duration: 60, easing: Easing.out(Easing.quad) }),
+      withTiming(0.45, { duration: 175, easing: Easing.in(Easing.cubic) }),
+    )
+    y.value = withDelay(
+      45,
+      withTiming(-28, { duration: 190, easing: Easing.out(Easing.quad) }),
+    )
+    r.value = withDelay(
+      45,
+      withTiming((Math.random() - 0.5) * 32, { duration: 190 }),
+    )
+    o.value = withDelay(
+      80,
+      withTiming(0, { duration: 165 }, (finished) => {
+        if (finished) runOnJS(onDone)()
+      }),
+    )
   }, [])
   const style = useAnimatedStyle(() => ({
     transform: [
