@@ -9,16 +9,14 @@ export const BountyStyleContext = createContext<{
   accent: string
   frontBg: string
   textColor: string
-  icon: string
-  // Monochrome treasure glyph rendered on the in-game bounty card (Card.tsx).
-  // `icon` (emoji) remains for the Armory rack miniatures until their next slice.
+  // Monochrome treasure glyph rendered on the bounty card, in-game and in the
+  // Armory miniatures alike (ui/sigils.tsx). The old emoji `icon` field is gone.
   sigil?: SigilSpec
 }>({
   backColor: "#0D0D0D",
   accent: "#DAA520",
   frontBg: "#FDF8E8",
   textColor: "#B8860B",
-  icon: "💰",
   sigil: BOUNTY_FALLBACK_SIGIL,
 })
 

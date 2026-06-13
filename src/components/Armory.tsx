@@ -17,7 +17,13 @@ import { logError } from "../services/logError"
 import ReturnToCastle from "./ReturnToCastle"
 import { Icon, IconName } from "../ui/Icon"
 import { color, font } from "../ui/theme"
-import { SigilSpec } from "../ui/sigils"
+import {
+  BACK_STYLES,
+  BOUNTY_FALLBACK_SIGIL,
+  DEFAULT_BACK_STYLE,
+  Sigil,
+  SigilSpec,
+} from "../ui/sigils"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Armory — "Quartermaster's Stage" (DESIGN_PLAN §4.9)
@@ -409,8 +415,9 @@ const BOUNTY_STYLES: ArmoryItem[] = [
   },
 ]
 
-// `sigil` is the monochrome treasure glyph the in-game card renders (ui/sigils.tsx);
-// `icon` (emoji) remains for the rack miniatures until their next slice.
+// `sigil` is the monochrome treasure glyph both the in-game card and the rack
+// miniatures now render (ui/sigils.tsx). The old emoji `icon` field was retired
+// when MiniBounty adopted the Sigil — nothing reads it anymore.
 export const BOUNTY_STYLE_CONFIG: Record<
   string,
   {
@@ -418,7 +425,6 @@ export const BOUNTY_STYLE_CONFIG: Record<
     accent: string
     frontBg: string
     textColor: string
-    icon: string
     sigil: SigilSpec
   }
 > = {
@@ -427,7 +433,6 @@ export const BOUNTY_STYLE_CONFIG: Record<
     accent: "#DAA520",
     frontBg: "#FFF8E8",
     textColor: "#8B6200",
-    icon: "💰",
     sigil: { fam: "mci", name: "sack" },
   },
   silver_cache: {
@@ -435,7 +440,6 @@ export const BOUNTY_STYLE_CONFIG: Record<
     accent: "#C0CCDA",
     frontBg: "#F4F6F8",
     textColor: "#445566",
-    icon: "🪙",
     sigil: { fam: "mci", name: "circle-multiple" },
   },
   ruby: {
@@ -443,7 +447,6 @@ export const BOUNTY_STYLE_CONFIG: Record<
     accent: "#FF2244",
     frontBg: "#FFF0F0",
     textColor: "#AA0022",
-    icon: "💎",
     sigil: { fam: "mci", name: "diamond-stone" },
   },
   emerald: {
@@ -451,7 +454,6 @@ export const BOUNTY_STYLE_CONFIG: Record<
     accent: "#22DD66",
     frontBg: "#EEFFF4",
     textColor: "#116622",
-    icon: "💚",
     sigil: { fam: "mci", name: "diamond-stone" },
   },
   diamond: {
@@ -459,7 +461,6 @@ export const BOUNTY_STYLE_CONFIG: Record<
     accent: "#99EEFF",
     frontBg: "#EEF8FF",
     textColor: "#1166AA",
-    icon: "💠",
     sigil: { fam: "mci", name: "diamond-stone" },
   },
   eternal_crown: {
@@ -468,7 +469,6 @@ export const BOUNTY_STYLE_CONFIG: Record<
     accent: "#FFCC00",
     frontBg: "#FFFAEE",
     textColor: "#AA7700",
-    icon: "👑",
     sigil: { fam: "mci", name: "crown" },
   },
 }
@@ -602,47 +602,62 @@ const RUNE_POS = [
 const inset = (n: number) =>
   ({ position: "absolute", top: n, left: n, right: n, bottom: n }) as const
 
-// In-game CardBackView in miniature: engraved double frame, cross lines,
-// crest medallion, corner runes.
+// In-game CardBackView in miniature: every engraving line takes the equipped
+// item's accent metal (ui/sigils.tsx BACK_STYLES) and the crest is the same
+// monochrome Sigil the live card inks — a true mirror, not an emoji-in-a-circle.
 const MiniBack = ({ item, w, h }: { item: ArmoryItem; w: number; h: number }) => {
+  const back = BACK_STYLES[item.color] || DEFAULT_BACK_STYLE
+  const a = back.accent
   const detailed = w >= 70
   const r = Math.round(Math.min(w, 52) * 0.19)
   const medal = Math.round(w * 0.58)
   return (
     <View
-      style={[m.backRoot, { width: w, height: h, borderRadius: r, backgroundColor: item.color }]}
+      style={[
+        m.backRoot,
+        { width: w, height: h, borderRadius: r, backgroundColor: item.color, borderColor: a + "59" },
+      ]}
     >
       <View
         style={[
           inset(Math.max(3, Math.round(w * 0.055))),
           m.backFrameOuter,
-          { borderRadius: Math.max(3, r - 3) },
+          { borderRadius: Math.max(3, r - 3), borderColor: a + "8C" },
         ]}
       />
       <View
         style={[
           inset(Math.max(6, Math.round(w * 0.11))),
           m.backFrameInner,
-          { borderRadius: Math.max(2, r - 6) },
+          { borderRadius: Math.max(2, r - 6), borderColor: a + "45" },
         ]}
       />
-      <View style={m.backCrossH} />
-      <View style={m.backCrossV} />
-      {detailed && <View style={[m.backDiag, { transform: [{ rotate: "30deg" }] }]} />}
-      {detailed && <View style={[m.backDiag, { transform: [{ rotate: "-30deg" }] }]} />}
-      <View style={[m.backMedal, { width: medal, height: medal, borderRadius: medal / 2 }]}>
+      <View style={[m.backCrossH, { backgroundColor: a + "1A" }]} />
+      <View style={[m.backCrossV, { backgroundColor: a + "1A" }]} />
+      {detailed && (
+        <View style={[m.backDiag, { transform: [{ rotate: "30deg" }], backgroundColor: a + "12" }]} />
+      )}
+      {detailed && (
+        <View style={[m.backDiag, { transform: [{ rotate: "-30deg" }], backgroundColor: a + "12" }]} />
+      )}
+      <View
+        style={[
+          m.backMedal,
+          { width: medal, height: medal, borderRadius: medal / 2, borderColor: a + "B3" },
+        ]}
+      >
         <View
           style={[
             inset(Math.max(2, Math.round(medal * 0.09))),
             m.backMedalRing,
-            { borderRadius: medal / 2 },
+            { borderRadius: medal / 2, borderColor: a + "59" },
           ]}
         />
-        <Text style={{ fontSize: Math.round(medal * 0.42) }}>{item.icon}</Text>
+        <Sigil sigil={back.sigil} size={Math.round(medal * 0.46)} color={a + "F0"} />
       </View>
       {detailed &&
         RUNES.map((g, i) => (
-          <Text key={g} style={[m.backRune, RUNE_POS[i]]}>
+          <Text key={g} style={[m.backRune, RUNE_POS[i], { color: a + "73" }]}>
             {g}
           </Text>
         ))}
@@ -655,7 +670,7 @@ const MiniBounty = ({ item, w, h }: { item: ArmoryItem; w: number; h: number }) 
   const bc = BOUNTY_STYLE_CONFIG[item.id] || {
     backColor: item.color,
     accent: item.accent,
-    icon: item.icon,
+    sigil: BOUNTY_FALLBACK_SIGIL,
   }
   const detailed = w >= 70
   const r = Math.round(Math.min(w, 52) * 0.19)
@@ -706,7 +721,11 @@ const MiniBounty = ({ item, w, h }: { item: ArmoryItem; w: number; h: number }) 
             { borderRadius: medal / 2, borderColor: withAlpha(bc.accent, 0.45) },
           ]}
         />
-        <Text style={{ fontSize: Math.round(medal * 0.4) }}>{bc.icon}</Text>
+        <Sigil
+          sigil={bc.sigil || BOUNTY_FALLBACK_SIGIL}
+          size={Math.round(medal * 0.44)}
+          color={bc.accent}
+        />
       </View>
       {detailed &&
         RUNE_POS.map((pos, i) => (
@@ -769,22 +788,22 @@ const MiniTable = ({ item, w, h }: { item: ArmoryItem; w: number; h: number }) =
 }
 
 const m = StyleSheet.create({
+  // Engraving colors (root border, frames, cross, diagonals, medallion rings,
+  // runes) are passed inline from the back's accent metal — see MiniBack/MiniBounty.
   backRoot: {
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.18)",
     overflow: "hidden",
     justifyContent: "center",
     alignItems: "center",
   },
-  backFrameOuter: { borderWidth: 1, borderColor: "rgba(255,255,255,0.22)" },
-  backFrameInner: { borderWidth: 0.5, borderColor: "rgba(255,255,255,0.12)" },
+  backFrameOuter: { borderWidth: 1 },
+  backFrameInner: { borderWidth: 0.5 },
   backCrossH: {
     position: "absolute",
     top: "50%",
     left: 7,
     right: 7,
     height: 0.5,
-    backgroundColor: "rgba(255,255,255,0.07)",
   },
   backCrossV: {
     position: "absolute",
@@ -792,7 +811,6 @@ const m = StyleSheet.create({
     top: 7,
     bottom: 7,
     width: 0.5,
-    backgroundColor: "rgba(255,255,255,0.07)",
   },
   backDiag: {
     position: "absolute",
@@ -800,17 +818,16 @@ const m = StyleSheet.create({
     left: -10,
     right: -10,
     height: 0.5,
-    backgroundColor: "rgba(255,255,255,0.05)",
   },
+  // Dark well so the accent Sigil reads as inlaid metal (matches Card.tsx shield).
   backMedal: {
-    backgroundColor: "rgba(255,255,255,0.07)",
+    backgroundColor: "rgba(0,0,0,0.30)",
     borderWidth: 1.5,
-    borderColor: "rgba(255,255,255,0.25)",
     justifyContent: "center",
     alignItems: "center",
   },
-  backMedalRing: { borderWidth: 0.5, borderColor: "rgba(255,255,255,0.15)" },
-  backRune: { position: "absolute", fontSize: 7, color: "rgba(255,255,255,0.35)" },
+  backMedalRing: { borderWidth: 0.5 },
+  backRune: { position: "absolute", fontSize: 7 },
 
   bountyRoot: {
     borderWidth: 1.5,
