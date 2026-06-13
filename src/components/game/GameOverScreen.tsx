@@ -1,16 +1,38 @@
-// Game-over / results screen. Extracted from Game.tsx (Step 1.6).
+// Game-over / results — "The Spoils Card" (DESIGN_PLAN §4.4, recomposed).
+//
+// The finished run is sealed into an honor card in the exact Hall-of-Glory
+// podium grammar (deep-green field, outcome-metal trim, crest medallion with a
+// breathing halo, the SPOILS as the hero number) so the result visually rhymes
+// with the leaderboard the player is climbing. Right column is the battle
+// chronicle: an async rank slot that shimmers until the rank resolves (no layout
+// jump), dotted-leader ledger rows, a "one more battle" goal line (§6.5), and the
+// actions. Landscape-first; this screen replaces the board, so it carries no
+// 28-card cost and motion is free.
 
-import React from "react"
+import React, { useEffect, useRef } from "react"
 import {
+  Animated,
+  Easing,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import ReturnToCastle from "../ReturnToCastle"
 import RecordCelebration from "../RecordCelebration"
 import PersonalBestBanner from "../PersonalBestBanner"
+import { Icon, IconName } from "../../ui/Icon"
+import { color, font } from "../../ui/theme"
+import {
+  HonorCard,
+  LedgerRow,
+  LedgerSep,
+  TIER,
+  withAlpha,
+} from "../../ui/honor"
 import type { ThemeConfig } from "../Armory"
 
 export const GameOverScreen = ({
@@ -58,199 +80,333 @@ export const GameOverScreen = ({
   onHome: () => void
   onDismissCelebration: () => void
 }) => {
-  const clearPct =
-    totalFieldCards > 0
-      ? Math.round((totalCleared / totalFieldCards) * 100)
-      : 0
+  const { width: winW, height: winH } = useWindowDimensions()
+  const insets = useSafeAreaInsets()
 
+  const fade = useRef(new Animated.Value(0)).current
+  const slide = useRef(new Animated.Value(15)).current
+  const deal = useRef(new Animated.Value(0)).current
+  const float = useRef(new Animated.Value(0)).current
+  const pulse = useRef(new Animated.Value(0.3)).current
+  const crownPulse = useRef(new Animated.Value(0.7)).current
+  const shimmer = useRef(new Animated.Value(0.35)).current
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fade, {
+        toValue: 1,
+        duration: 400,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(slide, {
+        toValue: 0,
+        duration: 400,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start()
+    Animated.timing(deal, {
+      toValue: 1,
+      duration: 420,
+      delay: 140,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start()
+    const loop = (v: Animated.Value, lo: number, hi: number, d: number) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(v, { toValue: hi, duration: d, useNativeDriver: true }),
+          Animated.timing(v, { toValue: lo, duration: d, useNativeDriver: true }),
+        ]),
+      ).start()
+    loop(pulse, 0.3, 0.5, 2000)
+    loop(crownPulse, 0.7, 1, 1500)
+    loop(shimmer, 0.35, 0.85, 700)
+    loop(float, 0, 1, 2200)
+  }, [])
+
+  const clearPct =
+    totalFieldCards > 0 ? Math.round((totalCleared / totalFieldCards) * 100) : 0
   const isVictory = clearPct >= 80
   const isMidBattle = clearPct >= 50
-  const outcomeIcon = isVictory ? "👑" : isMidBattle ? "⚔️" : "🛡"
+
   const allFinished = arenaMode
     ? arenaPlayers.every((p: any) => p.finished || p.disconnected)
     : true
-
   const myArenaRank = arenaMode
     ? arenaPlayers.findIndex((p: any) => p.uid === uid) + 1
     : 0
 
-  const outcomeTitle = dailyMode
-    ? "QUEST COMPLETE"
-    : arenaMode
-      ? !allFinished
-        ? "FINALIZING..."
-        : myArenaRank === 1
-          ? "VICTORY"
-          : `RANK #${myArenaRank}`
-      : isVictory
-        ? "VICTORY"
-        : isMidBattle
-          ? "BATTLE OVER"
-          : "RETREAT"
+  // Outcome → metal + crest medallion (mirrors the podium place metals).
+  const outcome: { title: string; trim: string; medallion: IconName } =
+    isAllTimeRecord
+      ? { title: "ALL-TIME RECORD", trim: color.goldBright, medallion: "trophy-variant" }
+      : dailyMode
+        ? { title: "QUEST COMPLETE", trim: color.gold, medallion: "script-text" }
+        : arenaMode
+          ? !allFinished
+            ? { title: "FINALIZING", trim: TIER.steel, medallion: "timer-sand" }
+            : myArenaRank === 1
+              ? { title: "VICTORY", trim: color.gold, medallion: "crown" }
+              : { title: `RANK #${myArenaRank}`, trim: TIER.steel, medallion: "sword-cross" }
+          : isVictory
+            ? { title: "VICTORY", trim: color.gold, medallion: "crown" }
+            : isMidBattle
+              ? { title: "BATTLE OVER", trim: TIER.steel, medallion: "sword-cross" }
+              : { title: "RETREAT", trim: TIER.bronze, medallion: "shield-half-full" }
+
+  const crowned = isAllTimeRecord || (!arenaMode && isVictory && !dailyMode)
+
+  // ── Geometry ──
+  const padL = Math.max(14, insets.left)
+  const padR = Math.max(14, insets.right)
+  const shrineW = Math.round(Math.min(326, Math.max(238, winW * 0.4)))
+  const cardH = Math.round(Math.min(winH - 150, 208))
+  const cardW = Math.round(cardH / 1.46)
+
+  // ── Async rank slot ──
+  const rankResolved = !arenaMode && (dailyMode ? dailyRank !== null : rank !== null)
+  const rankValue = dailyMode ? dailyRank : rank
+  const rankLabel = dailyMode ? "IN TODAY'S QUEST" : "AMONG ALL WARRIORS"
+
+  // ── "One more battle" goal (§6.5, lite — uses data already on screen) ──
+  const pbDelta = previousBest > 0 ? score - previousBest : 0
+  const goalStruck = isPersonalBest && !isAllTimeRecord
+  const goalGap =
+    !goalStruck && !isAllTimeRecord && previousBest > 0 && score < previousBest
+      ? previousBest - score
+      : 0
+
+  const cardBody = (
+    <>
+      <Text
+        style={[g.cardTitle, { color: outcome.trim }]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.6}
+      >
+        {outcome.title}
+      </Text>
+      <View style={{ flex: 1 }} />
+      <Text style={[g.cardOverline, { color: withAlpha(outcome.trim, 0.55) }]}>
+        SPOILS
+      </Text>
+      <Text
+        style={[g.cardScore, { textShadowColor: withAlpha(outcome.trim, 0.4) }]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+      >
+        {score.toLocaleString()}
+      </Text>
+      <Text style={[g.cardCombo, { color: withAlpha(outcome.trim, 0.6) }]}>
+        x{bestCombo} BEST COMBO
+      </Text>
+    </>
+  )
 
   return (
-    <View
-      style={[
-        styles.center,
-        {
-          backgroundColor: theme.battlefieldColor,
-          flexDirection: "row",
-          paddingHorizontal: 24,
-          gap: 20,
-          position: "relative",
-          overflow: "hidden",
-        },
-      ]}
-    >
+    <View style={[g.container, { paddingLeft: padL, paddingRight: padR }]}>
+      {background}
       {isPersonalBest && !isAllTimeRecord && (
         <PersonalBestBanner newScore={score} previousBest={previousBest} />
       )}
-      {background}
 
-      {/* Left — Result + Score */}
-      <View style={styles.gameOverLeft}>
-        {isAllTimeRecord ? (
-          <View style={styles.recordBanner}>
-            <Text style={styles.recordStars}>✦ ✦ ✦ ✦ ✦</Text>
-            <Text style={styles.recordIcon}>🏆</Text>
-            <Text style={styles.recordTitle}>ALL-TIME RECORD</Text>
-            <Text style={styles.recordSub}>You are the #1 warrior!</Text>
-            <Text style={styles.recordStars}>✦ ✦ ✦ ✦ ✦</Text>
-          </View>
-        ) : (
-          <>
-            {/* Outcome icon with ring — much bigger */}
-            <View style={styles.outcomeIconWrap}>
-              <View
+      <Animated.View
+        style={[g.inner, { opacity: fade, transform: [{ translateY: slide }] }]}
+      >
+        <View style={g.contentRow}>
+          {/* ── Left: the spoils card ── */}
+          <View style={[g.shrine, { width: shrineW }]}>
+            <View style={g.cardZone}>
+              <Animated.View
                 style={[
-                  styles.outcomeIconRing,
+                  g.cardPool,
                   {
-                    borderColor: isVictory
-                      ? "rgba(255,215,0,0.3)"
-                      : isMidBattle
-                        ? "rgba(232,197,71,0.2)"
-                        : "rgba(255,255,255,0.1)",
+                    width: cardW * 1.7,
+                    height: cardW * 1.7,
+                    borderRadius: cardW * 0.85,
+                    backgroundColor: withAlpha(outcome.trim, 0.05),
+                    opacity: pulse,
                   },
                 ]}
               />
-              <Text style={styles.outcomeIcon}>{outcomeIcon}</Text>
+              {crowned && (
+                <Animated.View style={[g.crown, { opacity: crownPulse }]}>
+                  <Icon name="crown" size={22} color={color.goldBright} />
+                </Animated.View>
+              )}
+              <HonorCard
+                w={cardW}
+                h={cardH}
+                trim={outcome.trim}
+                medallion={outcome.medallion}
+                deal={deal}
+                pulse={pulse}
+                float={float}
+                index={rankResolved && rankValue ? `#${rankValue}` : undefined}
+                badge={isAllTimeRecord ? "RECORD" : undefined}
+              >
+                {cardBody}
+              </HonorCard>
             </View>
-
-            {/* Title */}
-            <Text
-              style={[styles.gameTitle, isVictory && styles.gameTitleVictory]}
-            >
-              {outcomeTitle}
-            </Text>
-          </>
-        )}
-
-        <View style={styles.divider} />
-
-        {/* Rank */}
-        {!arenaMode &&
-          uid &&
-          (dailyRank !== null || rank !== null ? (
-            <Text style={styles.rankText}>
-              #{dailyMode ? dailyRank : rank}{" "}
-              {dailyMode ? "in today's quest" : "among all warriors"}
-            </Text>
-          ) : (
-            <Text style={styles.rankLoading}>Calculating rank...</Text>
-          ))}
-
-        {/* Final score */}
-        <Text style={styles.finalScore}>{score.toLocaleString()}</Text>
-
-        {/* Stats */}
-        <View style={styles.statsRow}>
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>{clearPct}%</Text>
-            <Text style={styles.statLabel}>CLEARED</Text>
+            <View style={g.shelf} />
+            <View style={g.shelfGlow} />
           </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>x{bestCombo}</Text>
-            <Text style={styles.statLabel}>BEST COMBO</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>{totalCleared}</Text>
-            <Text style={styles.statLabel}>CARDS</Text>
+
+          {/* ── Right: the chronicle ── */}
+          <View style={g.chronicle}>
+            {arenaMode ? (
+              <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={{ paddingBottom: 4 }}
+                showsVerticalScrollIndicator={false}
+              >
+                <Text style={g.boardTitle}>FINAL RANKINGS</Text>
+                {arenaPlayers.map((p: any, i: number) => (
+                  <View
+                    key={p.uid || i}
+                    style={[g.arenaRow, p.uid === uid && g.arenaRowYou]}
+                  >
+                    <Text style={[g.arenaPos, p.uid === uid && { color: color.gold }]}>
+                      {i + 1}
+                    </Text>
+                    <View
+                      style={[
+                        g.arenaRing,
+                        i === 0 && { borderColor: color.gold, backgroundColor: color.goldWash },
+                      ]}
+                    >
+                      <Icon
+                        name={i === 0 ? "crown" : "sword-cross"}
+                        size={12}
+                        color={i === 0 ? color.gold : color.goldFaded}
+                      />
+                    </View>
+                    <Text
+                      style={[g.arenaName, p.uid === uid && { color: color.gold }]}
+                      numberOfLines={1}
+                    >
+                      {p.heroName}
+                    </Text>
+                    <View style={{ flex: 1 }} />
+                    <Text style={g.arenaCombo}>x{p.bestCombo || 0}</Text>
+                    <Text style={g.arenaScore}>{(p.score || 0).toLocaleString()}</Text>
+                  </View>
+                ))}
+              </ScrollView>
+            ) : (
+              <View style={{ flex: 1 }}>
+                {/* async rank slot — reserved height, shimmer until resolved */}
+                <View style={g.rankSlot}>
+                  {rankResolved ? (
+                    <View style={g.rankResolved}>
+                      <Icon name="trophy-variant" size={14} color={color.goldBright} />
+                      <Text style={g.rankNum}>#{rankValue}</Text>
+                      <Text style={g.rankLabel}>{rankLabel}</Text>
+                    </View>
+                  ) : (
+                    <Animated.Text style={[g.rankShimmer, { opacity: shimmer }]}>
+                      — counting ranks —
+                    </Animated.Text>
+                  )}
+                </View>
+
+                {/* ledger */}
+                <View style={g.ledger}>
+                  <LedgerRow
+                    icon="grid"
+                    label="Field Cleared"
+                    value={`${clearPct}%`}
+                    index={0}
+                  />
+                  <LedgerSep />
+                  <LedgerRow
+                    icon="sword-cross"
+                    label="Beasts Captured"
+                    value={totalCleared.toLocaleString()}
+                    index={1}
+                  />
+                  <LedgerSep />
+                  <LedgerRow
+                    icon="fire"
+                    label="Best Combo"
+                    value={`x${bestCombo}`}
+                    index={2}
+                  />
+                </View>
+
+                {/* one-more-battle goal */}
+                {goalStruck ? (
+                  <View style={[g.goal, g.goalStruck]}>
+                    <Icon name="star-four-points" size={12} color={color.goldBright} />
+                    <Text style={g.goalStruckTxt}>
+                      NEW PERSONAL BEST
+                      {pbDelta > 0 ? `  ·  +${pbDelta.toLocaleString()}` : ""}
+                    </Text>
+                  </View>
+                ) : goalGap > 0 ? (
+                  <View style={g.goal}>
+                    <Text style={g.goalTxt}>
+                      <Text style={g.goalNum}>{goalGap.toLocaleString()}</Text> spoils
+                      from your personal best
+                    </Text>
+                    <View style={g.goalTrack}>
+                      <View
+                        style={[
+                          g.goalFill,
+                          { width: `${Math.min(100, (score / previousBest) * 100)}%` },
+                        ]}
+                      />
+                    </View>
+                  </View>
+                ) : null}
+
+                {uid ? (
+                  <View style={g.savedRow}>
+                    <Icon name="check-decagram" size={11} color={color.sage} />
+                    <Text style={g.savedTxt}>
+                      {dailyMode
+                        ? "Submitted to today's quest"
+                        : "Sealed in the Hall of Glory"}
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={{ flex: 1 }} />
+                )}
+              </View>
+            )}
+
+            {/* actions */}
+            <View style={g.actions}>
+              {arenaMode ? (
+                <TouchableOpacity
+                  style={g.primaryBtn}
+                  onPress={onConfirmQuit}
+                  activeOpacity={0.85}
+                >
+                  <Icon name="castle" size={15} color={color.ink} />
+                  <Text style={g.primaryTxt}>RETURN TO CASTLE</Text>
+                </TouchableOpacity>
+              ) : (
+                <>
+                  <TouchableOpacity
+                    style={g.primaryBtn}
+                    onPress={onPlayAgain}
+                    activeOpacity={0.85}
+                  >
+                    <Icon name="sword-cross" size={15} color={color.ink} />
+                    <Text style={g.primaryTxt}>
+                      {dailyMode ? "RETURN TO CASTLE" : "BATTLE AGAIN"}
+                    </Text>
+                  </TouchableOpacity>
+                  {!dailyMode && <ReturnToCastle onPress={onHome} />}
+                </>
+              )}
+            </View>
           </View>
         </View>
-
-        {!arenaMode && uid && (
-          <Text style={styles.dailySubmitted}>
-            {dailyMode
-              ? "✓ Score submitted to daily leaderboard"
-              : "✓ Score saved to Hall of Glory"}
-          </Text>
-        )}
-      </View>
-
-      {/* Right — Buttons + Arena */}
-      <View style={styles.gameOverRight}>
-        {/* Arena final rankings */}
-        {arenaMode && arenaPlayers.length > 0 && (
-          <View style={styles.arenaBoard}>
-            <Text style={styles.arenaBoardTitle}>🏆 FINAL RANKINGS</Text>
-            <ScrollView style={styles.arenaScroll} nestedScrollEnabled>
-              {arenaPlayers.map((p: any, i: number) => (
-                <View
-                  key={p.uid || i}
-                  style={[styles.arenaRow, p.uid === uid && styles.arenaRowYou]}
-                >
-                  <Text style={styles.arenaRank}>
-                    {i === 0
-                      ? "🥇"
-                      : i === 1
-                        ? "🥈"
-                        : i === 2
-                          ? "🥉"
-                          : `${i + 1}.`}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.arenaName,
-                      p.uid === uid && styles.arenaNameYou,
-                    ]}
-                  >
-                    {p.heroName}
-                  </Text>
-                  <Text style={styles.arenaCombo}>x{p.bestCombo || 0}</Text>
-                  <Text style={styles.arenaScore}>
-                    {(p.score || 0).toLocaleString()}
-                  </Text>
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        {/* Play again / return */}
-        {!arenaMode && (
-          <TouchableOpacity style={styles.goldBtn} onPress={onPlayAgain}>
-            <Text style={styles.goldBtnText}>⚔ BATTLE AGAIN</Text>
-          </TouchableOpacity>
-        )}
-
-        {arenaMode && (
-          <TouchableOpacity style={styles.goldBtn} onPress={onConfirmQuit}>
-            <Text style={styles.goldBtnText}>🏰 Return to Castle</Text>
-          </TouchableOpacity>
-        )}
-
-        {!arenaMode && <ReturnToCastle onPress={onHome} />}
-
-        {!dailyMode && !arenaMode && (
-          <View style={styles.hallHint}>
-            <Text style={styles.hallHintText}>
-              ⚔ Check Hall of Glory for rankings
-            </Text>
-          </View>
-        )}
-      </View>
+      </Animated.View>
 
       {showCelebration && (
         <RecordCelebration
@@ -263,248 +419,229 @@ export const GameOverScreen = ({
   )
 }
 
-const styles = StyleSheet.create({
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 32,
+const g = StyleSheet.create({
+  container: { flex: 1, backgroundColor: color.bgBase, paddingTop: 6 },
+  inner: { flex: 1 },
+  contentRow: { flex: 1, flexDirection: "row", gap: 14, alignItems: "center" },
+
+  // Left shrine
+  shrine: { alignItems: "center", justifyContent: "center" },
+  cardZone: { alignItems: "center", justifyContent: "center" },
+  cardPool: { position: "absolute" },
+  crown: { position: "absolute", top: -14, zIndex: 9 },
+  shelf: {
+    width: "62%",
+    height: 1.5,
+    backgroundColor: color.goldLine,
+    marginTop: 12,
+    borderRadius: 1,
   },
-  gameOverLeft: {
-    flex: 1,
+  shelfGlow: {
+    width: "50%",
+    height: 7,
+    backgroundColor: "rgba(232,197,71,0.04)",
+    borderRadius: 4,
+    marginTop: -1,
+  },
+
+  // Card body
+  cardTitle: {
+    fontFamily: font.display,
+    fontSize: 20,
+    letterSpacing: 2,
+    textAlign: "center",
+    marginTop: 6,
+    marginHorizontal: 8,
+  },
+  cardOverline: {
+    fontSize: 7,
+    fontWeight: "900",
+    letterSpacing: 3,
+    textAlign: "center",
+    marginTop: 4,
+  },
+  cardScore: {
+    color: color.gold,
+    fontSize: 22,
+    fontWeight: "900",
+    textAlign: "center",
+    letterSpacing: 0.5,
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
+    marginHorizontal: 8,
+  },
+  cardCombo: {
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+    textAlign: "center",
+    marginTop: 1,
+    marginBottom: 10,
+  },
+
+  // Right chronicle
+  chronicle: { flex: 1, justifyContent: "center" },
+
+  rankSlot: { height: 26, justifyContent: "center", marginBottom: 2 },
+  rankResolved: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+  },
+  rankNum: {
+    color: color.goldBright,
+    fontSize: 18,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+  rankLabel: {
+    color: color.goldFaded,
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 2,
+  },
+  rankShimmer: {
+    color: "rgba(232,197,71,0.5)",
+    fontSize: 11,
+    fontStyle: "italic",
+    letterSpacing: 2,
+    textAlign: "center",
+  },
+
+  ledger: { paddingHorizontal: 2, marginVertical: 2 },
+
+  goal: { marginTop: 8, paddingHorizontal: 8, gap: 4 },
+  goalStruck: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-  },
-  gameOverRight: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-  },
-  outcomeIconWrap: {
-    width: 110,
-    height: 110,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  outcomeIconRing: {
-    position: "absolute",
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    borderWidth: 1.5,
-  },
-  outcomeIcon: {
-    fontSize: 64,
-    textShadowColor: "rgba(232,197,71,0.4)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 20,
-  },
-  gameTitle: {
-    color: "#E8C547",
-    fontSize: 30,
-    fontWeight: "900",
-    letterSpacing: 6,
-    textShadowColor: "rgba(232,197,71,0.4)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 20,
-  },
-  gameTitleVictory: {
-    color: "#FFD700",
-    textShadowColor: "rgba(255,215,0,0.5)",
-    fontSize: 34,
-  },
-  divider: {
-    width: 80,
-    height: 1,
-    backgroundColor: "rgba(232,197,71,0.15)",
-    marginVertical: 3,
-  },
-  finalScore: {
-    color: "#E8C547",
-    fontSize: 40,
-    fontWeight: "900",
-    textShadowColor: "rgba(232,197,71,0.5)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 15,
-  },
-  statsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-    marginVertical: 4,
-    backgroundColor: "rgba(232,197,71,0.03)",
-    borderRadius: 12,
+    backgroundColor: withAlpha(color.goldBright, 0.08),
     borderWidth: 1,
-    borderColor: "rgba(232,197,71,0.1)",
-    paddingHorizontal: 18,
-    paddingVertical: 10,
+    borderColor: withAlpha(color.goldBright, 0.35),
+    borderRadius: 8,
+    paddingVertical: 6,
   },
-  statBox: { alignItems: "center" },
-  statValue: {
-    color: "#E8C547",
-    fontSize: 20,
+  goalStruckTxt: {
+    color: color.goldBright,
+    fontSize: 11,
     fontWeight: "900",
-    textShadowColor: "rgba(232,197,71,0.3)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 6,
+    letterSpacing: 1.5,
   },
-  statLabel: {
-    color: "rgba(232,197,71,0.45)",
-    fontSize: 8,
-    fontWeight: "900",
-    letterSpacing: 2,
-    marginTop: 1,
-  },
-  statDivider: {
-    width: 1,
-    height: 32,
-    backgroundColor: "rgba(232,197,71,0.1)",
-  },
-  dailySubmitted: {
-    color: "rgba(123,237,159,0.65)",
-    fontSize: 12,
-    fontWeight: "700",
-    marginTop: 4,
-    paddingBottom: 2,
-  },
-  arenaBoard: {
-    width: "100%",
-    maxWidth: 350,
-    marginVertical: 6,
-  },
-  arenaBoardTitle: {
-    color: "rgba(232,197,71,0.5)",
-    fontSize: 10,
-    fontWeight: "900",
-    letterSpacing: 4,
-    marginBottom: 4,
-    textAlign: "center",
-  },
-  arenaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 6,
-    marginBottom: 2,
-    gap: 8,
-    backgroundColor: "rgba(232,197,71,0.02)",
-  },
-  arenaRowYou: {
-    backgroundColor: "rgba(232,197,71,0.06)",
-    borderWidth: 1,
-    borderColor: "rgba(232,197,71,0.15)",
-  },
-  arenaRank: { fontSize: 15, width: 28 },
-  arenaName: {
+  goalTxt: {
     color: "rgba(255,255,255,0.55)",
-    fontSize: 13,
-    fontWeight: "700",
-    flex: 1,
-    letterSpacing: 0.5,
-  },
-  arenaNameYou: { color: "#E8C547" },
-  arenaCombo: {
-    color: "rgba(232,197,71,0.45)",
     fontSize: 11,
     fontWeight: "700",
-    marginRight: 8,
+    textAlign: "center",
   },
-  arenaScore: {
-    color: "#E8C547",
-    fontSize: 15,
-    fontWeight: "900",
+  goalNum: { color: color.gold, fontWeight: "900" },
+  goalTrack: {
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: "rgba(255,255,255,0.07)",
+    overflow: "hidden",
   },
-  arenaScroll: { maxHeight: 110 },
-  rankText: {
-    color: "#E8C547",
-    fontSize: 20,
-    fontWeight: "900",
-    letterSpacing: 2,
-    textShadowColor: "rgba(232,197,71,0.4)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 10,
-  },
-  rankLoading: {
-    color: "rgba(232,197,71,0.3)",
-    fontSize: 12,
-    fontWeight: "700",
-    fontStyle: "italic",
-  },
-  recordBanner: {
+  goalFill: { height: "100%", borderRadius: 2, backgroundColor: color.gold },
+
+  savedRow: {
+    flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255,215,0,0.06)",
-    borderWidth: 2,
-    borderColor: "rgba(255,215,0,0.35)",
-    borderRadius: 18,
-    paddingHorizontal: 36,
-    paddingVertical: 14,
-    marginBottom: 4,
-    shadowColor: "#FFD700",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
+    justifyContent: "center",
+    gap: 5,
+    marginTop: 8,
   },
-  recordStars: {
-    color: "#FFD700",
-    fontSize: 12,
-    letterSpacing: 8,
-    textShadowColor: "rgba(255,215,0,0.5)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 6,
-  },
-  recordIcon: {
-    fontSize: 42,
-  },
-  recordTitle: {
-    color: "#FFD700",
-    fontSize: 26,
-    fontWeight: "900",
-    letterSpacing: 5,
-    textShadowColor: "rgba(255,215,0,0.6)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 20,
-  },
-  recordSub: {
-    color: "rgba(255,215,0,0.6)",
-    fontSize: 12,
+  savedTxt: {
+    color: withAlpha("#7BED9F", 0.7),
+    fontSize: 10,
     fontWeight: "700",
-    letterSpacing: 2,
+    letterSpacing: 0.5,
   },
-  goldBtn: {
-    backgroundColor: "#E8C547",
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 10,
-    minWidth: 220,
+
+  // Actions
+  actions: { alignItems: "center", gap: 6, marginTop: 8 },
+  primaryBtn: {
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: color.gold,
+    paddingHorizontal: 30,
+    paddingVertical: 11,
+    borderRadius: 12,
+    minWidth: 230,
     borderWidth: 1.5,
-    borderColor: "#D4A017",
-    shadowColor: "#E8C547",
+    borderColor: color.goldDeep,
+    shadowColor: color.gold,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
     shadowRadius: 12,
     elevation: 8,
   },
-  goldBtnText: {
-    color: "#1a1a1a",
-    fontSize: 15,
+  primaryTxt: {
+    color: color.ink,
+    fontSize: 14,
     fontWeight: "900",
     letterSpacing: 2,
   },
-  hallHint: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  hallHintText: {
-    color: "rgba(232,197,71,0.25)",
+
+  // Arena rankings
+  boardTitle: {
+    color: color.goldFaded,
     fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 1,
+    fontWeight: "900",
+    letterSpacing: 4,
     textAlign: "center",
+    marginBottom: 6,
+  },
+  arenaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    marginBottom: 2,
+  },
+  arenaRowYou: {
+    backgroundColor: color.goldWash,
+    borderWidth: 1,
+    borderColor: color.goldLine,
+  },
+  arenaPos: {
+    color: "rgba(255,255,255,0.4)",
+    fontSize: 13,
+    fontWeight: "900",
+    width: 20,
+    textAlign: "right",
+  },
+  arenaRing: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: color.goldLine,
+    backgroundColor: color.goldWash,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  arenaName: {
+    color: "rgba(255,255,255,0.78)",
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+    flexShrink: 1,
+  },
+  arenaCombo: {
+    color: color.goldFaded,
+    fontSize: 10,
+    fontWeight: "800",
+    marginRight: 6,
+  },
+  arenaScore: {
+    color: color.gold,
+    fontSize: 13,
+    fontWeight: "900",
+    letterSpacing: 0.5,
   },
 })
