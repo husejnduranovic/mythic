@@ -453,11 +453,12 @@ const g = StyleSheet.create({
     marginTop: 4,
   },
   cardScore: {
+    fontFamily: font.display,
     color: color.gold,
     fontSize: 22,
-    fontWeight: "900",
     textAlign: "center",
     letterSpacing: 0.5,
+    includeFontPadding: false,
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 8,
     marginHorizontal: 8,
@@ -482,10 +483,11 @@ const g = StyleSheet.create({
     gap: 7,
   },
   rankNum: {
+    fontFamily: font.display,
     color: color.goldBright,
     fontSize: 18,
-    fontWeight: "900",
     letterSpacing: 0.5,
+    includeFontPadding: false,
   },
   rankLabel: {
     color: color.goldFaded,

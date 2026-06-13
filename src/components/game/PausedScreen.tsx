@@ -167,9 +167,10 @@ const ps = StyleSheet.create({
     marginBottom: 1,
   },
   stakeValue: {
+    fontFamily: font.display,
     color: color.gold,
     fontSize: 20,
-    fontWeight: "900",
+    includeFontPadding: false,
     textShadowColor: withAlpha(color.gold, 0.5),
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 10,

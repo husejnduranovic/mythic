@@ -443,7 +443,12 @@ const p = StyleSheet.create({
     shadowRadius: 12,
     elevation: 6,
   },
-  gloryTxt: { color: color.ember, fontSize: 14, fontWeight: "900", letterSpacing: 1 },
+  gloryTxt: {
+    fontFamily: font.heading,
+    color: color.ember,
+    fontSize: 14,
+    letterSpacing: 1,
+  },
   glorySub: {
     color: withAlpha(color.ember, 0.5),
     fontSize: 9,

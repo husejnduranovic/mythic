@@ -158,11 +158,12 @@ const a = StyleSheet.create({
     marginTop: 4,
   },
   cardScore: {
+    fontFamily: font.display,
     color: color.gold,
     fontSize: 22,
-    fontWeight: "900",
     textAlign: "center",
     letterSpacing: 0.5,
+    includeFontPadding: false,
     marginHorizontal: 8,
     textShadowColor: withAlpha(color.gold, 0.4),
     textShadowOffset: { width: 0, height: 0 },
