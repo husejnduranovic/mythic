@@ -79,6 +79,9 @@ import {
 import { Battlefield } from "./game/Battlefield"
 import { Battlements, WallTexture } from "./game/Wall"
 import { LayoutEntrance } from "./game/LayoutEntrance"
+import { Icon } from "../ui/Icon"
+import { Sigil, SigilSpec } from "../ui/sigils"
+import { color as palette } from "../ui/theme"
 
 interface GameProps {
   onHome: () => void
@@ -132,7 +135,10 @@ const Game = ({
   const [alreadyPlayed, setAlreadyPlayed] = useState(false)
   const [alreadyPlayedScore, setAlreadyPlayedScore] = useState(0)
   const [milestoneText, setMilestoneText] = useState("")
-  const [milestoneIcon, setMilestoneIcon] = useState("")
+  const [milestoneIcon, setMilestoneIcon] = useState<SigilSpec>({
+    fam: "mci",
+    name: "sword-cross",
+  })
   const [milestoneColor, setMilestoneColor] = useState("#ffffff")
 
   const milestoneOpacity = useSharedValue(0)
@@ -333,7 +339,10 @@ const Game = ({
         personalBestComboShownRef.current = true
         setBestComboEver(combo)
         AsyncStorage.setItem(StorageKeys.bestComboEver, combo.toString())
-        showMilestone(`NEW BEST COMBO x${combo}!`, "#FFD700", "👑")
+        showMilestone(`NEW BEST COMBO x${combo}!`, palette.goldBright, {
+          fam: "mci",
+          name: "crown",
+        })
       }
       if (combo >= 10) {
         comboGlowOpacity.setValue(0.8)
@@ -375,7 +384,7 @@ const Game = ({
     }
   }, [score])
 
-  const showMilestone = (text: string, color: string, icon: string) => {
+  const showMilestone = (text: string, color: string, icon: SigilSpec) => {
     setMilestoneText(text)
     setMilestoneColor(color)
     setMilestoneIcon(icon)
@@ -437,7 +446,10 @@ const Game = ({
     if (allCleared) {
       const perfectBonus = getPerfectClearBonus(level, gloryActiveRef.current)
       setScore((s) => s + perfectBonus)
-      showMilestone("PERFECT CLEAR!", "#7BED9F", "✨")
+      showMilestone("PERFECT CLEAR!", "#7BED9F", {
+        fam: "mci",
+        name: "star-four-points",
+      })
     }
 
     SoundService.playLevelComplete()
@@ -586,7 +598,8 @@ const Game = ({
     // Bounty = fiksni bonus, ne množi se s comboom
     const bountyBonus = isBounty ? getBountyBonus(level) : 0
 
-    if (isBounty) showMilestone("BOUNTY!", "#FFD700", "💰")
+    if (isBounty)
+      showMilestone("BOUNTY!", palette.goldBright, { fam: "mci", name: "sack" })
     SoundService.playMatch(nc)
     showPointsAnimation(pts)
 
@@ -720,7 +733,7 @@ const Game = ({
     setDeckIndex((i) => i + 1)
     setSecondCard(null)
     setShowHints(false)
-    showMilestone("FREE DRAW!", "#4FC3F7", "🃏")
+    showMilestone("FREE DRAW!", palette.gold, { fam: "mci", name: "restore" })
   }, []) // ← stable
 
   // Render Battlefield once per battlefield theme change. Score/combo/timer
@@ -992,7 +1005,8 @@ const Game = ({
           </TouchableOpacity>
           {gloryActive && (
             <View style={styles.gloryBadge}>
-              <Text style={styles.gloryBadgeText}>⚡ GLORY HUNT · 2X</Text>
+              <Icon name="lightning-bolt" size={12} color={palette.ember} />
+              <Text style={styles.gloryBadgeText}>GLORY HUNT · 2X</Text>
             </View>
           )}
           <View style={styles.field}>
@@ -1035,20 +1049,30 @@ const Game = ({
                       activeOpacity={0.7}
                     >
                       <View style={styles.freeDrawCardInner}>
-                        {/* gornji lijevi ugao */}
+                        <View style={styles.freeDrawFrame} />
                         <View style={styles.freeDrawCorner}>
-                          <Text style={styles.freeDrawCornerIcon}>↻</Text>
+                          <Icon
+                            name="restore"
+                            size={10}
+                            color={palette.goldDeep}
+                          />
                         </View>
-                        {/* centar */}
-                        <Text style={styles.freeDrawCenterIcon}>↻</Text>
-                        {/* donji desni ugao (rotiran) */}
+                        <Icon
+                          name="restore"
+                          size={28}
+                          color={palette.goldDeep}
+                        />
                         <View
                           style={[
                             styles.freeDrawCorner,
                             styles.freeDrawCornerBR,
                           ]}
                         >
-                          <Text style={styles.freeDrawCornerIcon}>↻</Text>
+                          <Icon
+                            name="restore"
+                            size={10}
+                            color={palette.goldDeep}
+                          />
                         </View>
                       </View>
                     </TouchableOpacity>
@@ -1061,7 +1085,7 @@ const Game = ({
                 </View>
               </View>
               <View style={styles.centerCards}>
-                <View style={[styles.openCardGlow, styles.openCardGlowWild]} />
+                <View style={styles.openCardGlow} />
                 <>
                   <Card
                     card={cards[currentIndex]}
@@ -1095,65 +1119,75 @@ const Game = ({
                   }}
                 />
                 <View style={styles.comboWrap}>
-                  <View style={styles.comboRow}>
-                    {combo >= 3 && (
-                      <View
-                        style={[
-                          styles.comboBar,
-                          {
-                            width: Math.min(combo * 2.5, 45),
-                            backgroundColor: comboColor,
-                          },
-                        ]}
-                      />
-                    )}
-                    <Reanimated.Text
-                      style={[
-                        styles.comboValue,
-                        comboPulseStyle,
-                        {
-                          color: comboColor,
-                          fontSize:
-                            combo >= 25
-                              ? 20
-                              : combo >= 15
-                                ? 19
-                                : combo >= 10
-                                  ? 18
-                                  : 17,
-                          textShadowColor:
-                            combo >= 10 ? comboColor : "transparent",
-                          textShadowOffset: { width: 0, height: 0 },
-                          textShadowRadius:
-                            combo >= 25
-                              ? 20
-                              : combo >= 15
-                                ? 14
-                                : combo >= 10
-                                  ? 8
-                                  : 0,
-                        },
-                      ]}
-                    >
-                      x{combo}
-                    </Reanimated.Text>
-                  </View>
-                  {combo >= 5 && (
-                    <Text
-                      style={[styles.comboTitle, { color: comboColor + "90" }]}
-                    >
-                      {combo >= 30
-                        ? "MYTHIC"
-                        : combo >= 25
-                          ? "RAMPAGE"
-                          : combo >= 20
-                            ? "LEGENDARY"
-                            : combo >= 15
-                              ? "GLORIOUS"
-                              : combo >= 10
-                                ? "VALIANT"
-                                : "WORTHY"}
-                    </Text>
+                  {/* Hidden entirely below x2 — a persistent x0/x1 in the corner
+                      communicates nothing (§4.2.3). comboWrap reserves the height
+                      so the timer above never shifts when it appears. */}
+                  {combo >= 2 && (
+                    <>
+                      <View style={styles.comboRow}>
+                        {combo >= 3 && (
+                          <View
+                            style={[
+                              styles.comboBar,
+                              {
+                                width: Math.min(combo * 2.5, 45),
+                                backgroundColor: comboColor,
+                              },
+                            ]}
+                          />
+                        )}
+                        <Reanimated.Text
+                          style={[
+                            styles.comboValue,
+                            comboPulseStyle,
+                            {
+                              color: comboColor,
+                              fontSize:
+                                combo >= 25
+                                  ? 20
+                                  : combo >= 15
+                                    ? 19
+                                    : combo >= 10
+                                      ? 18
+                                      : 17,
+                              textShadowColor:
+                                combo >= 10 ? comboColor : "transparent",
+                              textShadowOffset: { width: 0, height: 0 },
+                              textShadowRadius:
+                                combo >= 25
+                                  ? 20
+                                  : combo >= 15
+                                    ? 14
+                                    : combo >= 10
+                                      ? 8
+                                      : 0,
+                            },
+                          ]}
+                        >
+                          x{combo}
+                        </Reanimated.Text>
+                      </View>
+                      {combo >= 5 && (
+                        <Text
+                          style={[
+                            styles.comboTitle,
+                            { color: comboColor + "90" },
+                          ]}
+                        >
+                          {combo >= 30
+                            ? "MYTHIC"
+                            : combo >= 25
+                              ? "RAMPAGE"
+                              : combo >= 20
+                                ? "LEGENDARY"
+                                : combo >= 15
+                                  ? "GLORIOUS"
+                                  : combo >= 10
+                                    ? "VALIANT"
+                                    : "WORTHY"}
+                        </Text>
+                      )}
+                    </>
                   )}
                 </View>
               </View>
@@ -1175,9 +1209,9 @@ const Game = ({
                             : 26,
                     color:
                       combo >= 25
-                        ? "#FF00FF"
+                        ? "#FF4757"
                         : combo >= 15
-                          ? "#FF4757"
+                          ? "#FF6B35"
                           : combo >= 10
                             ? "#FFD700"
                             : "#E8C547",
@@ -1194,9 +1228,9 @@ const Game = ({
                     letterSpacing: 2,
                     color:
                       combo >= 25
-                        ? "rgba(200,50,255,0.7)"
+                        ? "rgba(255,71,87,0.7)"
                         : combo >= 15
-                          ? "rgba(255,70,70,0.6)"
+                          ? "rgba(255,107,53,0.6)"
                           : "rgba(255,200,50,0.5)",
                   }}
                 >
@@ -1224,14 +1258,11 @@ const Game = ({
             ]}
             pointerEvents="none"
           >
-            <Text
-              style={[
-                styles.milestoneIcon,
-                { fontSize: combo >= 20 ? 30 : 24 },
-              ]}
-            >
-              {milestoneIcon}
-            </Text>
+            <Sigil
+              sigil={milestoneIcon}
+              size={combo >= 20 ? 30 : 24}
+              color={milestoneColor}
+            />
             <View style={styles.milestoneTextWrap}>
               <Text
                 style={[
@@ -1350,6 +1381,8 @@ const styles = StyleSheet.create({
     right: 0,
     justifyContent: "center",
   },
+  // Quiet gold frame marking the active card(s). Tokenized; the old always-on
+  // "wild" variant (a vestige of the removed wild-card mechanic) is gone.
   openCardGlow: {
     position: "absolute",
     top: -8,
@@ -1357,17 +1390,13 @@ const styles = StyleSheet.create({
     right: -12,
     bottom: -8,
     borderRadius: 14,
-    backgroundColor: "rgba(232,197,71,0.025)",
+    backgroundColor: palette.goldWash,
     borderWidth: 1,
-    borderColor: "rgba(232,197,71,0.06)",
-  },
-  openCardGlowWild: {
-    backgroundColor: "rgba(232,197,71,0.08)",
-    borderColor: "rgba(232,197,71,0.25)",
-    shadowColor: "#E8C547",
+    borderColor: palette.goldLine,
+    shadowColor: palette.gold,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
   },
 
   // Timer + Combo
@@ -1378,10 +1407,10 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   label: {
-    color: "rgba(232,197,71,0.5)",
-    fontSize: 8,
-    fontWeight: "900",
-    letterSpacing: 3,
+    color: palette.goldFaded,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 2.5,
   },
   scoreValue: {
     color: "#E8C547",
@@ -1504,9 +1533,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.6,
     shadowRadius: 15,
   },
-  milestoneIcon: {
-    fontSize: 24,
-  },
   milestoneTextWrap: {
     alignItems: "flex-start",
   },
@@ -1537,15 +1563,27 @@ const styles = StyleSheet.create({
     height: 78,
     margin: 2,
   },
+  // Parchment plate in the card grammar — reads "golden reinforcement", not the
+  // old purple "wrong-suit" oddity. Glyphs are the `restore` icon in goldDeep.
   freeDrawCardInner: {
     flex: 1,
     borderRadius: 10,
     borderWidth: 1.5,
-    borderColor: "rgba(232,197,71,0.6)",
-    backgroundColor: "#F2E8D5",
+    borderColor: "rgba(184,134,11,0.6)",
+    backgroundColor: palette.parchment,
     justifyContent: "center",
     alignItems: "center",
     overflow: "hidden",
+  },
+  freeDrawFrame: {
+    position: "absolute",
+    top: 3,
+    left: 3,
+    right: 3,
+    bottom: 3,
+    borderRadius: 7,
+    borderWidth: 0.5,
+    borderColor: "rgba(184,134,11,0.35)",
   },
   freeDrawCorner: {
     position: "absolute",
@@ -1559,16 +1597,6 @@ const styles = StyleSheet.create({
     bottom: 3,
     right: 4,
     transform: [{ rotate: "180deg" }],
-  },
-  freeDrawCenterIcon: {
-    fontSize: 30,
-    color: "#5B3A8B", // skoro crna, topla tamna — maksimalan kontrast
-    fontWeight: "900",
-  },
-  freeDrawCornerIcon: {
-    fontSize: 11,
-    color: "#5B3A8B",
-    fontWeight: "900",
   },
 })
 

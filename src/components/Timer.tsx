@@ -1,5 +1,9 @@
 import React, { useEffect, useRef, useState } from "react"
-import { Animated, StyleSheet, Text, View } from "react-native"
+import { Animated, StyleSheet, View } from "react-native"
+import { MaterialCommunityIcons } from "@expo/vector-icons"
+import { color } from "../ui/theme"
+
+const AnimatedIcon = Animated.createAnimatedComponent(MaterialCommunityIcons)
 
 interface ITimerProps {
   initialTime: number
@@ -103,13 +107,15 @@ const Timer = ({
   }, [frozen])
 
   const isLow = timeLeft <= 10
+  // Spoils burning down: healthy gold → warn ember (≤20s) → low crimson (≤10s);
+  // frozen reads frost. De-neoned from the old blue/green/red traffic light.
   const barColor = frozen
-    ? "#4FC3F7"
+    ? color.frost
     : isLow
-      ? "#E74C3C"
+      ? color.crimson
       : timeLeft <= 20
-        ? "#E8C547"
-        : "#4CAF50"
+        ? color.ember
+        : color.gold
   const mins = Math.floor(timeLeft / 60)
   const secs = timeLeft % 60
   const timeStr =
@@ -118,13 +124,19 @@ const Timer = ({
   return (
     <View style={styles.container}>
       {frozen && (
-        <Animated.Text style={[styles.frozenIcon, { opacity: frozenPulse }]}>
-          ❄
-        </Animated.Text>
+        <AnimatedIcon
+          name="snowflake"
+          size={12}
+          color={color.frost}
+          style={[styles.frozenIcon, { opacity: frozenPulse }]}
+        />
       )}
       <View style={styles.timerFrame}>
         <Animated.Text
-          style={[styles.timeText, { opacity: flashAnim, color: barColor }]}
+          style={[
+            styles.timeText,
+            { opacity: flashAnim, color: barColor, textShadowColor: barColor },
+          ]}
         >
           {timeStr}
         </Animated.Text>
@@ -174,12 +186,11 @@ const styles = StyleSheet.create({
     borderColor: "rgba(232,197,71,0.08)",
   },
   barTrackFrozen: {
-    backgroundColor: "rgba(79,195,247,0.15)",
-    borderColor: "rgba(79,195,247,0.3)",
+    backgroundColor: "rgba(159,216,239,0.15)",
+    borderColor: "rgba(159,216,239,0.35)",
   },
   barFill: { height: "100%", borderRadius: 2 },
   frozenIcon: {
-    fontSize: 12,
     position: "absolute",
     top: -10,
     right: -10,

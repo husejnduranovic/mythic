@@ -1,6 +1,8 @@
 // Pure game configuration — constants only, no React.
 // Extracted verbatim from Game.tsx (Step 1.2).
 
+import type { SigilSpec } from "../ui/sigils"
+
 export const LEVEL_CONFIG: Record<
   number,
   { fieldCards: number; deckStart: number; time: number; layout: number }
@@ -17,18 +19,22 @@ export const TOTAL_LEVELS = Object.keys(LEVEL_CONFIG).length
 export const BASE_CARD_VALUE = 500
 export const SECOND_CARD_COMBO = 2
 
+// Milestone escalation now climbs within the fire/metal language (§4.2.4) —
+// sage → gold → ember → red → crimson → white-gold → white — and the icons are
+// heraldic sigils (rendered via <Sigil>) instead of platform emoji. Kills the
+// old magenta/pink/cyan neon (#FF00FF / #FF1493 / #7DF9FF).
 export const COMBO_MILESTONES: Record<
   number,
-  { text: string; color: string; icon: string }
+  { text: string; color: string; icon: SigilSpec }
 > = {
-  5: { text: "WORTHY!", color: "#7BED9F", icon: "⚔" },
-  8: { text: "VALIANT!", color: "#FFD700", icon: "🛡" },
-  12: { text: "GLORIOUS!", color: "#FF6B35", icon: "👑" },
-  16: { text: "LEGENDARY!", color: "#FF4757", icon: "🐉" },
-  20: { text: "RAMPAGE!", color: "#FF00FF", icon: "⚡" },
-  24: { text: "UNSTOPPABLE!", color: "#FF1493", icon: "🔥" },
-  28: { text: "DIVINE!", color: "#7DF9FF", icon: "👁" },
-  32: { text: "MASTER OF PEAKS!", color: "#FFFFFF", icon: "⚜️" },
+  5: { text: "WORTHY!", color: "#7BED9F", icon: { fam: "mci", name: "sword-cross" } },
+  8: { text: "VALIANT!", color: "#E8C547", icon: { fam: "mci", name: "shield" } },
+  12: { text: "GLORIOUS!", color: "#FF8C00", icon: { fam: "mci", name: "crown" } },
+  16: { text: "LEGENDARY!", color: "#FF6B35", icon: { fam: "fa5", name: "dragon" } },
+  20: { text: "RAMPAGE!", color: "#FF4757", icon: { fam: "mci", name: "lightning-bolt" } },
+  24: { text: "UNSTOPPABLE!", color: "#C0392B", icon: { fam: "mci", name: "fire" } },
+  28: { text: "DIVINE!", color: "#FFE08A", icon: { fam: "mci", name: "eye" } },
+  32: { text: "MASTER OF PEAKS!", color: "#FFFFFF", icon: { fam: "mci", name: "fleur-de-lis" } },
 }
 
 export const RUNES = [
