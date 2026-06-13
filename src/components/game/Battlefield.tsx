@@ -1,97 +1,38 @@
 // Decorative battlefield backdrop — purely visual, theme-driven. Extracted from
-// Game.tsx (Step 1.3), drop-in: same props, same rendering.
+// Game.tsx (Step 1.3). Re-quieted in §4.2.6: the felt should be silent so the
+// cards read as the art. The old Noto-emoji clutter (clan banners, weapon racks,
+// candle torches) is gone; what remains is the engraved war-table language —
+// gold frames, a central crest medallion inking the same <Sigil> dragon the
+// hearts suit uses, carved runes, ghost cards and vignettes. Memoized: re-renders
+// only when the battlefield theme changes, never per frame.
 
 import React from "react"
 import { StyleSheet, Text, View } from "react-native"
+import { Sigil, SigilSpec } from "../../ui/sigils"
+
+// The felt's central crest — the hearts-suit dragon, so the board speaks one
+// heraldic language end to end (DESIGN_PLAN §4.2.6 / §4.2.8 dependency).
+const FIELD_CREST: SigilSpec = { fam: "fa5", name: "dragon" }
 
 export const Battlefield = React.memo(
   ({ battlefieldId }: { battlefieldId?: string }) => {
-    const themeDetails: Record<
-      string,
+    const themeDetails: Record<string, { accent: string; tableColor: string }> =
       {
-        icons: string[]
-        accent: string
-        tableColor: string
-        weaponIcons: string[]
+        forest: { accent: "rgba(100,180,100,0.08)", tableColor: "rgba(30,60,35,0.3)" },
+        dungeon: { accent: "rgba(180,160,120,0.08)", tableColor: "rgba(50,40,30,0.3)" },
+        ocean: { accent: "rgba(80,150,200,0.08)", tableColor: "rgba(20,40,60,0.3)" },
+        volcano: { accent: "rgba(200,80,50,0.08)", tableColor: "rgba(50,20,15,0.3)" },
+        frost: { accent: "rgba(150,200,230,0.08)", tableColor: "rgba(20,35,50,0.3)" },
+        void: { accent: "rgba(120,80,180,0.08)", tableColor: "rgba(15,10,30,0.3)" },
+        swamp: { accent: "rgba(80,150,60,0.08)", tableColor: "rgba(20,40,15,0.3)" },
+        temple: { accent: "rgba(200,180,100,0.08)", tableColor: "rgba(40,35,20,0.3)" },
+        shadow: { accent: "rgba(100,80,150,0.08)", tableColor: "rgba(15,12,25,0.3)" },
+        celestial: { accent: "rgba(100,100,200,0.08)", tableColor: "rgba(20,20,45,0.3)" },
+        crimson: { accent: "rgba(180,50,80,0.08)", tableColor: "rgba(40,10,20,0.3)" },
+        eternal: { accent: "rgba(200,150,50,0.08)", tableColor: "rgba(40,25,10,0.3)" },
       }
-    > = {
-      forest: {
-        icons: ["🌲", "🍃", "🌿", "🐺"],
-        accent: "rgba(100,180,100,0.08)",
-        tableColor: "rgba(30,60,35,0.3)",
-        weaponIcons: ["🏹", "🗡", "⚔", "🛡"],
-      },
-      dungeon: {
-        icons: ["🏰", "⛓", "🗝", "💀"],
-        accent: "rgba(180,160,120,0.08)",
-        tableColor: "rgba(50,40,30,0.3)",
-        weaponIcons: ["⛓", "🔑", "⚔", "🛡"],
-      },
-      ocean: {
-        icons: ["🌊", "🐚", "⚓", "🦑"],
-        accent: "rgba(80,150,200,0.08)",
-        tableColor: "rgba(20,40,60,0.3)",
-        weaponIcons: ["⚓", "🔱", "⚔", "🛡"],
-      },
-      volcano: {
-        icons: ["🌋", "🔥", "💎", "🐉"],
-        accent: "rgba(200,80,50,0.08)",
-        tableColor: "rgba(50,20,15,0.3)",
-        weaponIcons: ["🔥", "💎", "⚔", "🛡"],
-      },
-      frost: {
-        icons: ["❄️", "🏔", "⛄", "🐻‍❄️"],
-        accent: "rgba(150,200,230,0.08)",
-        tableColor: "rgba(20,35,50,0.3)",
-        weaponIcons: ["❄️", "🏔", "⚔", "🛡"],
-      },
-      void: {
-        icons: ["🌑", "✨", "🕳", "👁"],
-        accent: "rgba(120,80,180,0.08)",
-        tableColor: "rgba(15,10,30,0.3)",
-        weaponIcons: ["✨", "👁", "⚔", "🛡"],
-      },
-      swamp: {
-        icons: ["🐸", "🍄", "🌾", "🐍"],
-        accent: "rgba(80,150,60,0.08)",
-        tableColor: "rgba(20,40,15,0.3)",
-        weaponIcons: ["🍄", "🌾", "⚔", "🛡"],
-      },
-      temple: {
-        icons: ["🏛", "🕯", "📜", "⚱️"],
-        accent: "rgba(200,180,100,0.08)",
-        tableColor: "rgba(40,35,20,0.3)",
-        weaponIcons: ["🕯", "📜", "⚔", "🛡"],
-      },
-      shadow: {
-        icons: ["🌘", "🦇", "🕸", "👻"],
-        accent: "rgba(100,80,150,0.08)",
-        tableColor: "rgba(15,12,25,0.3)",
-        weaponIcons: ["🦇", "🕸", "⚔", "🛡"],
-      },
-      celestial: {
-        icons: ["⭐", "🌙", "☄️", "🔮"],
-        accent: "rgba(100,100,200,0.08)",
-        tableColor: "rgba(20,20,45,0.3)",
-        weaponIcons: ["🌙", "🔮", "⚔", "🛡"],
-      },
-      crimson: {
-        icons: ["💀", "🩸", "⚰️", "🗡"],
-        accent: "rgba(180,50,80,0.08)",
-        tableColor: "rgba(40,10,20,0.3)",
-        weaponIcons: ["💀", "🗡", "⚔", "🛡"],
-      },
-      eternal: {
-        icons: ["♾", "🔥", "👑", "⚡"],
-        accent: "rgba(200,150,50,0.08)",
-        tableColor: "rgba(40,25,10,0.3)",
-        weaponIcons: ["👑", "⚡", "⚔", "🛡"],
-      },
-    }
 
     const theme = themeDetails[battlefieldId || "forest"] || themeDetails.forest
-    const icons = theme.icons
-    const weapons = theme.weaponIcons
 
     return (
       <View style={s.container} pointerEvents="none">
@@ -125,13 +66,13 @@ export const Battlefield = React.memo(
         <Text style={[s.edgeOrn, { left: 1, top: "38%" }]}>◇</Text>
         <Text style={[s.edgeOrn, { right: 1, top: "38%" }]}>◇</Text>
 
-        {/* CENTER EMBLEM — double ring shield */}
+        {/* CENTER CREST — double-ring medallion inking the field dragon */}
         <View style={[s.ringOuter, { borderColor: theme.accent }]} />
         <View style={[s.ringInner, { borderColor: theme.accent }]} />
         <View style={s.emblem}>
           <View style={s.emblemRing}>
             <View style={s.emblemCore}>
-              <Text style={s.emblemIcon}>⚔</Text>
+              <Sigil sigil={FIELD_CREST} size={18} color="rgba(232,197,71,0.22)" />
             </View>
           </View>
         </View>
@@ -141,34 +82,6 @@ export const Battlefield = React.memo(
         <View style={s.crossV} />
         <View style={s.diagA} />
         <View style={s.diagB} />
-
-        {/* CLAN BANNERS — four corners with pole + flag + stripe */}
-        {[
-          { pos: { top: "5%", left: "4%" }, icon: icons[0] },
-          { pos: { top: "5%", right: "4%" }, icon: icons[1] },
-          { pos: { bottom: "18%", left: "4%" }, icon: icons[2] },
-          { pos: { bottom: "18%", right: "4%" }, icon: icons[3] },
-        ].map((b, i) => (
-          <View key={`b${i}`} style={[s.banner, b.pos as any]}>
-            <View style={[s.pole, { backgroundColor: theme.accent }]} />
-            <View style={[s.flag, { borderColor: theme.accent }]}>
-              <Text style={s.flagIcon}>{b.icon}</Text>
-              <View style={[s.flagStripe, { backgroundColor: theme.accent }]} />
-            </View>
-          </View>
-        ))}
-
-        {/* WEAPON RACKS — left and right sides */}
-        <View style={[s.weaponRack, { top: "28%", left: "1.5%" }]}>
-          <Text style={s.weaponEmoji}>{weapons[0]}</Text>
-          <View style={s.weaponBar} />
-          <Text style={s.weaponEmoji}>{weapons[1]}</Text>
-        </View>
-        <View style={[s.weaponRack, { top: "28%", right: "1.5%" }]}>
-          <Text style={s.weaponEmoji}>{weapons[2]}</Text>
-          <View style={s.weaponBar} />
-          <Text style={s.weaponEmoji}>{weapons[3]}</Text>
-        </View>
 
         {/* GHOST CARDS — card silhouettes on table */}
         <View
@@ -208,13 +121,11 @@ export const Battlefield = React.memo(
           ]}
         />
 
-        {/* TORCH GLOW — warm light circles at top */}
+        {/* TORCH GLOW — warm light circles at top (no emoji flame) */}
         <View style={[s.torchGlow, { top: -15, left: 8 }]} />
         <View style={[s.torchGlow, { top: -15, right: 8 }]} />
-        <Text style={[s.torch, { top: 3, left: 18 }]}>🕯</Text>
-        <Text style={[s.torch, { top: 3, right: 18 }]}>🕯</Text>
 
-        {/* RUNES — carved into surface, scattered */}
+        {/* RUNES — carved into the surface, scattered. The felt's only motif now. */}
         {["ᚠ", "ᚦ", "ᚱ", "ᛟ", "ᚲ", "ᛊ", "ᚹ", "ᛏ", "ᚨ", "ᛃ", "ᛈ", "ᛞ"].map(
           (r, i) => (
             <Text
@@ -246,56 +157,31 @@ export const Battlefield = React.memo(
         <View
           style={[
             s.scratch,
-            {
-              top: "33%",
-              left: "24%",
-              width: 22,
-              transform: [{ rotate: "38deg" }],
-            },
+            { top: "33%", left: "24%", width: 22, transform: [{ rotate: "38deg" }] },
           ]}
         />
         <View
           style={[
             s.scratch,
-            {
-              top: "34%",
-              left: "25%",
-              width: 16,
-              transform: [{ rotate: "32deg" }],
-            },
+            { top: "34%", left: "25%", width: 16, transform: [{ rotate: "32deg" }] },
           ]}
         />
         <View
           style={[
             s.scratch,
-            {
-              top: "35%",
-              left: "26%",
-              width: 10,
-              transform: [{ rotate: "28deg" }],
-            },
+            { top: "35%", left: "26%", width: 10, transform: [{ rotate: "28deg" }] },
           ]}
         />
         <View
           style={[
             s.scratch,
-            {
-              bottom: "35%",
-              right: "22%",
-              width: 20,
-              transform: [{ rotate: "-22deg" }],
-            },
+            { bottom: "35%", right: "22%", width: 20, transform: [{ rotate: "-22deg" }] },
           ]}
         />
         <View
           style={[
             s.scratch,
-            {
-              bottom: "34%",
-              right: "23%",
-              width: 14,
-              transform: [{ rotate: "-18deg" }],
-            },
+            { bottom: "34%", right: "23%", width: 14, transform: [{ rotate: "-18deg" }] },
           ]}
         />
 
@@ -380,19 +266,17 @@ const s = StyleSheet.create({
     alignItems: "center",
     zIndex: 2,
   },
-  // Corner ornaments — more visible
-  cornerIcon: { color: "rgba(232,197,71,0.4)", fontSize: 10 }, // was 0.25
+  cornerIcon: { color: "rgba(232,197,71,0.4)", fontSize: 10 },
 
   // Edge ornaments
   edgeOrn: {
     position: "absolute",
-    color: "rgba(232,197,71,0.22)", // was 0.12
+    color: "rgba(232,197,71,0.22)",
     fontSize: 8,
     zIndex: 2,
   },
 
   // Center rings
-  // Rings — more visible
   ringOuter: {
     position: "absolute",
     top: "16%",
@@ -401,7 +285,7 @@ const s = StyleSheet.create({
     height: "62%",
     borderRadius: 9999,
     borderWidth: 1,
-    opacity: 0.35, // add this — was just borderColor opacity doing the work
+    opacity: 0.35,
   },
   ringInner: {
     position: "absolute",
@@ -437,16 +321,15 @@ const s = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  emblemIcon: { fontSize: 14, color: "rgba(232,197,71,0.25)" }, // was 0.12
 
-  // Cross lines — slightly more visible
+  // Cross lines
   crossH: {
     position: "absolute",
     top: "48%",
     left: "12%",
     width: "76%",
     height: 1,
-    backgroundColor: "rgba(232,197,71,0.06)", // was 0.03
+    backgroundColor: "rgba(232,197,71,0.06)",
   },
   crossV: {
     position: "absolute",
@@ -454,7 +337,7 @@ const s = StyleSheet.create({
     top: "10%",
     width: 1,
     height: "68%",
-    backgroundColor: "rgba(232,197,71,0.06)", // was 0.03
+    backgroundColor: "rgba(232,197,71,0.06)",
   },
   diagA: {
     position: "absolute",
@@ -475,28 +358,6 @@ const s = StyleSheet.create({
     transform: [{ rotate: "-45deg" }],
   },
 
-  // Banners
-  banner: { position: "absolute", alignItems: "center" },
-  pole: { width: 2, height: 10, borderRadius: 1 },
-  flag: {
-    width: 34,
-    height: 32,
-    borderRadius: 4,
-    backgroundColor: "rgba(232,197,71,0.02)",
-    borderWidth: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    overflow: "hidden",
-  },
-  // Banners — more visible
-  flagIcon: { fontSize: 16, opacity: 0.22 }, // was 0.12
-  flagStripe: { position: "absolute", bottom: 0, left: 0, right: 0, height: 3 },
-
-  // Weapon racks
-  weaponRack: { position: "absolute", alignItems: "center", gap: 2 },
-  weaponEmoji: { fontSize: 14, opacity: 0.14 }, // was 0.08
-  weaponBar: { width: 18, height: 1, backgroundColor: "rgba(232,197,71,0.06)" },
-
   // Ghost cards
   ghostCard: {
     position: "absolute",
@@ -504,11 +365,11 @@ const s = StyleSheet.create({
     height: 26,
     borderRadius: 3,
     borderWidth: 1,
-    borderColor: "rgba(232,197,71,0.07)", // was 0.035
-    backgroundColor: "rgba(232,197,71,0.025)", // was 0.012
+    borderColor: "rgba(232,197,71,0.07)",
+    backgroundColor: "rgba(232,197,71,0.025)",
   },
 
-  // Torch
+  // Torch glow (warm light, no emoji)
   torchGlow: {
     position: "absolute",
     width: 70,
@@ -516,15 +377,12 @@ const s = StyleSheet.create({
     borderRadius: 35,
     backgroundColor: "rgba(255,200,80,0.03)",
   },
-  // Torch — more visible
-  torch: { position: "absolute", fontSize: 14, opacity: 0.28 }, // was 0.18
 
-  // Runes — more visible
-  rune: { position: "absolute", color: "rgba(232,197,71,0.1)" }, // was 0.055
+  // Runes
+  rune: { position: "absolute", color: "rgba(232,197,71,0.1)" },
 
   // Chains
   chain: { position: "absolute" },
-  // Chains — more visible
   chainText: { color: "rgba(232,197,71,0.1)", fontSize: 6, letterSpacing: 1 },
 
   // Scratches
