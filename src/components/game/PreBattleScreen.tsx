@@ -1,10 +1,28 @@
-// Pre-battle / daily-quest intro screen. Extracted from Game.tsx (Step 1.6).
+// Pre-battle / daily-quest intro — "The Muster" (DESIGN_PLAN §4.2 intro, recomposed).
+//
+// Normal mode shows the player's equipped war kit — the card back + bounty card
+// fanned and standing on a shelf, the app icon recreated from the player's own
+// gear (the same MiniBack/MiniBounty the Armory stage uses) — beside the road
+// ahead and the Enter Battle muster. Daily mode shows a sealed quest card. The
+// screen replaces the board, so deal-in / levitate motion is free.
 
-import React from "react"
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native"
+import React, { useEffect, useRef } from "react"
+import {
+  Animated,
+  Easing,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import ReturnToCastle from "../ReturnToCastle"
 import { TOTAL_LEVELS } from "../../game/config"
-import type { ThemeConfig } from "../Armory"
+import { Icon } from "../../ui/Icon"
+import { color, font } from "../../ui/theme"
+import { HonorCard, withAlpha } from "../../ui/honor"
+import { getEquippedKit, MiniBack, MiniBounty, type ThemeConfig } from "../Armory"
 
 export const PreBattleScreen = ({
   theme,
@@ -24,326 +42,445 @@ export const PreBattleScreen = ({
   onActivateGlory: () => void
   onEnter: () => void
   onHome: () => void
-}) => (
-  <View
-    style={[
-      styles.center,
+}) => {
+  const { width: winW, height: winH } = useWindowDimensions()
+  const insets = useSafeAreaInsets()
+
+  const fade = useRef(new Animated.Value(0)).current
+  const slide = useRef(new Animated.Value(15)).current
+  const dealBack = useRef(new Animated.Value(0)).current
+  const dealBounty = useRef(new Animated.Value(0)).current
+  const float = useRef(new Animated.Value(0)).current
+  const pulse = useRef(new Animated.Value(0.3)).current
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fade, {
+        toValue: 1,
+        duration: 380,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(slide, {
+        toValue: 0,
+        duration: 380,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start()
+    // The kit deals onto the shelf: bounty first, the equipped back lands last.
+    const seat = (v: Animated.Value, dur: number) =>
+      Animated.timing(v, {
+        toValue: 1,
+        duration: dur,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      })
+    Animated.stagger(120, [seat(dealBounty, 320), seat(dealBack, 360)]).start()
+    const loop = (v: Animated.Value, lo: number, hi: number, d: number) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(v, { toValue: hi, duration: d, useNativeDriver: true }),
+          Animated.timing(v, { toValue: lo, duration: d, useNativeDriver: true }),
+        ]),
+      ).start()
+    loop(float, 0, 1, 2400)
+    loop(pulse, 0.3, 0.5, 2000)
+  }, [])
+
+  const kit = getEquippedKit(theme)
+
+  // ── Geometry ──
+  const padL = Math.max(14, insets.left)
+  const padR = Math.max(14, insets.right)
+  const shrineW = Math.round(Math.min(310, Math.max(225, winW * 0.38)))
+  const availH = winH - 96
+  const backH = Math.round(Math.min(availH - 60, 168))
+  const backW = Math.round(backH / 1.42)
+  const bountyH = Math.round(backH * 0.84)
+  const bountyW = Math.round(bountyH / 1.42)
+  const cardH = Math.round(Math.min(winH - 150, 196))
+  const cardW = Math.round(cardH / 1.46)
+
+  const floatY = float.interpolate({ inputRange: [0, 1], outputRange: [0, -4] })
+  const dealStyle = (v: Animated.Value, rot: number) => ({
+    opacity: v,
+    transform: [
+      { translateY: v.interpolate({ inputRange: [0, 1], outputRange: [22, 0] }) },
       {
-        backgroundColor: theme.battlefieldColor,
-        flexDirection: "row",
-        paddingHorizontal: 24,
-        gap: 20,
-        position: "relative",
-        overflow: "hidden",
+        rotate: v.interpolate({
+          inputRange: [0, 1],
+          outputRange: [`${rot * 2.2}deg`, `${rot}deg`],
+        }),
       },
-    ]}
-  >
-    {background}
+    ],
+  })
 
-    {/* Left — Title + Info */}
-    <View style={styles.preBattleLeft}>
-      {/* Top ornament */}
-      <View style={styles.screenOrnRow}>
-        <View style={styles.screenOrnLine} />
-        <Text style={styles.screenOrnDot}>◆</Text>
-        <View style={styles.screenOrnLine} />
-      </View>
-
-      {/* Main icon — much bigger, with ring */}
-      <View style={styles.preBattleIconWrap}>
-        <View style={styles.preBattleIconRingOuter} />
-        <View style={styles.preBattleIconRingInner} />
-        <Text style={styles.preBattleIcon}>⚔️</Text>
-      </View>
-
-      {/* Title */}
-      <Text style={styles.preBattleTitle}>
-        {dailyMode ? "DAILY QUEST" : "PREPARE FOR BATTLE"}
+  const dailyBody = (
+    <>
+      <Text style={[p.cardTitle, { color: color.gold }]}>TODAY'S TRIAL</Text>
+      <View style={{ flex: 1 }} />
+      <Text style={[p.cardOverline, { color: withAlpha(color.gold, 0.55) }]}>
+        ONE ATTEMPT
       </Text>
+      <Text style={p.cardSeed}>SEEDED · SHARED DECK</Text>
+      <View style={{ height: 10 }} />
+    </>
+  )
 
-      <View style={styles.screenOrnRow}>
-        <View style={styles.screenOrnLine} />
-        <Text style={styles.screenOrnRune}>ᚠ</Text>
-        <View style={styles.screenOrnLine} />
-        <Text style={styles.screenOrnRune}>ᚦ</Text>
-        <View style={styles.screenOrnLine} />
-      </View>
+  return (
+    <View style={[p.container, { paddingLeft: padL, paddingRight: padR }]}>
+      {background}
 
-      <Text style={styles.preBattleSub}>
-        {dailyMode
-          ? "One attempt · Seeded deck · Glory awaits"
-          : `${TOTAL_LEVELS} battlefields await your conquest`}
-      </Text>
-
-      {/* Progress dots — with level numbers */}
-      {!dailyMode && (
-        <View style={styles.preBattleLevels}>
-          {Array.from({ length: TOTAL_LEVELS }).map((_, i) => (
-            <View key={i} style={styles.preBattleLevel}>
-              <View style={styles.progressDot}>
-                <Text style={styles.preBattleLevelNum}>{i + 1}</Text>
-              </View>
-              <View
-                style={[
-                  styles.preBattleLevelLine,
-                  i === TOTAL_LEVELS - 1 && { opacity: 0 },
-                ]}
+      <Animated.View
+        style={[p.inner, { opacity: fade, transform: [{ translateY: slide }] }]}
+      >
+        {/* Header */}
+        <View style={p.header}>
+          <View style={p.hOrn}>
+            <View style={p.hLine} />
+            <Text style={p.hDot}>◆</Text>
+            <View style={p.hLineS} />
+          </View>
+          <View style={p.hCenter}>
+            <View style={p.hTitleRow}>
+              <Icon
+                name={dailyMode ? "script-text" : "sword-cross"}
+                size={18}
+                color={color.gold}
               />
+              <Text style={p.hTitle}>
+                {dailyMode ? "DAILY QUEST" : "PREPARE FOR BATTLE"}
+              </Text>
             </View>
-          ))}
-        </View>
-      )}
-
-      {/* Bottom ornament */}
-      <View style={styles.screenOrnRow}>
-        <View style={styles.screenOrnLine} />
-        <Text style={styles.screenOrnDot}>◆</Text>
-        <View style={styles.screenOrnLine} />
-      </View>
-    </View>
-
-    {/* Right — Glory Hunt + Enter */}
-    <View style={styles.preBattleRight}>
-      {/* Daily mode badge */}
-      {dailyMode && (
-        <View style={styles.dailyQuestBadge}>
-          <Text style={styles.dailyQuestIcon}>📜</Text>
-          <View>
-            <Text style={styles.dailyQuestLabel}>DAILY QUEST</Text>
-            <Text style={styles.dailyQuestSub}>Resets at midnight</Text>
-          </View>
-        </View>
-      )}
-
-      {/* Glory Hunt */}
-      {!dailyMode && gloryCharges > 0 && (
-        <TouchableOpacity
-          style={[styles.gloryBtn, gloryActive && styles.gloryBtnActive]}
-          onPress={onActivateGlory}
-          disabled={gloryActive}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.gloryBtnIcon}>⚡</Text>
-          <View>
-            <Text style={styles.gloryBtnText}>
-              {gloryActive ? "GLORY HUNT ACTIVE" : "Glory Hunt"}
-            </Text>
-            <Text style={styles.gloryBtnSub}>
-              {gloryActive
-                ? "2x points · 50% time"
-                : `2x points · 50% time (${gloryCharges} charge)`}
+            <Text style={p.hSub} numberOfLines={1}>
+              {dailyMode
+                ? "ONE ATTEMPT · SEEDED DECK · GLORY AWAITS"
+                : `${TOTAL_LEVELS} BATTLEFIELDS AWAIT YOUR CONQUEST`}
             </Text>
           </View>
-        </TouchableOpacity>
-      )}
+          <View style={p.hOrn}>
+            <View style={p.hLineS} />
+            <Text style={p.hDot}>◆</Text>
+            <View style={p.hLine} />
+          </View>
+        </View>
 
-      {/* Enter battle */}
-      <TouchableOpacity style={styles.goldBtn} onPress={onEnter}>
-        <Text style={[styles.goldBtnText, gloryActive && { color: "#fff" }]}>
-          {gloryActive ? "⚡ BEGIN GLORY HUNT" : "⚔ ENTER BATTLE"}
-        </Text>
-      </TouchableOpacity>
+        <View style={p.contentRow}>
+          {/* ── Left: the war kit (or daily card) ── */}
+          <View style={[p.shrine, { width: shrineW }]}>
+            {dailyMode ? (
+              <>
+                <Animated.View
+                  style={[
+                    p.cardPool,
+                    {
+                      width: cardW * 1.7,
+                      height: cardW * 1.7,
+                      borderRadius: cardW * 0.85,
+                      backgroundColor: withAlpha(color.gold, 0.05),
+                      opacity: pulse,
+                    },
+                  ]}
+                />
+                <HonorCard
+                  w={cardW}
+                  h={cardH}
+                  trim={color.gold}
+                  medallion="script-text"
+                  deal={dealBack}
+                  pulse={pulse}
+                  float={float}
+                >
+                  {dailyBody}
+                </HonorCard>
+              </>
+            ) : (
+              <>
+                <View style={p.kitZone}>
+                  <Animated.View
+                    style={[
+                      p.kitRear,
+                      { marginRight: -Math.round(backW * 0.32) },
+                      dealStyle(dealBounty, 9),
+                    ]}
+                  >
+                    <MiniBounty item={kit.bounty} w={bountyW} h={bountyH} />
+                  </Animated.View>
+                  <Animated.View style={[p.kitFront, dealStyle(dealBack, -5)]}>
+                    <Animated.View style={{ transform: [{ translateY: floatY }] }}>
+                      <MiniBack item={kit.back} w={backW} h={backH} />
+                    </Animated.View>
+                  </Animated.View>
+                </View>
+                <View style={p.shelf} />
+                <Text style={p.kitLabel}>YOUR WAR KIT</Text>
+                <Text style={p.kitName} numberOfLines={1}>
+                  {kit.back.name} · {kit.bounty.name}
+                </Text>
+              </>
+            )}
+          </View>
 
-      <ReturnToCastle onPress={onHome} />
+          {/* ── Right: muster ── */}
+          <View style={p.right}>
+            {!dailyMode && (
+              <View style={p.road}>
+                <Text style={p.roadLabel}>THE ROAD AHEAD</Text>
+                <View style={p.roadCards}>
+                  {Array.from({ length: TOTAL_LEVELS }).map((_, i) => (
+                    <View key={i} style={p.roadCard}>
+                      <View style={p.roadCardFrame} />
+                      <Text style={p.roadCardNum}>{i + 1}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {!dailyMode && gloryCharges > 0 && (
+              <TouchableOpacity
+                style={[p.gloryBtn, gloryActive && p.gloryBtnActive]}
+                onPress={onActivateGlory}
+                disabled={gloryActive}
+                activeOpacity={0.85}
+              >
+                <Icon name="lightning-bolt" size={18} color={color.ember} />
+                <View>
+                  <Text style={p.gloryTxt}>
+                    {gloryActive ? "GLORY HUNT ARMED" : "Glory Hunt"}
+                  </Text>
+                  <Text style={p.glorySub}>
+                    {gloryActive
+                      ? "2× spoils · 50% time"
+                      : `2× spoils · 50% time (${gloryCharges} charge)`}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              style={[p.primaryBtn, gloryActive && p.primaryBtnGlory]}
+              onPress={onEnter}
+              activeOpacity={0.85}
+            >
+              <Icon
+                name={gloryActive ? "lightning-bolt" : "sword-cross"}
+                size={15}
+                color={gloryActive ? "#fff" : color.ink}
+              />
+              <Text style={[p.primaryTxt, gloryActive && { color: "#fff" }]}>
+                {gloryActive ? "BEGIN GLORY HUNT" : "ENTER BATTLE"}
+              </Text>
+            </TouchableOpacity>
+
+            <ReturnToCastle onPress={onHome} />
+          </View>
+        </View>
+      </Animated.View>
     </View>
-  </View>
-)
+  )
+}
 
-const styles = StyleSheet.create({
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 32,
-  },
-  screenOrnRow: {
+const p = StyleSheet.create({
+  container: { flex: 1, backgroundColor: color.bgBase, paddingTop: 6 },
+  inner: { flex: 1 },
+
+  // Header
+  header: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    width: "100%",
-  },
-  screenOrnLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "rgba(232,197,71,0.1)",
-  },
-  screenOrnDot: {
-    color: "rgba(232,197,71,0.3)",
-    fontSize: 7,
-  },
-  screenOrnRune: {
-    color: "rgba(232,197,71,0.25)",
-    fontSize: 12,
-  },
-  preBattleLeft: {
-    flex: 1,
-    alignItems: "center",
     justifyContent: "center",
-    gap: 10,
+    marginBottom: 6,
+    gap: 6,
   },
-  preBattleRight: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-  },
-  preBattleIconWrap: {
-    width: 100,
-    height: 100,
-    justifyContent: "center",
-    alignItems: "center",
-    marginVertical: 4,
-  },
-  preBattleIconRingOuter: {
-    position: "absolute",
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 1,
-    borderColor: "rgba(232,197,71,0.15)",
-    borderStyle: "dashed",
-  },
-  preBattleIconRingInner: {
-    position: "absolute",
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    borderWidth: 1,
-    borderColor: "rgba(232,197,71,0.2)",
-  },
-  preBattleIcon: {
-    fontSize: 52,
-    textShadowColor: "rgba(232,197,71,0.3)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 20,
-  },
-  preBattleTitle: {
-    color: "#E8C547",
-    fontSize: 26,
-    fontWeight: "900",
-    letterSpacing: 5,
-    textAlign: "center",
+  hCenter: { alignItems: "center" },
+  hTitleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  hTitle: {
+    color: color.gold,
+    fontFamily: font.heading,
+    fontSize: 17,
+    letterSpacing: 3,
     textShadowColor: "rgba(232,197,71,0.4)",
     textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 16,
+    textShadowRadius: 14,
   },
-  preBattleSub: {
-    color: "rgba(255,255,255,0.3)",
-    fontSize: 12,
-    fontWeight: "600",
-    textAlign: "center",
-    letterSpacing: 1,
-    lineHeight: 18,
-  },
-  preBattleLevels: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 4,
-  },
-  preBattleLevel: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  preBattleLevelNum: {
-    color: "rgba(232,197,71,0.5)",
-    fontSize: 8,
-    fontWeight: "900",
-  },
-  preBattleLevelLine: {
-    width: 12,
-    height: 1,
-    backgroundColor: "rgba(232,197,71,0.1)",
-  },
-  progressDot: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 1.5,
-    borderColor: "rgba(232,197,71,0.15)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  dailyQuestBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: "rgba(232,197,71,0.05)",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(232,197,71,0.15)",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    width: "100%",
-  },
-  dailyQuestIcon: { fontSize: 22 },
-  dailyQuestLabel: {
-    color: "#E8C547",
-    fontSize: 12,
-    fontWeight: "900",
-    letterSpacing: 2,
-  },
-  dailyQuestSub: {
-    color: "rgba(232,197,71,0.4)",
+  hSub: {
+    color: color.goldFaded,
     fontSize: 9,
-    fontWeight: "600",
+    fontWeight: "800",
+    letterSpacing: 2,
     marginTop: 1,
   },
+  hOrn: { flexDirection: "row", alignItems: "center", flex: 1, gap: 4 },
+  hLine: { flex: 1, height: 1, backgroundColor: "rgba(232,197,71,0.15)" },
+  hLineS: { width: 10, height: 1, backgroundColor: "rgba(232,197,71,0.25)" },
+  hDot: { color: "rgba(232,197,71,0.4)", fontSize: 6 },
+
+  contentRow: { flex: 1, flexDirection: "row", gap: 14, alignItems: "center" },
+
+  // Left
+  shrine: { alignItems: "center", justifyContent: "center" },
+  cardPool: { position: "absolute" },
+  kitZone: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "center",
+  },
+  kitFront: {
+    zIndex: 2,
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 8,
+  },
+  kitRear: {
+    zIndex: 1,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+  },
+  shelf: {
+    width: "62%",
+    height: 1.5,
+    backgroundColor: color.goldLine,
+    marginTop: 12,
+    borderRadius: 1,
+  },
+  kitLabel: {
+    color: color.goldFaded,
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 3,
+    marginTop: 8,
+  },
+  kitName: {
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    marginTop: 2,
+    maxWidth: "90%",
+  },
+
+  // Daily card body
+  cardTitle: {
+    fontFamily: font.display,
+    fontSize: 18,
+    letterSpacing: 2,
+    textAlign: "center",
+    marginTop: 8,
+  },
+  cardOverline: {
+    fontSize: 7,
+    fontWeight: "900",
+    letterSpacing: 3,
+    textAlign: "center",
+    marginTop: 4,
+  },
+  cardSeed: {
+    color: color.gold,
+    fontSize: 12,
+    fontWeight: "900",
+    letterSpacing: 1,
+    textAlign: "center",
+    marginTop: 2,
+  },
+
+  // Right
+  right: { flex: 1, justifyContent: "center", alignItems: "center", gap: 12 },
+  road: { alignItems: "center" },
+  roadLabel: {
+    color: color.goldFaded,
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 3,
+    marginBottom: 6,
+  },
+  roadCards: { flexDirection: "row", gap: 6, justifyContent: "center" },
+  roadCard: {
+    width: 26,
+    height: 36,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: color.goldLine,
+    backgroundColor: color.bgRaised,
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+  },
+  roadCardFrame: {
+    position: "absolute",
+    top: 2,
+    left: 2,
+    right: 2,
+    bottom: 2,
+    borderRadius: 3,
+    borderWidth: 0.5,
+    borderColor: "rgba(232,197,71,0.12)",
+  },
+  roadCardNum: {
+    color: "rgba(232,197,71,0.35)",
+    fontFamily: font.heading,
+    fontSize: 14,
+  },
+
   gloryBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
-    backgroundColor: "rgba(255,140,0,0.1)",
+    backgroundColor: withAlpha(color.ember, 0.1),
     borderWidth: 1.5,
-    borderColor: "rgba(255,140,0,0.4)",
+    borderColor: withAlpha(color.ember, 0.4),
     borderRadius: 10,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    minWidth: 220,
+    paddingHorizontal: 18,
+    paddingVertical: 9,
+    minWidth: 230,
   },
   gloryBtnActive: {
-    backgroundColor: "rgba(255,140,0,0.18)",
-    borderColor: "#FF8C00",
-    shadowColor: "#FF8C00",
+    backgroundColor: withAlpha(color.ember, 0.18),
+    borderColor: color.ember,
+    shadowColor: color.ember,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.5,
     shadowRadius: 12,
     elevation: 6,
   },
-  gloryBtnIcon: { fontSize: 20 },
-  gloryBtnText: {
-    color: "#FF8C00",
-    fontSize: 15,
-    fontWeight: "900",
-    letterSpacing: 1.5,
-  },
-  gloryBtnSub: {
-    color: "rgba(255,140,0,0.5)",
+  gloryTxt: { color: color.ember, fontSize: 14, fontWeight: "900", letterSpacing: 1 },
+  glorySub: {
+    color: withAlpha(color.ember, 0.5),
     fontSize: 9,
     fontWeight: "700",
-    letterSpacing: 1,
+    letterSpacing: 0.5,
     marginTop: 1,
   },
-  goldBtn: {
-    backgroundColor: "#E8C547",
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 10,
-    minWidth: 220,
+
+  primaryBtn: {
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: color.gold,
+    paddingHorizontal: 30,
+    paddingVertical: 11,
+    borderRadius: 12,
+    minWidth: 230,
     borderWidth: 1.5,
-    borderColor: "#D4A017",
-    shadowColor: "#E8C547",
+    borderColor: color.goldDeep,
+    shadowColor: color.gold,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
     shadowRadius: 12,
     elevation: 8,
   },
-  goldBtnText: {
-    color: "#1a1a1a",
-    fontSize: 15,
-    fontWeight: "900",
-    letterSpacing: 2,
+  primaryBtnGlory: {
+    backgroundColor: color.ember,
+    borderColor: "#C2410C",
+    shadowColor: color.ember,
   },
+  primaryTxt: { color: color.ink, fontSize: 14, fontWeight: "900", letterSpacing: 2 },
 })

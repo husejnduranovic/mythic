@@ -575,6 +575,15 @@ export const getSelectedTheme = async (): Promise<ThemeConfig> => {
   }
 }
 
+// The equipped loadout as ArmoryItems — lets other screens (pre-battle muster)
+// render the player's real kit through the same MiniBack/MiniBounty renderers.
+export const getEquippedKit = (theme: ThemeConfig) => ({
+  back: findOr(CARD_BACKS, theme.cardBack),
+  bounty: findOr(BOUNTY_STYLES, theme.bountyStyle || "gold_coin"),
+  table: findOr(WAR_TABLES, theme.warTable || "oak_plank"),
+  field: findOr(BATTLEFIELDS, theme.battlefield),
+})
+
 export const incrementGamesPlayed = async () => {
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEYS.gamesPlayed)
@@ -605,7 +614,8 @@ const inset = (n: number) =>
 // In-game CardBackView in miniature: every engraving line takes the equipped
 // item's accent metal (ui/sigils.tsx BACK_STYLES) and the crest is the same
 // monochrome Sigil the live card inks — a true mirror, not an emoji-in-a-circle.
-const MiniBack = ({ item, w, h }: { item: ArmoryItem; w: number; h: number }) => {
+// Exported so the pre-battle "war kit" muster can reuse the canonical renderer.
+export const MiniBack = ({ item, w, h }: { item: ArmoryItem; w: number; h: number }) => {
   const back = BACK_STYLES[item.color] || DEFAULT_BACK_STYLE
   const a = back.accent
   const detailed = w >= 70
@@ -666,7 +676,7 @@ const MiniBack = ({ item, w, h }: { item: ArmoryItem; w: number; h: number }) =>
 }
 
 // In-game BountyCardBack in miniature: accent-jeweled frames, ✦ corners.
-const MiniBounty = ({ item, w, h }: { item: ArmoryItem; w: number; h: number }) => {
+export const MiniBounty = ({ item, w, h }: { item: ArmoryItem; w: number; h: number }) => {
   const bc = BOUNTY_STYLE_CONFIG[item.id] || {
     backColor: item.color,
     accent: item.accent,
