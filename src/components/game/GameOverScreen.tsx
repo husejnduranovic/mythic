@@ -16,7 +16,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   useWindowDimensions,
   View,
 } from "react-native"
@@ -25,6 +24,7 @@ import ReturnToCastle from "../ReturnToCastle"
 import RecordCelebration from "../RecordCelebration"
 import PersonalBestBanner from "../PersonalBestBanner"
 import { Icon, IconName } from "../../ui/Icon"
+import { GoldButton } from "../../ui/GoldButton"
 import { color, font } from "../../ui/theme"
 import {
   HonorCard,
@@ -380,26 +380,18 @@ export const GameOverScreen = ({
             {/* actions */}
             <View style={g.actions}>
               {arenaMode ? (
-                <TouchableOpacity
-                  style={g.primaryBtn}
+                <GoldButton
+                  label="RETURN TO CASTLE"
+                  icon="castle"
                   onPress={onConfirmQuit}
-                  activeOpacity={0.85}
-                >
-                  <Icon name="castle" size={15} color={color.ink} />
-                  <Text style={g.primaryTxt}>RETURN TO CASTLE</Text>
-                </TouchableOpacity>
+                />
               ) : (
                 <>
-                  <TouchableOpacity
-                    style={g.primaryBtn}
+                  <GoldButton
+                    label={dailyMode ? "RETURN TO CASTLE" : "BATTLE AGAIN"}
+                    icon={dailyMode ? "castle" : "sword-cross"}
                     onPress={onPlayAgain}
-                    activeOpacity={0.85}
-                  >
-                    <Icon name="sword-cross" size={15} color={color.ink} />
-                    <Text style={g.primaryTxt}>
-                      {dailyMode ? "RETURN TO CASTLE" : "BATTLE AGAIN"}
-                    </Text>
-                  </TouchableOpacity>
+                  />
                   {!dailyMode && <ReturnToCastle onPress={onHome} />}
                 </>
               )}
@@ -560,30 +552,6 @@ const g = StyleSheet.create({
 
   // Actions
   actions: { alignItems: "center", gap: 6, marginTop: 8 },
-  primaryBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: color.gold,
-    paddingHorizontal: 30,
-    paddingVertical: 11,
-    borderRadius: 12,
-    minWidth: 230,
-    borderWidth: 1.5,
-    borderColor: color.goldDeep,
-    shadowColor: color.gold,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  primaryTxt: {
-    color: color.ink,
-    fontSize: 14,
-    fontWeight: "900",
-    letterSpacing: 2,
-  },
 
   // Arena rankings
   boardTitle: {

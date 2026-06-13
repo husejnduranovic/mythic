@@ -4,15 +4,9 @@
 // no emoji. Scales in on mount.
 
 import React, { useEffect, useRef } from "react"
-import {
-  Animated,
-  Easing,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native"
+import { Animated, Easing, StyleSheet, Text, View } from "react-native"
 import { Icon } from "../../ui/Icon"
+import { GoldButton } from "../../ui/GoldButton"
 import { color, font } from "../../ui/theme"
 import { withAlpha } from "../../ui/honor"
 
@@ -86,15 +80,19 @@ export const QuitConfirmModal = ({
 
         <View style={q.divider} />
 
-        <TouchableOpacity style={q.fightBtn} onPress={onResume} activeOpacity={0.85}>
-          <Icon name="sword-cross" size={14} color={color.ink} />
-          <Text style={q.fightTxt}>KEEP FIGHTING</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={q.leaveBtn} onPress={onConfirmQuit} activeOpacity={0.85}>
-          <Icon name="castle" size={14} color="#D9604F" />
-          <Text style={q.leaveTxt}>Retreat to Castle</Text>
-        </TouchableOpacity>
+        <GoldButton
+          label="KEEP FIGHTING"
+          icon="sword-cross"
+          onPress={onResume}
+          style={q.btn}
+        />
+        <GoldButton
+          variant="danger"
+          label="RETREAT TO CASTLE"
+          icon="castle"
+          onPress={onConfirmQuit}
+          style={q.btn}
+        />
 
         {/* bottom rune row */}
         <View style={q.runeRow}>
@@ -234,47 +232,5 @@ const q = StyleSheet.create({
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 12,
   },
-  fightBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    backgroundColor: color.gold,
-    paddingHorizontal: 28,
-    paddingVertical: 10,
-    borderRadius: 12,
-    width: "100%",
-    borderWidth: 1.5,
-    borderColor: color.goldDeep,
-    shadowColor: color.gold,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  fightTxt: {
-    color: color.ink,
-    fontSize: 13,
-    fontWeight: "900",
-    letterSpacing: 2,
-  },
-  leaveBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 9,
-    paddingHorizontal: 28,
-    paddingVertical: 8,
-    borderRadius: 12,
-    width: "100%",
-    borderWidth: 1,
-    borderColor: withAlpha(color.crimson, 0.4),
-    backgroundColor: withAlpha(color.crimson, 0.08),
-  },
-  leaveTxt: {
-    color: "#D9604F",
-    fontSize: 12,
-    fontWeight: "800",
-    letterSpacing: 1.5,
-  },
+  btn: { width: "100%" },
 })

@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import ReturnToCastle from "../ReturnToCastle"
 import { TOTAL_LEVELS } from "../../game/config"
 import { Icon } from "../../ui/Icon"
+import { GoldButton } from "../../ui/GoldButton"
 import { color, font } from "../../ui/theme"
 import { HonorCard, withAlpha } from "../../ui/honor"
 import { getEquippedKit, MiniBack, MiniBounty, type ThemeConfig } from "../Armory"
@@ -259,20 +260,12 @@ export const PreBattleScreen = ({
               </TouchableOpacity>
             )}
 
-            <TouchableOpacity
-              style={[p.primaryBtn, gloryActive && p.primaryBtnGlory]}
+            <GoldButton
+              variant={gloryActive ? "ember" : "primary"}
+              icon={gloryActive ? "lightning-bolt" : "sword-cross"}
+              label={gloryActive ? "BEGIN GLORY HUNT" : "ENTER BATTLE"}
               onPress={onEnter}
-              activeOpacity={0.85}
-            >
-              <Icon
-                name={gloryActive ? "lightning-bolt" : "sword-cross"}
-                size={15}
-                color={gloryActive ? "#fff" : color.ink}
-              />
-              <Text style={[p.primaryTxt, gloryActive && { color: "#fff" }]}>
-                {gloryActive ? "BEGIN GLORY HUNT" : "ENTER BATTLE"}
-              </Text>
-            </TouchableOpacity>
+            />
 
             <ReturnToCastle onPress={onHome} />
           </View>
@@ -459,28 +452,4 @@ const p = StyleSheet.create({
     marginTop: 1,
   },
 
-  primaryBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: color.gold,
-    paddingHorizontal: 30,
-    paddingVertical: 11,
-    borderRadius: 12,
-    minWidth: 230,
-    borderWidth: 1.5,
-    borderColor: color.goldDeep,
-    shadowColor: color.gold,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  primaryBtnGlory: {
-    backgroundColor: color.ember,
-    borderColor: "#C2410C",
-    shadowColor: color.ember,
-  },
-  primaryTxt: { color: color.ink, fontSize: 14, fontWeight: "900", letterSpacing: 2 },
 })

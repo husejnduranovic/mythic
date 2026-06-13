@@ -13,6 +13,7 @@ import {
   View,
 } from "react-native"
 import { Icon } from "../../ui/Icon"
+import { GoldButton } from "../../ui/GoldButton"
 import { color, font } from "../../ui/theme"
 import { withAlpha } from "../../ui/honor"
 import type { ThemeConfig } from "../Armory"
@@ -72,10 +73,7 @@ export const PausedScreen = ({
           <Text style={ps.stakeValue}>{score.toLocaleString()}</Text>
         </View>
 
-        <TouchableOpacity style={ps.primaryBtn} onPress={onResume} activeOpacity={0.85}>
-          <Icon name="play" size={16} color={color.ink} />
-          <Text style={ps.primaryTxt}>RESUME</Text>
-        </TouchableOpacity>
+        <GoldButton label="RESUME" icon="play" onPress={onResume} />
 
         <View style={ps.ghostRow}>
           {!dailyMode && (
@@ -176,25 +174,6 @@ const ps = StyleSheet.create({
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 10,
   },
-  primaryBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 9,
-    backgroundColor: color.gold,
-    paddingHorizontal: 36,
-    paddingVertical: 10,
-    borderRadius: 12,
-    minWidth: 220,
-    borderWidth: 1.5,
-    borderColor: color.goldDeep,
-    shadowColor: color.gold,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  primaryTxt: { color: color.ink, fontSize: 14, fontWeight: "900", letterSpacing: 3 },
   ghostRow: { flexDirection: "row", gap: 10 },
   ghostBtn: {
     flexDirection: "row",

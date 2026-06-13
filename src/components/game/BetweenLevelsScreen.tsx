@@ -21,6 +21,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { LEVEL_CONFIG, TOTAL_LEVELS } from "../../game/config"
 import { Icon } from "../../ui/Icon"
+import { GoldButton } from "../../ui/GoldButton"
 import { color, font } from "../../ui/theme"
 import { HonorCard, TIER, withAlpha } from "../../ui/honor"
 import type { ThemeConfig } from "../Armory"
@@ -371,24 +372,24 @@ export const BetweenLevelsScreen = ({
                 )}
 
                 {/* onward */}
-                <TouchableOpacity
-                  style={b.primaryBtn}
-                  onPress={onNextLevel}
-                  activeOpacity={0.85}
-                >
-                  <Icon
-                    name={isFinal ? "trophy-variant" : gloryActive ? "lightning-bolt" : "sword-cross"}
-                    size={15}
-                    color={color.ink}
-                  />
-                  <Text style={b.primaryTxt}>
-                    {isFinal
+                <GoldButton
+                  variant={gloryActive ? "ember" : "primary"}
+                  icon={
+                    isFinal
+                      ? "trophy-variant"
+                      : gloryActive
+                        ? "lightning-bolt"
+                        : "sword-cross"
+                  }
+                  label={
+                    isFinal
                       ? "CLAIM VICTORY"
                       : gloryActive
                         ? "BEGIN GLORY HUNT"
-                        : "NEXT BATTLE"}
-                  </Text>
-                </TouchableOpacity>
+                        : "NEXT BATTLE"
+                  }
+                  onPress={onNextLevel}
+                />
               </View>
             )}
           </View>
@@ -545,27 +546,6 @@ const b = StyleSheet.create({
     letterSpacing: 0.5,
     marginTop: 1,
   },
-
-  primaryBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: color.gold,
-    paddingHorizontal: 30,
-    paddingVertical: 11,
-    borderRadius: 12,
-    alignSelf: "center",
-    minWidth: 230,
-    borderWidth: 1.5,
-    borderColor: color.goldDeep,
-    shadowColor: color.gold,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  primaryTxt: { color: color.ink, fontSize: 14, fontWeight: "900", letterSpacing: 2 },
 
   // Arena
   boardTitle: {
