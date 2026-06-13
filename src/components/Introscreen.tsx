@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react"
 import {
   Animated,
+  Easing,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -9,64 +10,82 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import ReturnToCastle from "./ReturnToCastle"
 import { StorageKeys } from "../services/storageKeys"
+import { Icon, IconName } from "../ui/Icon"
+import { GoldButton } from "../ui/GoldButton"
+import { color, font } from "../ui/theme"
+import { withAlpha } from "../ui/honor"
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Intro / How-to-play (Guide). First-run shows the brand splash then the
+// tutorial; opened from Home it skips straight to the tutorial. Brought onto the
+// design system (DESIGN_PLAN §2/§3): token palette, Cinzel titles, MCI tutorial
+// icons in ring medallions (reusing the in-game vocabulary — restore = Free Draw,
+// sack = Bounty, lightning-bolt = Glory Hunt), GoldButton nav. The four card-face
+// beasts on the splash stay emoji (§9, illustration).
+// ─────────────────────────────────────────────────────────────────────────────
 
 const INTRO_KEY = StorageKeys.introSeen
 
 interface IntroScreenProps {
   onComplete: () => void
   skipAnimation?: boolean
-  showReturnButton?: boolean // NEW
-  onReturnHome?: () => void // NEW
+  showReturnButton?: boolean
+  onReturnHome?: () => void
 }
 
-const TUTORIAL_SLIDES = [
+const TUTORIAL_SLIDES: {
+  icon: IconName
+  title: string
+  desc: string
+  example: string
+}[] = [
   {
-    icon: "🃏",
+    icon: "cards",
     title: "Match Cards",
     desc: "One card is open at the bottom.\nTap any field card that is one higher or one lower in number.\n\nAce connects to both King and 2.",
     example: "Open card is 7 → tap a 6 or an 8",
   },
   {
-    icon: "🔥",
+    icon: "fire",
     title: "Build Your Combo",
     desc: "Each match in a row builds your combo.\nThe higher your combo, the more points every card is worth.\n\nThis is the heart of the game — chain as many matches as you can.",
     example: "More matches in a row = far more points",
   },
   {
-    icon: "⚡",
+    icon: "refresh",
     title: "The Deck Resets It",
     desc: "If no field card matches, draw from the deck.\nBut drawing resets your combo to zero.\n\nDraw only when you're truly stuck — every match you make first is worth it.",
     example: "Match → Match → Match → then draw if needed",
   },
   {
-    icon: "🃏",
+    icon: "restore",
     title: "One Free Draw",
     desc: "Each battlefield gives you one Free Draw.\nIt swaps your open card WITHOUT breaking your combo.\n\nSave it for the moment you get stuck with a high combo.",
     example: "Stuck at a big combo? Use your Free Draw",
   },
   {
-    icon: "💰",
+    icon: "sack",
     title: "Bounty Cards",
     desc: "Two special cards are hidden on every battlefield.\nThey look different from the rest.\n\nMatch them for a bonus reward.",
     example: "Spot the special cards and match them",
   },
   {
-    icon: "🏔",
+    icon: "image-filter-hdr",
     title: "6 Battlefields",
     desc: "Each run has 6 battlefields, played in order.\nLater battlefields are worth more points per card.\n\nClear every card on a field for a big bonus.",
     example: "Field 1 = 1×  →  Field 6 = 3.5× points",
   },
   {
-    icon: "⚔",
+    icon: "lightning-bolt",
     title: "Glory Hunt",
     desc: "Before battle you can activate Glory Hunt.\nIt doubles your points — but cuts your time in half.\n\nOne charge per run. High risk, high reward.",
     example: "2× points · 50% time · one charge per run",
   },
   {
-    icon: "🏆",
+    icon: "trophy-variant",
     title: "Monthly Prizes",
     desc: "Each month the top 3 warriors win real prizes.\nScores reset monthly, so everyone starts fresh.\n\nPlay the Daily Quest for your best shot.",
-    example: "🥇 €50  ·  🥈 €30  ·  🥉 €20",
+    example: "1st €50  ·  2nd €30  ·  3rd €20",
   },
 ]
 
@@ -91,6 +110,7 @@ const IntroScreen = ({
   const tapOpacity = useRef(new Animated.Value(0)).current
   const slideOpacity = useRef(new Animated.Value(1)).current
   const slideSlide = useRef(new Animated.Value(0)).current
+  const halo = useRef(new Animated.Value(0.3)).current
 
   const [phase, setPhase] = useState<"intro" | "tutorial">(
     skipAnimation ? "tutorial" : "intro",
@@ -174,6 +194,24 @@ const IntroScreen = ({
         useNativeDriver: true,
       }),
     ]).start()
+
+    // The tutorial medallion breathes (shared pulse grammar).
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(halo, {
+          toValue: 0.55,
+          duration: 1600,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(halo, {
+          toValue: 0.3,
+          duration: 1600,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ]),
+    ).start()
   }, [])
 
   const handleIntroTap = () => setPhase("tutorial")
@@ -239,37 +277,25 @@ const IntroScreen = ({
             <Text style={[z.bgRune, { bottom: "25%", right: "8%" }]}>ᛟ</Text>
           </View>
 
-          {/* Beasts */}
+          {/* Beasts — the four card-face clans (§9: illustration, stay emoji) */}
           <View style={z.beastRow}>
             <Animated.Text
-              style={[
-                z.beast,
-                { opacity: beast1, transform: [{ scale: beast1 }] },
-              ]}
+              style={[z.beast, { opacity: beast1, transform: [{ scale: beast1 }] }]}
             >
               🐉
             </Animated.Text>
             <Animated.Text
-              style={[
-                z.beast,
-                { opacity: beast2, transform: [{ scale: beast2 }] },
-              ]}
+              style={[z.beast, { opacity: beast2, transform: [{ scale: beast2 }] }]}
             >
               🦅
             </Animated.Text>
             <Animated.Text
-              style={[
-                z.beast,
-                { opacity: beast3, transform: [{ scale: beast3 }] },
-              ]}
+              style={[z.beast, { opacity: beast3, transform: [{ scale: beast3 }] }]}
             >
               🐺
             </Animated.Text>
             <Animated.Text
-              style={[
-                z.beast,
-                { opacity: beast4, transform: [{ scale: beast4 }] },
-              ]}
+              style={[z.beast, { opacity: beast4, transform: [{ scale: beast4 }] }]}
             >
               🐍
             </Animated.Text>
@@ -337,10 +363,14 @@ const IntroScreen = ({
           { opacity: slideOpacity, transform: [{ translateX: slideSlide }] },
         ]}
       >
-        {/* Left — Icon + Title */}
+        {/* Left — Icon medallion + Title */}
         <View style={z.slideLeft}>
-          <View style={z.iconWrap}>
-            <Text style={z.slideIcon}>{slide.icon}</Text>
+          <View style={z.iconZone}>
+            <Animated.View style={[z.iconHalo, { opacity: halo }]} />
+            <View style={z.iconWrap}>
+              <View style={z.iconRing} />
+              <Icon name={slide.icon} size={30} color={color.gold} />
+            </View>
           </View>
           <Text style={z.slideTitle}>{slide.title}</Text>
         </View>
@@ -369,21 +399,19 @@ const IntroScreen = ({
             onPress={handleBack}
             activeOpacity={0.8}
           >
-            <Text style={z.backBtnText}>← Back</Text>
+            <Icon name="chevron-left" size={16} color={color.goldFaded} />
+            <Text style={z.backBtnText}>Back</Text>
           </TouchableOpacity>
         ) : (
           <View style={{ flex: 1 }} />
         )}
 
-        <TouchableOpacity
-          style={z.nextBtn}
+        <GoldButton
+          label={isLast ? "ENTER BATTLE" : "NEXT"}
+          icon={isLast ? "sword-cross" : "chevron-right"}
           onPress={handleNext}
-          activeOpacity={0.8}
-        >
-          <Text style={z.nextBtnText}>
-            {isLast ? "⚔ Enter the Arena" : "Next →"}
-          </Text>
-        </TouchableOpacity>
+          style={z.nextBtn}
+        />
       </View>
 
       <Text style={z.skipHint}>
@@ -408,7 +436,7 @@ export const hasSeenIntro = async (): Promise<boolean> => {
 const z = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0B1410",
+    backgroundColor: color.bgBase,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -421,11 +449,7 @@ const z = StyleSheet.create({
 
   // Background
   bgLayer: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
-  bgRune: {
-    position: "absolute",
-    fontSize: 22,
-    color: "rgba(232,197,71,0.04)",
-  },
+  bgRune: { position: "absolute", fontSize: 22, color: "rgba(232,197,71,0.04)" },
   bgHLine: {
     position: "absolute",
     top: "50%",
@@ -435,20 +459,20 @@ const z = StyleSheet.create({
     backgroundColor: "rgba(232,197,71,0.03)",
   },
 
-  // Intro screen
+  // Intro splash
   beastRow: { flexDirection: "row", gap: 20, marginBottom: 16 },
   beast: { fontSize: 38 },
   title: {
-    fontSize: 38,
-    fontWeight: "900",
-    color: "#E8C547",
-    letterSpacing: 6,
+    fontFamily: font.display,
+    fontSize: 40,
+    color: color.gold,
+    letterSpacing: 4,
     textShadowColor: "rgba(232,197,71,0.4)",
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 20,
   },
   subtitle: {
-    color: "rgba(232,197,71,0.5)",
+    color: color.goldFaded,
     fontSize: 13,
     fontWeight: "600",
     letterSpacing: 2,
@@ -480,11 +504,11 @@ const z = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "#E8C547",
+    backgroundColor: color.gold,
   },
 
   // Tutorial header
-  tutHeader: { alignItems: "center", marginBottom: 12 },
+  tutHeader: { alignItems: "center", marginBottom: 14 },
   headerOrn: {
     flexDirection: "row",
     alignItems: "center",
@@ -494,10 +518,13 @@ const z = StyleSheet.create({
   ornLine: { width: 24, height: 1, backgroundColor: "rgba(232,197,71,0.2)" },
   ornDot: { color: "rgba(232,197,71,0.4)", fontSize: 7 },
   tutHeaderTitle: {
-    color: "#E8C547",
-    fontSize: 14,
-    fontWeight: "900",
-    letterSpacing: 5,
+    color: color.gold,
+    fontFamily: font.heading,
+    fontSize: 16,
+    letterSpacing: 4,
+    textShadowColor: "rgba(232,197,71,0.4)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 14,
   },
 
   // Slide — horizontal layout
@@ -505,57 +532,67 @@ const z = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 24,
-    gap: 20,
-    maxWidth: 600,
+    gap: 24,
+    maxWidth: 620,
     width: "100%",
   },
-  slideLeft: {
-    flex: 1,
-    alignItems: "center",
-    gap: 8,
+  slideLeft: { flex: 1, alignItems: "center", gap: 10 },
+  iconZone: { alignItems: "center", justifyContent: "center" },
+  iconHalo: {
+    position: "absolute",
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: withAlpha(color.gold, 0.1),
   },
   iconWrap: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: "rgba(232,197,71,0.06)",
+    backgroundColor: withAlpha(color.gold, 0.08),
     borderWidth: 1.5,
-    borderColor: "rgba(232,197,71,0.15)",
+    borderColor: withAlpha(color.gold, 0.6),
     justifyContent: "center",
     alignItems: "center",
   },
-  slideIcon: { fontSize: 30 },
+  iconRing: {
+    position: "absolute",
+    top: 4,
+    left: 4,
+    right: 4,
+    bottom: 4,
+    borderRadius: 28,
+    borderWidth: 0.5,
+    borderColor: withAlpha(color.gold, 0.3),
+  },
   slideTitle: {
-    color: "#E8C547",
+    color: color.gold,
+    fontFamily: font.display,
     fontSize: 18,
-    fontWeight: "900",
-    letterSpacing: 2,
+    letterSpacing: 1.5,
     textAlign: "center",
     textShadowColor: "rgba(232,197,71,0.3)",
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 8,
   },
-  slideRight: {
-    flex: 2,
-    gap: 10,
-  },
+  slideRight: { flex: 2, gap: 10 },
   slideDesc: {
-    color: "rgba(255,255,255,0.55)",
+    color: "rgba(255,255,255,0.6)",
     fontSize: 12,
     fontWeight: "600",
     lineHeight: 19,
     letterSpacing: 0.5,
   },
   exampleBox: {
-    backgroundColor: "rgba(232,197,71,0.06)",
+    backgroundColor: color.goldWash,
     borderRadius: 8,
     paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderWidth: 1,
-    borderColor: "rgba(232,197,71,0.1)",
+    borderColor: color.goldLine,
   },
   exampleText: {
-    color: "#E8C547",
+    color: color.gold,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 1,
@@ -563,14 +600,14 @@ const z = StyleSheet.create({
   },
 
   // Dots
-  dotRow: { flexDirection: "row", gap: 6, marginTop: 16, marginBottom: 12 },
+  dotRow: { flexDirection: "row", gap: 6, marginTop: 18, marginBottom: 12 },
   dot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "rgba(232,197,71,0.15)",
+    backgroundColor: color.goldLine,
   },
-  dotActive: { backgroundColor: "#E8C547", width: 18 },
+  dotActive: { backgroundColor: color.gold, width: 18 },
 
   // Navigation
   navRow: {
@@ -579,47 +616,35 @@ const z = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 32,
     width: "100%",
-    maxWidth: 400,
+    maxWidth: 430,
   },
   backBtn: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 12,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    paddingVertical: 11,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(232,197,71,0.12)",
-    backgroundColor: "rgba(232,197,71,0.03)",
+    borderColor: color.goldLine,
+    backgroundColor: color.goldWash,
   },
   backBtnText: {
-    color: "rgba(232,197,71,0.5)",
+    color: color.goldFaded,
     fontSize: 13,
-    fontWeight: "700",
+    fontWeight: "800",
     letterSpacing: 1,
   },
-  nextBtn: {
-    flex: 1,
-    backgroundColor: "#E8C547",
-    paddingVertical: 10,
-    borderRadius: 12,
-    alignItems: "center",
-    shadowColor: "#E8C547",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  nextBtnText: {
-    color: "#1a1a1a",
-    fontSize: 13,
-    fontWeight: "900",
-    letterSpacing: 1,
-  },
+  nextBtn: { flex: 1, minWidth: 0 },
 
   skipHint: {
-    color: "rgba(255,255,255,0.15)",
+    color: "rgba(255,255,255,0.18)",
     fontSize: 10,
-    marginTop: 8,
-    marginBottom: 20,
+    fontWeight: "700",
+    letterSpacing: 1,
+    marginTop: 10,
+    marginBottom: 18,
   },
 })
 
