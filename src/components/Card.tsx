@@ -17,7 +17,15 @@ import Animated, {
   interpolate,
 } from "react-native-reanimated"
 import { useBountyStyle, useCardBackColor } from "../context/ThemeContext"
-import { BACK_ICONS } from "./Armory"
+import {
+  BACK_STYLES,
+  BOUNTY_FALLBACK_SIGIL,
+  DEFAULT_BACK_STYLE,
+  Sigil,
+  SigilSpec,
+  SUIT_SIGILS,
+} from "../ui/sigils"
+import { color as palette, font } from "../ui/theme"
 
 export interface ICard {
   value: string
@@ -46,72 +54,55 @@ interface ICardProps {
   pending?: boolean
 }
 
-// ─── REPLACE THESE CONSTANTS at the top of Card.tsx ───
+// ─────────────────────────────────────────────────────────────────────────────
+// The Engraver's Deck (DESIGN_PLAN §4.2.8)
+//
+// Faces are parchment plates: the value engraved in Cinzel capitals with the
+// suit beast inked monochrome behind it (heraldic sigil, not emoji), courts
+// sealed in gold leaf, the ace a beast showcase. Backs are tooled leather:
+// double frame, lattice, corner runes and a crested medallion, all in the
+// equipped item's own accent metal (ui/sigils.tsx BACK_STYLES).
+//
+// Perf contract: ~28 instances live on the field at once. Sigils are Text
+// glyphs (same cost as the emoji they replaced), view count is unchanged, and
+// the only animations remain the existing one-card-at-a-time flip/fall
+// transitions. No idle loops.
+// ─────────────────────────────────────────────────────────────────────────────
 
-const SUIT_ICONS: Record<string, string> = {
-  hearts: "🐉",
-  diamonds: "🦅",
-  clubs: "🐺",
-  spades: "🐍",
-}
-
-// Deeper, more medieval — still clearly distinct
-const SUIT_COLORS: Record<string, string> = {
-  hearts: "#B02020", // deep crimson (was bright red)
-  diamonds: "#B8860B", // dark gold/amber (was bright yellow)
-  clubs: "#1A5C8A", // deep steel blue (was bright blue)
-  spades: "#1E6B3A", // deep forest green (was bright green)
-}
-
-// Warm parchment base — same for all suits, medieval feel
-const SUIT_BG: Record<string, string> = {
-  hearts: "#F2E8D5",
-  diamonds: "#F2E8D5",
-  clubs: "#F2E8D5",
-  spades: "#F2E8D5",
-}
-
-// Subtle tint at top — just a whisper of the suit color
-const SUIT_BG_TOP: Record<string, string> = {
-  hearts: "rgba(176,32,32,0.07)",
-  diamonds: "rgba(184,134,11,0.07)",
-  clubs: "rgba(26,92,138,0.07)",
-  spades: "rgba(30,107,58,0.07)",
-}
-
-// Pre-computed suit style packs — one object lookup instead of four per card render
+// Suit inks — deep heraldic metals on warm parchment. Pre-computed packs: one
+// object lookup per card render.
 const SUIT_STYLES: Record<
   string,
-  { icon: string; color: string; bg: string; bgTop: string }
+  { sigil: SigilSpec; color: string; bg: string; bgTop: string }
 > = {
   hearts: {
-    icon: SUIT_ICONS.hearts,
-    color: SUIT_COLORS.hearts,
-    bg: SUIT_BG.hearts,
-    bgTop: SUIT_BG_TOP.hearts,
+    sigil: SUIT_SIGILS.hearts, // dragon
+    color: "#8E1717", // deep crimson — darkened for legibility on parchment
+    bg: "#F2E8D5",
+    bgTop: "rgba(142,23,23,0.07)",
   },
   diamonds: {
-    icon: SUIT_ICONS.diamonds,
-    color: SUIT_COLORS.diamonds,
-    bg: SUIT_BG.diamonds,
-    bgTop: SUIT_BG_TOP.diamonds,
+    sigil: SUIT_SIGILS.diamonds, // eagle
+    color: "#8A6308", // dark amber — was #B8860B, too pale on cream
+    bg: "#F2E8D5",
+    bgTop: "rgba(138,99,8,0.07)",
   },
   clubs: {
-    icon: SUIT_ICONS.clubs,
-    color: SUIT_COLORS.clubs,
-    bg: SUIT_BG.clubs,
-    bgTop: SUIT_BG_TOP.clubs,
+    sigil: SUIT_SIGILS.clubs, // wolf (hunting mark)
+    color: "#134A70", // deep steel blue
+    bg: "#F2E8D5",
+    bgTop: "rgba(19,74,112,0.07)",
   },
   spades: {
-    icon: SUIT_ICONS.spades,
-    color: SUIT_COLORS.spades,
-    bg: SUIT_BG.spades,
-    bgTop: SUIT_BG_TOP.spades,
+    sigil: SUIT_SIGILS.spades, // serpent
+    color: "#15542B", // deep forest green
+    bg: "#F2E8D5",
+    bgTop: "rgba(21,84,43,0.07)",
   },
 }
 
-const DEFAULT_SUIT_STYLE = {
-  icon: "",
+const DEFAULT_SUIT_STYLE: (typeof SUIT_STYLES)[string] = {
+  sigil: { fam: "mci", name: "sword-cross" },
   color: "#333",
   bg: "#F8F5EC",
   bgTop: "rgba(0,0,0,0.03)",
@@ -124,21 +115,6 @@ const FACE_TITLES: Record<string, string> = {
   A: "ACE",
 }
 const DEFAULT_BACK_COLOR = "#162A47"
-// const BACK_ICONS: Record<string, string> = {
-//   "#162A47": "🛡",
-//   "#3A1212": "🐉",
-//   "#1A3524": "🐺",
-//   "#3D3008": "🦅",
-//   "#150D30": "🐍",
-//   "#2A1045": "👑",
-//   "#3A0A18": "🌙",
-//   "#0A1A3D": "🌩",
-//   "#2D2D0A": "📜",
-//   "#3A2800": "⚜️",
-//   "#1A0D30": "👻",
-//   "#3A1500": "🔥",
-//   "#3D2E0A": "📜",
-// }
 const BACK_RUNES = ["ᚠ", "ᚦ", "ᚱ", "ᛟ"]
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window")
@@ -149,118 +125,57 @@ const DECK_W = Math.round(56 * CARD_SCALE)
 const DECK_H = Math.round(78 * CARD_SCALE)
 const CARD_RADIUS = Math.round(10 * CARD_SCALE)
 
-// ─── REPLACE CardBackView in Card.tsx ───
-
+// Tooled-leather back. Every engraving line takes the equipped item's accent
+// metal (BACK_STYLES) — the old universal white overlays read washed-out and
+// made all eight Armory backs feel like recolors of the same card.
 const CardBackView = React.memo(
   ({ color }: { color: string }) => {
-    const icon = BACK_ICONS[color] || "⚔"
-
-    // Derive a lighter version of the card color for borders/accents
-    // We overlay white at low opacity to "lighten" the base color
-    const borderColor = color + "FF" // full opacity base
-    const frameOuter = color // will use with white overlay trick in style
+    const back = BACK_STYLES[color] || DEFAULT_BACK_STYLE
+    const a = back.accent
 
     return (
       <View
         style={[
           styles.cardBack,
-          {
-            backgroundColor: color,
-            borderColor: "rgba(255,255,255,0.18)", // subtle white edge — works on ANY color
-          },
+          { backgroundColor: color, borderColor: a + "59" },
         ]}
       >
-        {/* Outer frame — lighter than bg */}
-        <View
-          style={[
-            styles.backOuterFrame,
-            { borderColor: "rgba(255,255,255,0.22)" },
-          ]}
-        />
-        {/* Inner frame — even subtler */}
-        <View
-          style={[
-            styles.backInnerFrame,
-            { borderColor: "rgba(255,255,255,0.12)" },
-          ]}
-        />
-        {/* Cross lines */}
-        <View
-          style={[
-            styles.backCrossH,
-            { backgroundColor: "rgba(255,255,255,0.06)" },
-          ]}
-        />
-        <View
-          style={[
-            styles.backCrossV,
-            { backgroundColor: "rgba(255,255,255,0.06)" },
-          ]}
-        />
-        {/* Diagonals */}
-        <View
-          style={[
-            styles.backDiagonal1,
-            { backgroundColor: "rgba(255,255,255,0.04)" },
-          ]}
-        />
-        <View
-          style={[
-            styles.backDiagonal2,
-            { backgroundColor: "rgba(255,255,255,0.04)" },
-          ]}
-        />
-        {/* Center medallion */}
-        <View
-          style={[
-            styles.shield,
-            {
-              backgroundColor: "rgba(255,255,255,0.07)",
-              borderColor: "rgba(255,255,255,0.25)",
-            },
-          ]}
-        >
-          <View
-            style={[
-              styles.shieldRing,
-              { borderColor: "rgba(255,255,255,0.15)" },
-            ]}
-          >
+        {/* Double engraving frame */}
+        <View style={[styles.backOuterFrame, { borderColor: a + "8C" }]} />
+        <View style={[styles.backInnerFrame, { borderColor: a + "45" }]} />
+        {/* Lattice */}
+        <View style={[styles.backCrossH, { backgroundColor: a + "1A" }]} />
+        <View style={[styles.backCrossV, { backgroundColor: a + "1A" }]} />
+        <View style={[styles.backDiagonal1, { backgroundColor: a + "12" }]} />
+        <View style={[styles.backDiagonal2, { backgroundColor: a + "12" }]} />
+        {/* Crest medallion — dark well so the sigil reads as inlaid metal */}
+        <View style={[styles.shield, { borderColor: a + "B3" }]}>
+          <View style={[styles.shieldRing, { borderColor: a + "59" }]}>
             <View style={styles.shieldInner}>
-              <Text style={styles.shieldIcon}>{icon}</Text>
+              <Sigil
+                sigil={back.sigil}
+                size={Math.round(13 * CARD_SCALE)}
+                color={a + "F0"}
+              />
             </View>
           </View>
         </View>
         {/* Corner runes */}
-        <Text
-          style={[
-            styles.cornerRune,
-            { top: 3, left: 3, color: "rgba(255,255,255,0.35)" },
-          ]}
-        >
+        <Text style={[styles.cornerRune, { top: 3, left: 3, color: a + "73" }]}>
           {BACK_RUNES[0]}
         </Text>
         <Text
-          style={[
-            styles.cornerRune,
-            { top: 3, right: 3, color: "rgba(255,255,255,0.35)" },
-          ]}
+          style={[styles.cornerRune, { top: 3, right: 3, color: a + "73" }]}
         >
           {BACK_RUNES[1]}
         </Text>
         <Text
-          style={[
-            styles.cornerRune,
-            { bottom: 3, left: 3, color: "rgba(255,255,255,0.35)" },
-          ]}
+          style={[styles.cornerRune, { bottom: 3, left: 3, color: a + "73" }]}
         >
           {BACK_RUNES[2]}
         </Text>
         <Text
-          style={[
-            styles.cornerRune,
-            { bottom: 3, right: 3, color: "rgba(255,255,255,0.35)" },
-          ]}
+          style={[styles.cornerRune, { bottom: 3, right: 3, color: a + "73" }]}
         >
           {BACK_RUNES[3]}
         </Text>
@@ -268,29 +183,25 @@ const CardBackView = React.memo(
         <View
           style={[
             styles.edgeDot,
-            { top: 3, left: "46%", backgroundColor: "rgba(255,255,255,0.25)" },
+            { top: 3, left: "46%", backgroundColor: a + "66" },
           ]}
         />
         <View
           style={[
             styles.edgeDot,
-            {
-              bottom: 3,
-              left: "46%",
-              backgroundColor: "rgba(255,255,255,0.25)",
-            },
+            { bottom: 3, left: "46%", backgroundColor: a + "66" },
           ]}
         />
         <View
           style={[
             styles.edgeDot,
-            { top: "46%", left: 3, backgroundColor: "rgba(255,255,255,0.25)" },
+            { top: "46%", left: 3, backgroundColor: a + "66" },
           ]}
         />
         <View
           style={[
             styles.edgeDot,
-            { top: "46%", right: 3, backgroundColor: "rgba(255,255,255,0.25)" },
+            { top: "46%", right: 3, backgroundColor: a + "66" },
           ]}
         />
       </View>
@@ -375,14 +286,11 @@ const BountyCardBack = React.memo(() => {
           ]}
         >
           <View style={styles.shieldInner}>
-            <Text
-              style={[
-                styles.shieldIcon,
-                { color: bc.accent, fontSize: Math.round(14 * CARD_SCALE) },
-              ]}
-            >
-              {bc.icon}
-            </Text>
+            <Sigil
+              sigil={bc.sigil || BOUNTY_FALLBACK_SIGIL}
+              size={Math.round(14 * CARD_SCALE)}
+              color={bc.accent}
+            />
           </View>
         </View>
       </View>
@@ -506,12 +414,17 @@ const BountyCardBack = React.memo(() => {
   )
 })
 
+// Parchment plate. Value engraved in Cinzel, beast watermarked in suit ink
+// behind it; courts sealed with a gold-leaf trim; the ace shows its beast
+// solid — the one card in each suit where the engraving is the hero, echoing
+// the app icon's crested cards.
 const CardFace = React.memo(
   ({ card }: { card: ICard }) => {
     const suitStyle = SUIT_STYLES[card.suit] || DEFAULT_SUIT_STYLE
-    const { icon, color, bg, bgTop } = suitStyle
+    const { sigil, color, bg, bgTop } = suitStyle
     const isFaceCard = ["J", "Q", "K", "A"].includes(card.displayValue)
     const isAce = card.displayValue === "A"
+    const twoChar = card.displayValue.length > 1 // "10" — Cinzel capitals run wide
     const faceTitle = FACE_TITLES[card.displayValue]
     return (
       <View
@@ -527,28 +440,19 @@ const CardFace = React.memo(
         <View style={[styles.faceTintTop, { backgroundColor: bgTop }]} />
         <View style={[styles.faceTintBottom, { backgroundColor: bgTop }]} />
         <View style={[styles.cardFaceInner, { borderColor: color + "20" }]} />
-        {isFaceCard && (
-          <View style={[styles.faceCardTrim, { borderColor: color + "18" }]} />
+        {isFaceCard && <View style={styles.faceCardTrim} />}
+        {!isAce && (
+          <Sigil
+            sigil={sigil}
+            size={Math.round(38 * CARD_SCALE)}
+            color={color + "1F"}
+            style={styles.watermark}
+          />
         )}
-        <Text
-          style={[
-            styles.watermarkIcon,
-            {
-              color: color + "22",
-              fontSize: isAce
-                ? Math.round(50 * CARD_SCALE)
-                : Math.round(40 * CARD_SCALE),
-            },
-          ]}
-        >
-          {icon}
-        </Text>
         <View
           style={[styles.faceDividerTop, { backgroundColor: color + "10" }]}
         />
-        <View
-          style={[styles.faceDividerBottom, { backgroundColor: color + "10" }]}
-        />
+        <View style={[styles.faceDividerBottom, { backgroundColor: color + "10" }]} />
         <View style={styles.cornerGroup}>
           <Text
             style={[
@@ -563,26 +467,28 @@ const CardFace = React.memo(
           >
             {card.displayValue}
           </Text>
-          <Text style={styles.cornerIcon}>{icon}</Text>
+          <Sigil
+            sigil={sigil}
+            size={Math.round(7 * CARD_SCALE)}
+            color={color + "CC"}
+          />
         </View>
         <View style={styles.centerWrap}>
           {isAce ? (
             <>
-              <Text
-                style={[
-                  styles.centerIcon,
-                  { fontSize: Math.round(22 * CARD_SCALE), marginBottom: -2 },
-                ]}
-              >
-                {icon}
-              </Text>
+              <Sigil
+                sigil={sigil}
+                size={Math.round(22 * CARD_SCALE)}
+                color={color + "E6"}
+                style={styles.aceSigil}
+              />
               <Text
                 style={[
                   styles.centerValue,
                   {
                     color,
-                    fontSize: Math.round(24 * CARD_SCALE),
-                    lineHeight: Math.round(28 * CARD_SCALE),
+                    fontSize: Math.round(22 * CARD_SCALE),
+                    lineHeight: Math.round(27 * CARD_SCALE),
                   },
                 ]}
               >
@@ -596,29 +502,28 @@ const CardFace = React.memo(
                   styles.centerValue,
                   {
                     color,
-                    fontSize: isFaceCard
-                      ? Math.round(26 * CARD_SCALE)
-                      : Math.round(28 * CARD_SCALE),
-                    lineHeight: isFaceCard
-                      ? Math.round(30 * CARD_SCALE)
-                      : Math.round(32 * CARD_SCALE),
+                    fontSize: Math.round(
+                      (isFaceCard ? 24 : twoChar ? 23 : 26) * CARD_SCALE,
+                    ),
+                    lineHeight: Math.round(
+                      (isFaceCard ? 29 : twoChar ? 28 : 31) * CARD_SCALE,
+                    ),
+                    letterSpacing: twoChar ? -0.5 : 0,
                   },
                 ]}
               >
                 {card.displayValue}
               </Text>
-              <Text
-                style={[
-                  styles.centerIcon,
-                  { fontSize: Math.round(14 * CARD_SCALE) },
-                ]}
-              >
-                {icon}
-              </Text>
+              <Sigil
+                sigil={sigil}
+                size={Math.round(12 * CARD_SCALE)}
+                color={color + "D9"}
+                style={styles.centerSigil}
+              />
             </>
           )}
           {faceTitle && (
-            <Text style={[styles.faceTitle, { color: color + "40" }]}>
+            <Text style={[styles.faceTitle, { color: color + "59" }]}>
               {faceTitle}
             </Text>
           )}
@@ -637,7 +542,11 @@ const CardFace = React.memo(
           >
             {card.displayValue}
           </Text>
-          <Text style={styles.cornerIcon}>{icon}</Text>
+          <Sigil
+            sigil={sigil}
+            size={Math.round(7 * CARD_SCALE)}
+            color={color + "CC"}
+          />
         </View>
         <View
           style={[
@@ -662,9 +571,11 @@ const CardFace = React.memo(
 const BountyCardFace = React.memo(
   ({ card }: { card: ICard }) => {
     const bc = useBountyStyle()
+    const sigil = bc.sigil || BOUNTY_FALLBACK_SIGIL
     const color = bc.textColor
     const isFaceCard = ["J", "Q", "K", "A"].includes(card.displayValue)
     const isAce = card.displayValue === "A"
+    const twoChar = card.displayValue.length > 1
     const faceTitle = FACE_TITLES[card.displayValue]
     return (
       <View
@@ -691,19 +602,14 @@ const BountyCardFace = React.memo(
             style={[styles.faceCardTrim, { borderColor: bc.accent + "30" }]}
           />
         )}
-        <Text
-          style={[
-            styles.watermarkIcon,
-            {
-              color: bc.accent + "1A",
-              fontSize: isAce
-                ? Math.round(50 * CARD_SCALE)
-                : Math.round(40 * CARD_SCALE),
-            },
-          ]}
-        >
-          {bc.icon}
-        </Text>
+        {!isAce && (
+          <Sigil
+            sigil={sigil}
+            size={Math.round(38 * CARD_SCALE)}
+            color={bc.accent + "1A"}
+            style={styles.watermark}
+          />
+        )}
         <View
           style={[styles.faceDividerTop, { backgroundColor: bc.accent + "25" }]}
         />
@@ -727,26 +633,28 @@ const BountyCardFace = React.memo(
           >
             {card.displayValue}
           </Text>
-          <Text style={styles.cornerIcon}>{bc.icon}</Text>
+          <Sigil
+            sigil={sigil}
+            size={Math.round(7 * CARD_SCALE)}
+            color={color + "CC"}
+          />
         </View>
         <View style={styles.centerWrap}>
           {isAce ? (
             <>
-              <Text
-                style={[
-                  styles.centerIcon,
-                  { fontSize: Math.round(22 * CARD_SCALE), marginBottom: -2 },
-                ]}
-              >
-                {bc.icon}
-              </Text>
+              <Sigil
+                sigil={sigil}
+                size={Math.round(22 * CARD_SCALE)}
+                color={color + "E6"}
+                style={styles.aceSigil}
+              />
               <Text
                 style={[
                   styles.centerValue,
                   {
                     color,
-                    fontSize: Math.round(24 * CARD_SCALE),
-                    lineHeight: Math.round(28 * CARD_SCALE),
+                    fontSize: Math.round(22 * CARD_SCALE),
+                    lineHeight: Math.round(27 * CARD_SCALE),
                   },
                 ]}
               >
@@ -760,25 +668,24 @@ const BountyCardFace = React.memo(
                   styles.centerValue,
                   {
                     color,
-                    fontSize: isFaceCard
-                      ? Math.round(26 * CARD_SCALE)
-                      : Math.round(28 * CARD_SCALE),
-                    lineHeight: isFaceCard
-                      ? Math.round(30 * CARD_SCALE)
-                      : Math.round(32 * CARD_SCALE),
+                    fontSize: Math.round(
+                      (isFaceCard ? 24 : twoChar ? 23 : 26) * CARD_SCALE,
+                    ),
+                    lineHeight: Math.round(
+                      (isFaceCard ? 29 : twoChar ? 28 : 31) * CARD_SCALE,
+                    ),
+                    letterSpacing: twoChar ? -0.5 : 0,
                   },
                 ]}
               >
                 {card.displayValue}
               </Text>
-              <Text
-                style={[
-                  styles.centerIcon,
-                  { fontSize: Math.round(14 * CARD_SCALE) },
-                ]}
-              >
-                {bc.icon}
-              </Text>
+              <Sigil
+                sigil={sigil}
+                size={Math.round(12 * CARD_SCALE)}
+                color={color + "D9"}
+                style={styles.centerSigil}
+              />
             </>
           )}
           {faceTitle && (
@@ -801,7 +708,11 @@ const BountyCardFace = React.memo(
           >
             {card.displayValue}
           </Text>
-          <Text style={styles.cornerIcon}>{bc.icon}</Text>
+          <Sigil
+            sigil={sigil}
+            size={Math.round(7 * CARD_SCALE)}
+            color={color + "CC"}
+          />
         </View>
         <View
           style={[
@@ -1081,8 +992,6 @@ const Card = React.memo(
   },
 )
 
-// ─── REPLACE the StyleSheet.create({}) in Card.tsx ───
-
 const styles = StyleSheet.create({
   emptySlot: { width: DECK_W, height: DECK_H, margin: 2, padding: 2 },
   touch: { margin: 2, padding: 2 },
@@ -1154,12 +1063,11 @@ const styles = StyleSheet.create({
     right: 5,
     bottom: 5,
     borderRadius: Math.max(2, CARD_RADIUS - 4),
-    borderWidth: 0.5,
+    borderWidth: 1,
+    // Gold-leaf court seal; the bounty face overrides with its accent inline.
+    borderColor: palette.goldDeep + "6B",
   },
-  watermarkIcon: {
-    position: "absolute",
-    fontSize: Math.round(40 * CARD_SCALE),
-  },
+  watermark: { position: "absolute" },
   faceDividerTop: {
     position: "absolute",
     top: "28%",
@@ -1183,31 +1091,33 @@ const styles = StyleSheet.create({
     right: 4,
     transform: [{ rotate: "180deg" }],
   },
+  // Values/captions engrave in Cinzel. expo-google-fonts registers each weight
+  // as its own family, so no fontWeight alongside; includeFontPadding off keeps
+  // the titling capitals optically centered at these sizes.
   cornerValue: {
+    fontFamily: font.display,
     fontSize: Math.round(10 * CARD_SCALE),
-    fontWeight: "900",
-    lineHeight: Math.round(11 * CARD_SCALE),
-  },
-  cornerIcon: {
-    fontSize: Math.round(7 * CARD_SCALE),
-    lineHeight: Math.round(9 * CARD_SCALE),
-    marginTop: -1,
+    lineHeight: Math.round(13 * CARD_SCALE),
+    includeFontPadding: false,
   },
   centerWrap: { alignItems: "center", justifyContent: "center" },
   centerValue: {
-    fontSize: Math.round(28 * CARD_SCALE),
-    fontWeight: "900",
-    lineHeight: Math.round(32 * CARD_SCALE),
-    textShadowColor: "rgba(0,0,0,0.15)",
+    fontFamily: font.display,
+    fontSize: Math.round(26 * CARD_SCALE),
+    lineHeight: Math.round(31 * CARD_SCALE),
+    includeFontPadding: false,
+    textShadowColor: "rgba(0,0,0,0.18)",
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    textShadowRadius: 1.5,
   },
-  centerIcon: { fontSize: Math.round(14 * CARD_SCALE), marginTop: -2 },
+  centerSigil: { marginTop: 1 },
+  aceSigil: { marginBottom: 1 },
   faceTitle: {
-    fontSize: Math.round(5 * CARD_SCALE),
-    fontWeight: "900",
-    letterSpacing: 2,
+    fontFamily: font.heading,
+    fontSize: Math.round(6 * CARD_SCALE),
+    letterSpacing: 1.5,
     marginTop: 1,
+    includeFontPadding: false,
   },
 
   // ── Card Back ──
@@ -1219,6 +1129,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  // Engraving colors (frames, lattice, runes, dots, medallion rings) are set
+  // inline per card from the back's accent metal — see CardBackView/BountyCardBack.
   backOuterFrame: {
     position: "absolute",
     top: 3,
@@ -1227,7 +1139,6 @@ const styles = StyleSheet.create({
     bottom: 3,
     borderRadius: Math.max(3, CARD_RADIUS - 3),
     borderWidth: 1,
-    borderColor: "rgba(232,197,71,0.55)", // was 0.4 — more visible
   },
   backInnerFrame: {
     position: "absolute",
@@ -1237,7 +1148,6 @@ const styles = StyleSheet.create({
     bottom: 7,
     borderRadius: Math.max(2, CARD_RADIUS - 6),
     borderWidth: 0.5,
-    borderColor: "rgba(232,197,71,0.3)", // was 0.2
   },
   backCrossH: {
     position: "absolute",
@@ -1245,7 +1155,6 @@ const styles = StyleSheet.create({
     left: 8,
     right: 8,
     height: 0.5,
-    backgroundColor: "rgba(232,197,71,0.12)", // was 0.06 — actually visible now
   },
   backCrossV: {
     position: "absolute",
@@ -1253,7 +1162,6 @@ const styles = StyleSheet.create({
     top: 8,
     bottom: 8,
     width: 0.5,
-    backgroundColor: "rgba(232,197,71,0.12)",
   },
   backDiagonal1: {
     position: "absolute",
@@ -1261,7 +1169,6 @@ const styles = StyleSheet.create({
     left: -10,
     right: -10,
     height: 0.5,
-    backgroundColor: "rgba(232,197,71,0.08)", // was 0.06
     transform: [{ rotate: "30deg" }],
   },
   backDiagonal2: {
@@ -1270,16 +1177,16 @@ const styles = StyleSheet.create({
     left: -10,
     right: -10,
     height: 0.5,
-    backgroundColor: "rgba(232,197,71,0.08)",
     transform: [{ rotate: "-30deg" }],
   },
   shield: {
     width: Math.round(32 * CARD_SCALE),
     height: Math.round(32 * CARD_SCALE),
     borderRadius: Math.round(16 * CARD_SCALE),
-    backgroundColor: "rgba(232,197,71,0.12)", // was 0.08
+    // Dark well behind the crest so the accent sigil reads as inlaid metal
+    // (the bounty back overrides with its jewel tint inline).
+    backgroundColor: "rgba(0,0,0,0.30)",
     borderWidth: 1.5,
-    borderColor: "rgba(232,197,71,0.5)", // was 0.3 — more defined
     justifyContent: "center",
     alignItems: "center",
   },
@@ -1288,7 +1195,6 @@ const styles = StyleSheet.create({
     height: Math.round(26 * CARD_SCALE),
     borderRadius: Math.round(13 * CARD_SCALE),
     borderWidth: 0.5,
-    borderColor: "rgba(232,197,71,0.3)", // was 0.2
     justifyContent: "center",
     alignItems: "center",
   },
@@ -1299,21 +1205,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  shieldIcon: {
-    fontSize: Math.round(12 * CARD_SCALE),
-    color: "rgba(255,255,255,0.80)", // was rgba(232,197,71,0.9)
-  },
   cornerRune: {
     position: "absolute",
     fontSize: Math.round(6 * CARD_SCALE),
-    color: "rgba(255,255,255,0.35)", // base — overridden inline above anyway
   },
   edgeDot: {
     position: "absolute",
     width: 2,
     height: 2,
     borderRadius: 1,
-    backgroundColor: "rgba(232,197,71,0.35)", // was 0.2
   },
 
   // ── Deck Card ──

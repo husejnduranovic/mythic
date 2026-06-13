@@ -17,6 +17,7 @@ import { logError } from "../services/logError"
 import ReturnToCastle from "./ReturnToCastle"
 import { Icon, IconName } from "../ui/Icon"
 import { color, font } from "../ui/theme"
+import { SigilSpec } from "../ui/sigils"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Armory — "Quartermaster's Stage" (DESIGN_PLAN §4.9)
@@ -53,16 +54,8 @@ export interface ThemeConfig {
   bountyStyle?: string
 }
 
-export const BACK_ICONS: Record<string, string> = {
-  "#1A1410": "🛡", // oak_shield
-  "#0E1A2E": "⚔", // steel_bastion
-  "#2A0E0A": "🏠", // hearthwood
-  "#0C2218": "🐺", // wolf_sigil
-  "#3D0D0D": "🐉", // dragon_crest
-  "#2A1C00": "🦅", // eagle_pennant
-  "#1E0A3C": "👑", // royal_banner
-  "#1A0500": "🔥", // flame_sworn (7-day streak)
-}
+// Back medallion icons moved to ui/sigils.tsx (BACK_STYLES) — monochrome glyphs
+// keyed by the same back colors, plus each item's accent for the frame engraving.
 
 // Vestigial: the wild-card mechanic was removed from Game.tsx (158f5c9), so
 // these styles have no picker tab and no in-game consumer. Kept because
@@ -416,6 +409,8 @@ const BOUNTY_STYLES: ArmoryItem[] = [
   },
 ]
 
+// `sigil` is the monochrome treasure glyph the in-game card renders (ui/sigils.tsx);
+// `icon` (emoji) remains for the rack miniatures until their next slice.
 export const BOUNTY_STYLE_CONFIG: Record<
   string,
   {
@@ -424,6 +419,7 @@ export const BOUNTY_STYLE_CONFIG: Record<
     frontBg: string
     textColor: string
     icon: string
+    sigil: SigilSpec
   }
 > = {
   gold_coin: {
@@ -432,6 +428,7 @@ export const BOUNTY_STYLE_CONFIG: Record<
     frontBg: "#FFF8E8",
     textColor: "#8B6200",
     icon: "💰",
+    sigil: { fam: "mci", name: "sack" },
   },
   silver_cache: {
     backColor: "#1A1E22",
@@ -439,6 +436,7 @@ export const BOUNTY_STYLE_CONFIG: Record<
     frontBg: "#F4F6F8",
     textColor: "#445566",
     icon: "🪙",
+    sigil: { fam: "mci", name: "circle-multiple" },
   },
   ruby: {
     backColor: "#360A0A",
@@ -446,6 +444,7 @@ export const BOUNTY_STYLE_CONFIG: Record<
     frontBg: "#FFF0F0",
     textColor: "#AA0022",
     icon: "💎",
+    sigil: { fam: "mci", name: "diamond-stone" },
   },
   emerald: {
     backColor: "#082A10",
@@ -453,6 +452,7 @@ export const BOUNTY_STYLE_CONFIG: Record<
     frontBg: "#EEFFF4",
     textColor: "#116622",
     icon: "💚",
+    sigil: { fam: "mci", name: "diamond-stone" },
   },
   diamond: {
     backColor: "#0C1830",
@@ -460,6 +460,7 @@ export const BOUNTY_STYLE_CONFIG: Record<
     frontBg: "#EEF8FF",
     textColor: "#1166AA",
     icon: "💠",
+    sigil: { fam: "mci", name: "diamond-stone" },
   },
   eternal_crown: {
     // 60-day streak
@@ -468,6 +469,7 @@ export const BOUNTY_STYLE_CONFIG: Record<
     frontBg: "#FFFAEE",
     textColor: "#AA7700",
     icon: "👑",
+    sigil: { fam: "mci", name: "crown" },
   },
 }
 
