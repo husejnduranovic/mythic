@@ -42,7 +42,6 @@ interface ICardProps {
   disabled?: boolean
   alwaysEnabled?: boolean
   remaining?: number
-  hinted?: boolean
   cardBackColor?: string
   bounty?: boolean
   bountyConfig?: {
@@ -864,7 +863,6 @@ const Card = React.memo(
       disabled = false,
       alwaysEnabled = false,
       remaining,
-      hinted = false,
       cardBackColor: propBackColor,
       bounty,
       pending,
@@ -970,7 +968,6 @@ const Card = React.memo(
   },
   (prev, next) => {
     if (prev.disabled !== next.disabled) return false
-    if (prev.hinted !== next.hinted) return false
     if (prev.isOpen !== next.isOpen) return false
     if (prev.remove !== next.remove) return false
     if (prev.bounty !== next.bounty) return false
@@ -1241,23 +1238,6 @@ const styles = StyleSheet.create({
     fontSize: Math.round(12 * CARD_SCALE),
     fontWeight: "900",
     color: "#1a1a1a",
-  },
-
-  // ── Hint Glow ──
-  hintGlow: {
-    position: "absolute",
-    top: -4,
-    left: -4,
-    right: -4,
-    bottom: -4,
-    borderRadius: CARD_RADIUS + 4,
-    borderWidth: 2,
-    borderColor: "#E8C547",
-    shadowColor: "#E8C547",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 12,
-    elevation: 12,
   },
 })
 

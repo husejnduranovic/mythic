@@ -6,7 +6,6 @@ import { ICard } from "./Card"
 interface ILayout1Props {
   cards: ICard[]
   onClick: (index: number) => void
-  hintedIndices?: Set<number>
   bountyIndices?: Set<number>
   pendingIndex?: number | null
 }
@@ -30,7 +29,6 @@ const Layout1 = React.memo(
   ({
     cards,
     onClick,
-    hintedIndices = new Set(),
     bountyIndices = new Set(),
     pendingIndex,
   }: ILayout1Props) => {
@@ -42,7 +40,6 @@ const Layout1 = React.memo(
         isOpen={open}
         remove={!cards[i].visible}
         onClick={() => onClick(i)}
-        hinted={hintedIndices.has(i)}
         bounty={bountyIndices?.has(i)}
         pending={pendingIndex === i}
       />

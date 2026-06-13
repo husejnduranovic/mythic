@@ -6,7 +6,6 @@ import { ICard } from "./Card"
 interface ILayout4CProps {
   cards: ICard[]
   onClick: (index: number) => void
-  hintedIndices?: Set<number>
   bountyIndices?: Set<number>
   pendingIndex?: number | null
 }
@@ -72,7 +71,6 @@ const Layout4C = React.memo(
   ({
     cards,
     onClick,
-    hintedIndices = new Set(),
     bountyIndices = new Set(),
     pendingIndex,
   }: ILayout4CProps) => {
@@ -84,7 +82,6 @@ const Layout4C = React.memo(
         isOpen={open}
         remove={!cards[i].visible}
         onClick={() => onClick(i)}
-        hinted={hintedIndices.has(i)}
         bounty={bountyIndices?.has(i)}
         pending={pendingIndex === i}
       />

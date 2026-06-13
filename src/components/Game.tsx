@@ -129,7 +129,6 @@ const Game = ({
   const [gameOver, setGameOver] = useState(false)
   const [secondCard, setSecondCard] = useState<number | null>(null)
   const [paused, setPaused] = useState(false)
-  const [showHints, setShowHints] = useState(false)
   const [scoreSaved, setScoreSaved] = useState(false)
   const [showQuitConfirm, setShowQuitConfirm] = useState(false)
   const [alreadyPlayed, setAlreadyPlayed] = useState(false)
@@ -499,7 +498,6 @@ const Game = ({
     comboBaseRef.current = 0
 
     setSecondCard(null)
-    setShowHints(false)
     setTimerFrozen(false)
     if (freezeTimer.current) clearTimeout(freezeTimer.current)
     setLoading(true)
@@ -610,7 +608,6 @@ const Game = ({
     })
     setCombo(nc)
     setScore((s) => s + pts + bountyBonus)
-    setShowHints(false)
 
     if (mc) {
       if (nc >= SECOND_CARD_COMBO && secondCard === null) {
@@ -732,7 +729,6 @@ const Game = ({
     setCurrentIndex(deckIndex)
     setDeckIndex((i) => i + 1)
     setSecondCard(null)
-    setShowHints(false)
     showMilestone("FREE DRAW!", palette.gold, { fam: "mci", name: "restore" })
   }, []) // ← stable
 
@@ -806,24 +802,12 @@ const Game = ({
   }, [combo])
 
   const remaining = cards.length - deckIndex
-  const hintedIndices = useMemo(() => {
-    const s = new Set<number>()
-    if (!cards.length || !showHints) return s
-    const cur = cards[currentIndex]
-    const sec = secondCard !== null ? cards[secondCard] : null
-    cards.slice(0, config.fieldCards).forEach((c, i) => {
-      if (c.visible && (isCardMatch(cur, c) || (sec && isCardMatch(sec, c))))
-        s.add(i)
-    })
-    return s
-  }, [cards, currentIndex, secondCard, showHints, config.fieldCards])
 
   const layoutKey = `${level}-${round}`
   const getLayout = () => {
     const p = {
       cards,
       onClick: handleCardPress,
-      hintedIndices,
       bountyIndices,
       bountyConfig,
     }
