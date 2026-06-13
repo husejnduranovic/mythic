@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react"
 import { Animated, StyleSheet, View } from "react-native"
 import { MaterialCommunityIcons } from "@expo/vector-icons"
-import { color } from "../ui/theme"
+import { color, font } from "../ui/theme"
 
 const AnimatedIcon = Animated.createAnimatedComponent(MaterialCommunityIcons)
 
@@ -123,15 +123,17 @@ const Timer = ({
 
   return (
     <View style={styles.container}>
-      {frozen && (
-        <AnimatedIcon
-          name="snowflake"
-          size={12}
-          color={color.frost}
-          style={[styles.frozenIcon, { opacity: frozenPulse }]}
-        />
-      )}
-      <View style={styles.timerFrame}>
+      <View style={styles.gaugeRow}>
+        {frozen ? (
+          <AnimatedIcon
+            name="snowflake"
+            size={13}
+            color={color.frost}
+            style={{ opacity: frozenPulse }}
+          />
+        ) : (
+          <MaterialCommunityIcons name="timer-sand" size={12} color={barColor} />
+        )}
         <Animated.Text
           style={[
             styles.timeText,
@@ -160,42 +162,32 @@ const Timer = ({
 }
 
 const styles = StyleSheet.create({
-  container: { alignItems: "center", gap: 2 },
-  timerFrame: {
-    backgroundColor: "rgba(0,0,0,0.3)",
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "rgba(232,197,71,0.12)",
-    paddingHorizontal: 10,
-    paddingVertical: 2,
-  },
+  container: { alignItems: "center", gap: 3 },
+  gaugeRow: { flexDirection: "row", alignItems: "center", gap: 5 },
+  // Cinzel digits — the time reads like an engraved dial, matching the cards.
   timeText: {
-    fontSize: 16,
-    fontWeight: "900",
-    letterSpacing: 2,
+    fontFamily: font.display,
+    fontSize: 17,
+    letterSpacing: 1,
+    includeFontPadding: false,
     textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 6,
+    textShadowRadius: 8,
   },
+  // The fuse — a touch thicker and framed so it reads as a gauge, not a hairline.
   barTrack: {
-    width: 80,
-    height: 4,
+    width: 78,
+    height: 5,
     backgroundColor: "rgba(255,255,255,0.1)",
-    borderRadius: 2,
+    borderRadius: 3,
     overflow: "hidden",
     borderWidth: 0.5,
-    borderColor: "rgba(232,197,71,0.08)",
+    borderColor: "rgba(232,197,71,0.12)",
   },
   barTrackFrozen: {
     backgroundColor: "rgba(159,216,239,0.15)",
     borderColor: "rgba(159,216,239,0.35)",
   },
-  barFill: { height: "100%", borderRadius: 2 },
-  frozenIcon: {
-    position: "absolute",
-    top: -10,
-    right: -10,
-    zIndex: 2,
-  },
+  barFill: { height: "100%", borderRadius: 3 },
 })
 
 export default Timer

@@ -81,7 +81,7 @@ import { Battlements, WallTexture } from "./game/Wall"
 import { LayoutEntrance } from "./game/LayoutEntrance"
 import { Icon } from "../ui/Icon"
 import { Sigil, SigilSpec } from "../ui/sigils"
-import { color as palette } from "../ui/theme"
+import { color as palette, font } from "../ui/theme"
 
 interface GameProps {
   onHome: () => void
@@ -1062,9 +1062,12 @@ const Game = ({
                     </TouchableOpacity>
                   )}
                 <View style={styles.treasury}>
-                  <Icon name="sack" size={13} color={palette.goldDeep} />
+                  <View style={styles.treasuryFrame} pointerEvents="none" />
+                  <View style={styles.treasuryMedal}>
+                    <Icon name="sack" size={12} color={palette.goldDeep} />
+                  </View>
                   <View>
-                    <Text style={styles.label}>SPOILS</Text>
+                    <Text style={styles.spoilsLabel}>SPOILS</Text>
                     <Reanimated.Text
                       style={[styles.scoreValue, scorePulseStyle]}
                     >
@@ -1356,18 +1359,40 @@ const styles = StyleSheet.create({
     gap: 8,
     zIndex: 2,
   },
-  // SPOILS treasury — a framed cartouche set into the war table, not floating text.
+  // SPOILS treasury — an engraved cartouche set into the war table (a mini plaque
+  // in the honor-card grammar: framed, with the sack crest in a dark well), not a
+  // floating calculator readout.
   treasury: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 7,
-    backgroundColor: "rgba(8,16,9,0.45)",
+    gap: 8,
+    backgroundColor: "rgba(8,16,9,0.5)",
     borderWidth: 1,
     borderColor: palette.goldLine,
-    borderRadius: 8,
-    paddingLeft: 9,
-    paddingRight: 12,
+    borderRadius: 9,
+    paddingLeft: 7,
+    paddingRight: 13,
     paddingVertical: 4,
+  },
+  treasuryFrame: {
+    position: "absolute",
+    top: 2,
+    left: 2,
+    right: 2,
+    bottom: 2,
+    borderRadius: 6,
+    borderWidth: 0.5,
+    borderColor: "rgba(232,197,71,0.14)",
+  },
+  treasuryMedal: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    borderWidth: 1,
+    borderColor: "rgba(232,197,71,0.3)",
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   // Center active cards
@@ -1411,16 +1436,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 4,
   },
-  label: {
+  spoilsLabel: {
+    fontFamily: font.heading,
     color: palette.goldFaded,
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 2.5,
+    fontSize: 8,
+    letterSpacing: 2,
   },
   scoreValue: {
+    fontFamily: font.display,
     color: "#E8C547",
-    fontSize: 18,
-    fontWeight: "900",
+    fontSize: 17,
+    letterSpacing: 0.5,
+    includeFontPadding: false,
     textShadowColor: "rgba(232,197,71,0.4)",
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 8,
@@ -1430,9 +1457,10 @@ const styles = StyleSheet.create({
   //  ██  POINTS POPUP & MILESTONES  ██
   // ═══════════════════════════════════════════
   pointsText: {
+    fontFamily: font.display,
     color: "#E8C547",
     fontSize: 26,
-    fontWeight: "900",
+    includeFontPadding: false,
     textShadowColor: "rgba(0,0,0,0.7)",
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 8,
@@ -1506,9 +1534,10 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   comboValue: {
+    fontFamily: font.display,
     fontSize: 18,
-    fontWeight: "900",
-    textAlign: "right",
+    includeFontPadding: false,
+    textAlign: "center",
   },
   comboTitle: {
     fontSize: Math.round(6 * CARD_SCALE),
@@ -1542,8 +1571,8 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   milestoneText: {
-    fontWeight: "900",
-    letterSpacing: 4,
+    fontFamily: font.display,
+    letterSpacing: 2,
     textShadowColor: "rgba(0,0,0,0.9)",
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 8,
