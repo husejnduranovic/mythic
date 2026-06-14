@@ -343,6 +343,12 @@ const LoungeScreen = ({ onBack, uid, heroName, onPlay }: LoungeScreenProps) => {
                 </HonorCard>
               </View>
               <View style={z.shelf} />
+              <GoldButton
+                label="ENTER BATTLE"
+                icon="sword-cross"
+                onPress={onPlay}
+                style={[z.shrineCta, { width: Math.min(shrineW, 240) }]}
+              />
             </View>
 
             {/* Right — the muster roll */}
@@ -371,16 +377,13 @@ const LoungeScreen = ({ onBack, uid, heroName, onPlay }: LoungeScreenProps) => {
                 </ScrollView>
               )}
               <View style={z.prize}>
-                <Icon name="trophy-variant" size={13} color={color.goldBright} />
-                <Text style={z.prizeTxt}>#1 wins the weekly prize</Text>
+                <Icon name="trophy-variant" size={12} color={withAlpha(color.gold, 0.5)} />
+                <Text style={z.prizeTxt}>#1 takes the weekly prize</Text>
               </View>
             </View>
           </View>
 
-          <View style={z.actions}>
-            <GoldButton label="ENTER BATTLE" icon="sword-cross" onPress={onPlay} />
-            <ReturnToCastle onPress={onBack} />
-          </View>
+          <ReturnToCastle onPress={onBack} />
         </Animated.View>
 
         <TouchableOpacity style={z.leaveBtn} onPress={handleLeave} activeOpacity={0.8}>
@@ -665,28 +668,25 @@ const z = StyleSheet.create({
   empty: { flex: 1, justifyContent: "center", alignItems: "center", gap: 6 },
   emptyTxt: { color: color.gold, fontSize: 14, fontWeight: "800", letterSpacing: 1 },
   emptyHint: { color: "rgba(255,255,255,0.25)", fontSize: 11 },
+  // Prize line — a quiet caption under the roll, not a boxed pill. Boxed, it read
+  // as a second button stacked above the CTA.
   prize: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    marginTop: 6,
-    backgroundColor: color.goldWash,
-    borderWidth: 1,
-    borderColor: color.goldLine,
-    borderRadius: 8,
-    paddingVertical: 5,
+    marginTop: 8,
   },
   prizeTxt: {
     color: color.goldFaded,
     fontSize: 10,
-    fontWeight: "800",
+    fontWeight: "700",
     letterSpacing: 1,
   },
 
-  // Bottom actions — primary CTA sized to its content (not stretched edge-to-edge),
-  // with the back link beneath it.
-  actions: { alignItems: "center", marginTop: 4, gap: 2 },
+  // Primary CTA lives under the standing card (see shrine) so it reads as "your
+  // move", anchored to your card — not a button floating centred under both columns.
+  shrineCta: { marginTop: 14, minWidth: 0 },
 
   // Leave (corner) — de-emphasised destructive chip
   leaveBtn: {
