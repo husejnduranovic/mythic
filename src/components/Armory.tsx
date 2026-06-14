@@ -973,12 +973,12 @@ const RackTile = ({
         )}
 
         <View style={[t.miniWrap, { height: miniH }]}>
-          <View style={!unlocked && { opacity: 0.35 }}>{children}</View>
+          <View style={!unlocked && { opacity: 0.3 }}>{children}</View>
           {!unlocked && (
             <View style={[t.lockChip, streakLock && t.lockChipStreak]}>
               <Icon
                 name={streakLock ? "key-variant" : "lock"}
-                size={11}
+                size={18}
                 color={streakLock ? color.ember : color.steel}
               />
             </View>
@@ -1055,21 +1055,28 @@ const t = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  // Prominent lock medallion — sits clearly on top of the dimmed preview so a
+  // locked item never reads as selectable.
   lockChip: {
     position: "absolute",
     alignSelf: "center",
     top: "50%",
-    marginTop: -11,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: "rgba(8,16,9,0.85)",
-    borderWidth: 1,
-    borderColor: "rgba(143,163,176,0.35)",
+    marginTop: -16,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(6,12,7,0.9)",
+    borderWidth: 1.5,
+    borderColor: "rgba(143,163,176,0.5)",
     justifyContent: "center",
     alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+    elevation: 5,
   },
-  lockChipStreak: { borderColor: "rgba(255,140,0,0.35)" },
+  lockChipStreak: { borderColor: "rgba(255,140,0,0.5)" },
   name: {
     fontSize: 10,
     fontWeight: "800",
