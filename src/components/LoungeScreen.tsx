@@ -29,15 +29,20 @@ import { color, font } from "../ui/theme"
 import { HonorCard, TIER, withAlpha } from "../ui/honor"
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Lounge — venue weekly tournament. Closest analog is the Hall of Glory (§4.6):
-// a landscape two-column board — left shrine = the player's standing as an honor
-// card, right muster roll = the week's warriors in the leaderboard grammar
-// (place metals for the top 3, tier rings, dotted leaders). Off-palette blue
-// (#4FC3F7) replaced by sage (the venue/live accent, matching Home's lounge dot).
-// Reuses src/ui/honor.tsx + GoldButton.
+// Lounge — venue weekly tournament. Shares the Hall's two-column board chassis
+// (left shrine = your standing card, right muster roll), but carries its own
+// identity: a dusky-sapphire venue accent on the chrome, and a standing card
+// that leads with your RANK ("#3 · OF 12") instead of echoing Glory's
+// "YOUR STANDING" hero-title. Reuses src/ui/honor.tsx + GoldButton.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const VENUE = color.sage // the lounge's signature accent (was blue #4FC3F7)
+// The venue's signature accent — a muted sapphire, deliberately off the
+// gold/green spine for freshness (not the old neon #4FC3F7, and not Glory's
+// gold). Carried by the header ornament, venue glyph, self-rows, shelf and join
+// well; the standing card itself stays rank-metal so place still reads at a glance.
+const VENUE = "#5A86C0"
+const VENUE_LINE = withAlpha(VENUE, 0.28) // hairline borders / shelf
+const VENUE_WASH = withAlpha(VENUE, 0.08) // subtle fills (self-row)
 const PLACE = [color.gold, TIER.steel, TIER.bronze]
 
 interface LoungeScreenProps {
@@ -82,7 +87,7 @@ const LoungeRow = ({
         },
       ]}
     >
-      <Text style={[lr.pos, isYou && { color: color.gold }]}>{index + 1}</Text>
+      <Text style={[lr.pos, isYou && { color: VENUE }]}>{index + 1}</Text>
       <View
         style={[
           lr.ring,
@@ -91,7 +96,7 @@ const LoungeRow = ({
       >
         <Icon name={ico} size={13} color={index < 3 ? ring : color.goldFaded} />
       </View>
-      <Text style={[lr.name, isYou && { color: color.gold }]} numberOfLines={1}>
+      <Text style={[lr.name, isYou && { color: VENUE }]} numberOfLines={1}>
         {item.heroName}
       </Text>
       {isYou && (
@@ -295,15 +300,25 @@ const LoungeScreen = ({ onBack, uid, heroName, onPlay }: LoungeScreenProps) => {
                   deal={deal}
                   pulse={glow}
                   float={float}
-                  index={myScore ? `#${myRank}` : undefined}
                 >
                   {myScore ? (
                     <>
-                      <Text style={[z.cardTitle, { color: trim }]}>YOUR STANDING</Text>
-                      <View style={{ flex: 1 }} />
-                      <Text style={[z.cardOverline, { color: withAlpha(trim, 0.55) }]}>
-                        YOUR SPOILS
+                      {/* Where do I stand — the rank IS the headline, not a title */}
+                      <Text
+                        style={[
+                          z.rankBig,
+                          { color: trim, textShadowColor: withAlpha(trim, 0.45) },
+                        ]}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                      >
+                        #{myRank}
                       </Text>
+                      <Text style={[z.rankOf, { color: withAlpha(trim, 0.7) }]}>
+                        OF {scores.length} {scores.length === 1 ? "WARRIOR" : "WARRIORS"}
+                      </Text>
+                      <View style={{ flex: 1 }} />
+                      <View style={[z.spoilsDiv, { backgroundColor: withAlpha(trim, 0.3) }]} />
                       <Text
                         style={[z.cardScore, { textShadowColor: withAlpha(trim, 0.4) }]}
                         numberOfLines={1}
@@ -362,8 +377,10 @@ const LoungeScreen = ({ onBack, uid, heroName, onPlay }: LoungeScreenProps) => {
             </View>
           </View>
 
-          <GoldButton label="ENTER BATTLE" icon="sword-cross" onPress={onPlay} />
-          <ReturnToCastle onPress={onBack} />
+          <View style={z.actions}>
+            <GoldButton label="ENTER BATTLE" icon="sword-cross" onPress={onPlay} />
+            <ReturnToCastle onPress={onBack} />
+          </View>
         </Animated.View>
 
         <TouchableOpacity style={z.leaveBtn} onPress={handleLeave} activeOpacity={0.8}>
@@ -415,10 +432,10 @@ const LoungeScreen = ({ onBack, uid, heroName, onPlay }: LoungeScreenProps) => {
             value={joinInput}
             onChangeText={(t) => setJoinInput(t.toUpperCase())}
             placeholder="ENTER CODE"
-            placeholderTextColor="rgba(232,197,71,0.25)"
+            placeholderTextColor={withAlpha(VENUE, 0.35)}
             autoCapitalize="characters"
             maxLength={20}
-            selectionColor={color.goldDeep}
+            selectionColor={VENUE}
           />
           <GoldButton
             label="JOIN TOURNAMENT"
@@ -443,9 +460,9 @@ const lr = StyleSheet.create({
     paddingHorizontal: 8,
   },
   rowYou: {
-    backgroundColor: color.goldWash,
+    backgroundColor: VENUE_WASH,
     borderWidth: 1,
-    borderColor: color.goldLine,
+    borderColor: withAlpha(VENUE, 0.3),
     borderRadius: 10,
   },
   pos: {
@@ -526,7 +543,7 @@ const z = StyleSheet.create({
     width: "38%",
     height: "55%",
     borderRadius: 250,
-    backgroundColor: "rgba(232,197,71,0.04)",
+    backgroundColor: withAlpha(VENUE, 0.05),
   },
   bgRune: { position: "absolute", fontSize: 22, color: "rgba(232,197,71,0.05)" },
   inner: { flex: 1 },
@@ -546,22 +563,22 @@ const z = StyleSheet.create({
     fontFamily: font.heading,
     fontSize: 17,
     letterSpacing: 3,
-    textShadowColor: "rgba(232,197,71,0.4)",
+    textShadowColor: withAlpha(VENUE, 0.5),
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 14,
     flexShrink: 1,
   },
   hSub: {
-    color: color.goldFaded,
+    color: color.steel,
     fontSize: 9,
     fontWeight: "800",
     letterSpacing: 2,
     marginTop: 1,
   },
   hOrn: { flexDirection: "row", alignItems: "center", flex: 1, gap: 4 },
-  hLine: { flex: 1, height: 1, backgroundColor: "rgba(232,197,71,0.15)" },
-  hLineS: { width: 10, height: 1, backgroundColor: "rgba(232,197,71,0.25)" },
-  hDot: { color: "rgba(232,197,71,0.4)", fontSize: 6 },
+  hLine: { flex: 1, height: 1, backgroundColor: withAlpha(VENUE, 0.18) },
+  hLineS: { width: 10, height: 1, backgroundColor: withAlpha(VENUE, 0.3) },
+  hDot: { color: withAlpha(VENUE, 0.55), fontSize: 6 },
 
   contentRow: { flex: 1, flexDirection: "row", gap: 12, alignItems: "center" },
 
@@ -572,7 +589,7 @@ const z = StyleSheet.create({
   shelf: {
     width: "60%",
     height: 1.5,
-    backgroundColor: color.goldLine,
+    backgroundColor: VENUE_LINE,
     marginTop: 10,
     borderRadius: 1,
   },
@@ -583,12 +600,29 @@ const z = StyleSheet.create({
     textAlign: "center",
     marginTop: 6,
   },
-  cardOverline: {
-    fontSize: 7,
-    fontWeight: "900",
-    letterSpacing: 3,
+  // Rank-forward standing card — the rank is the hero number (where do I stand)
+  rankBig: {
+    fontFamily: font.display,
+    fontSize: 32,
+    letterSpacing: 1,
     textAlign: "center",
-    marginTop: 4,
+    includeFontPadding: false,
+    marginTop: 6,
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 12,
+  },
+  rankOf: {
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 2.5,
+    textAlign: "center",
+    marginTop: 1,
+  },
+  spoilsDiv: {
+    width: "44%",
+    height: 1,
+    alignSelf: "center",
+    marginBottom: 6,
   },
   cardScore: {
     fontFamily: font.display,
@@ -650,22 +684,26 @@ const z = StyleSheet.create({
     letterSpacing: 1,
   },
 
-  // Leave (corner)
+  // Bottom actions — primary CTA sized to its content (not stretched edge-to-edge),
+  // with the back link beneath it.
+  actions: { alignItems: "center", marginTop: 4, gap: 2 },
+
+  // Leave (corner) — de-emphasised destructive chip
   leaveBtn: {
     position: "absolute",
-    bottom: 8,
+    bottom: 10,
     left: 16,
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: withAlpha(color.crimson, 0.35),
-    backgroundColor: withAlpha(color.crimson, 0.06),
+    borderColor: withAlpha(color.crimson, 0.4),
+    backgroundColor: withAlpha(color.crimson, 0.08),
   },
-  leaveTxt: { color: "#D9604F", fontSize: 10, fontWeight: "800", letterSpacing: 1 },
+  leaveTxt: { color: "#D9604F", fontSize: 11, fontWeight: "800", letterSpacing: 1 },
 
   // Join view
   joinWrap: { alignItems: "center", maxWidth: 420 },
@@ -688,7 +726,7 @@ const z = StyleSheet.create({
     backgroundColor: "rgba(18,32,25,0.85)",
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: color.goldLine,
+    borderColor: withAlpha(VENUE, 0.25),
     paddingHorizontal: 26,
     paddingVertical: 18,
   },
@@ -701,7 +739,7 @@ const z = StyleSheet.create({
   codeInput: {
     backgroundColor: color.bgSunken,
     borderWidth: 1.5,
-    borderColor: color.goldLine,
+    borderColor: withAlpha(VENUE, 0.4),
     borderRadius: 10,
     paddingHorizontal: 20,
     paddingVertical: 9,
