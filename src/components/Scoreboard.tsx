@@ -512,31 +512,49 @@ const Scoreboard = ({ onBack, uid }: ScoreboardProps) => {
     ).start()
   }, [])
 
+  // Refetch the active tab's leaderboard whenever it becomes active (mount +
+  // every switch), not just once on mount. The daily score is written
+  // fire-and-forget at game over, so a one-shot mount fetch could freeze a
+  // snapshot taken before that write landed — and since nothing re-queried, a
+  // freshly submitted score never showed up on returning to the Daily tab.
+  // The cancel guard drops stale resolutions from rapid toggles; loading is
+  // only ever set false (never back to true), so a return renders the cached
+  // rows immediately and refreshes them in place — no spinner flash.
   useEffect(() => {
-    getDailyLeaderboard()
+    let cancelled = false
+    const fetchScores = tab === "daily" ? getDailyLeaderboard : getAllTimeLeaderboard
+    const setScores = tab === "daily" ? setDailyScores : setAllTimeScores
+    const setLoading = tab === "daily" ? setLoadingDaily : setLoadingAllTime
+    fetchScores()
       .then((s) => {
-        setDailyScores(s)
-        setLoadingDaily(false)
+        if (cancelled) return
+        // A transient empty/failed read must not blank out rows we already
+        // show (e.g. on a tab-switch refresh) — keep the last good list.
+        setScores((prev) => (s.length === 0 && prev.length > 0 ? prev : s))
+        setLoading(false)
       })
-      .catch(() => setLoadingDaily(false))
-    getAllTimeLeaderboard()
-      .then((s) => {
-        setAllTimeScores(s)
-        setLoadingAllTime(false)
+      .catch(() => {
+        if (!cancelled) setLoading(false)
       })
-      .catch(() => setLoadingAllTime(false))
-  }, [])
+    return () => {
+      cancelled = true
+    }
+  }, [tab])
 
   const scores = tab === "daily" ? dailyScores : allTimeScores
   const isLoading = tab === "daily" ? loadingDaily : loadingAllTime
   const showContent = !isLoading && scores.length > 0
 
-  // Deal the trio in whenever fresh content shows (mount + tab switch):
-  // sides first, champion lands last. No fade-out needed — the re-deal IS
-  // the tab transition (rows remount and re-stagger via tab-keyed keys).
+  // Deal the trio in whenever fresh content shows (mount, tab switch, or a
+  // background refresh that changes the roster): sides first, champion lands
+  // last. stopAnimation() before setValue() is essential — these values are
+  // native-driven, and re-issuing setValue() on a value that has already run a
+  // native animation can fail to propagate, which left the champion card
+  // stranded at opacity 0 (invisible) when returning to a tab. Stopping first
+  // clears the native animation so the reset + re-deal reliably reaches 1. The
+  // cleanup cancels an in-flight deal so overlapping staggers can't fight.
   useEffect(() => {
     if (!showContent) return
-    deals.forEach((d) => d.setValue(0))
     const t = (i: number, dur = 300) =>
       Animated.timing(deals[i], {
         toValue: 1,
@@ -544,8 +562,14 @@ const Scoreboard = ({ onBack, uid }: ScoreboardProps) => {
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       })
-    Animated.stagger(90, [t(1), t(2), t(0, 340)]).start()
-  }, [showContent, tab])
+    deals.forEach((d) => {
+      d.stopAnimation()
+      d.setValue(0)
+    })
+    const anim = Animated.stagger(90, [t(1), t(2), t(0, 340)])
+    anim.start()
+    return () => anim.stop()
+  }, [showContent, tab, scores.length])
 
   const myIndex = uid ? scores.findIndex((s) => s.uid === uid) : -1
 
@@ -565,8 +589,12 @@ const Scoreboard = ({ onBack, uid }: ScoreboardProps) => {
     if (tab === next) return
     SoundService.playDeckDraw()
     // Reset before the re-render so the new tab's cards never flash at full
-    // opacity for a frame before the deal effect kicks in.
-    deals.forEach((d) => d.setValue(0))
+    // opacity for a frame before the deal effect kicks in. stopAnimation()
+    // first so a still-running native deal can't strand the value (see effect).
+    deals.forEach((d) => {
+      d.stopAnimation()
+      d.setValue(0)
+    })
     scrollRef.current?.scrollTo({ y: 0, animated: false })
     setTab(next)
   }
