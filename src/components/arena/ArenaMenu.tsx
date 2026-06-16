@@ -94,8 +94,8 @@ const ArenaMenu = ({
               <Text style={styles.menuCardDesc}>
                 Create a room and invite warriors
               </Text>
-              <View style={styles.menuCardFooter}>
-                <Text style={styles.menuCardAction}>CREATE →</Text>
+              <View style={[styles.cardActionBtn, { marginTop: "auto" }]}>
+                <Text style={styles.cardActionText}>CREATE</Text>
               </View>
             </TouchableOpacity>
 
@@ -124,14 +124,15 @@ const ArenaMenu = ({
 
               <TouchableOpacity
                 style={[
-                  styles.joinBtn,
-                  joinCode.length !== 4 && styles.joinBtnDisabled,
+                  styles.cardActionBtn,
+                  { marginTop: 6 },
+                  joinCode.length !== 4 && styles.cardActionDisabled,
                 ]}
                 onPress={onJoin}
                 disabled={loading || joinCode.length !== 4}
                 activeOpacity={0.85}
               >
-                <Text style={styles.joinBtnText}>JOIN →</Text>
+                <Text style={styles.cardActionText}>JOIN</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -166,8 +167,13 @@ const ArenaMenu = ({
                       />
                     </View>
                     <Text style={styles.onlineCardName} numberOfLines={1}>
-                      {p.uid === uid ? `${p.heroName} (you)` : p.heroName}
+                      {p.heroName}
                     </Text>
+                    {p.uid === uid && (
+                      <View style={styles.youBadge}>
+                        <Text style={styles.youBadgeText}>YOU</Text>
+                      </View>
+                    )}
                   </View>
                 ))}
               </ScrollView>

@@ -414,25 +414,34 @@ export const styles = StyleSheet.create({
     letterSpacing: 0.5,
     minHeight: 20, // was 22
   },
-  menuCardFooter: {
-    marginTop: 8,
-    paddingTop: 6,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(232,197,71,0.08)",
+  // Unified card CTA — both menu cards end in the same gold action button,
+  // pinned to the card's bottom edge so the equal-height pair reads balanced.
+  cardActionBtn: {
     width: "100%",
+    backgroundColor: color.gold,
+    borderRadius: 8,
+    paddingVertical: 7,
     alignItems: "center",
+    justifyContent: "center",
+    shadowColor: color.gold,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
-  menuCardAction: {
+  cardActionDisabled: { opacity: 0.3, shadowOpacity: 0 },
+  cardActionText: {
     fontFamily: font.heading,
-    color: "#E8C547",
+    color: color.ink,
     fontSize: 11,
     letterSpacing: 2,
   },
 
-  // Join code input
+  // Join code input — pinned toward the card bottom so the input + JOIN button
+  // group aligns with the Host card's CREATE button across the equal-height pair.
   codeInputWrap: {
-    marginTop: 2,
-    width: 120, // was 140
+    marginTop: "auto",
+    width: 120,
   },
   codeInput: {
     backgroundColor: "rgba(232,197,71,0.06)",
@@ -447,26 +456,6 @@ export const styles = StyleSheet.create({
     letterSpacing: 8, // was 10
     textAlign: "center",
   },
-  joinBtn: {
-    backgroundColor: "#E8C547",
-    borderRadius: 8,
-    paddingHorizontal: 24,
-    paddingVertical: 6,
-    marginTop: 4,
-    shadowColor: "#E8C547",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  joinBtnDisabled: { opacity: 0.3, shadowOpacity: 0 },
-  joinBtnText: {
-    fontFamily: font.heading,
-    color: "#1a1a1a",
-    fontSize: 11,
-    letterSpacing: 2,
-  },
-
   // LOBBY
   lobbyHeaderWrap: {
     alignItems: "center",
