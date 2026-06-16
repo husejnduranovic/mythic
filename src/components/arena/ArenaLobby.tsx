@@ -11,6 +11,7 @@ import ReturnToCastle from "../ReturnToCastle"
 import BackgroundDecor from "./BackgroundDecor"
 import { styles } from "./arenaStyles"
 import { Icon } from "../../ui/Icon"
+import { GoldButton } from "../../ui/GoldButton"
 import { color } from "../../ui/theme"
 
 interface Props {
@@ -62,7 +63,10 @@ const ArenaLobby = ({
             <Text style={styles.headerDiamond}>◆</Text>
             <View style={styles.headerLine} />
           </View>
-          <Text style={styles.lobbyTitle}>ARENA LOBBY</Text>
+          <View style={styles.titleRow}>
+            <Icon name="sword-cross" size={20} color={color.ember} />
+            <Text style={styles.lobbyTitle}>ARENA LOBBY</Text>
+          </View>
         </View>
 
         {/* Split layout */}
@@ -83,20 +87,15 @@ const ArenaLobby = ({
 
             <View style={styles.lobbyActions}>
               {isHost ? (
-                <TouchableOpacity
+                <GoldButton
+                  label={players.length < 2 ? "Need 2+ warriors" : "Start Battle"}
+                  icon="sword-cross"
+                  onPress={players.length < 2 ? () => {} : onStart}
                   style={[
-                    styles.goldBtn,
-                    players.length < 2 && styles.goldBtnDisabled,
+                    styles.lobbyPrimary,
+                    players.length < 2 && styles.lobbyPrimaryDisabled,
                   ]}
-                  onPress={onStart}
-                  disabled={players.length < 2}
-                  activeOpacity={0.85}
-                >
-                  <Icon name="sword-cross" size={16} color="#1a1a1a" />
-                  <Text style={styles.goldBtnText}>
-                    {players.length < 2 ? "Need 2+ warriors" : "Start Battle"}
-                  </Text>
-                </TouchableOpacity>
+                />
               ) : (
                 <View style={styles.waitingBox}>
                   <View style={styles.waitingDot} />

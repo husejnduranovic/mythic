@@ -466,7 +466,6 @@ export const styles = StyleSheet.create({
     color: "#E8C547",
     fontSize: 20,
     letterSpacing: 3,
-    marginTop: 2,
     textShadowColor: "rgba(232,197,71,0.3)",
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 12,
@@ -478,7 +477,7 @@ export const styles = StyleSheet.create({
     backgroundColor: "rgba(232,197,71,0.04)",
     borderRadius: 14,
     paddingHorizontal: 24,
-    paddingVertical: 10,
+    paddingVertical: 14,
     borderWidth: 1.5,
     borderColor: "rgba(232,197,71,0.25)",
     width: "100%",
@@ -628,30 +627,10 @@ export const styles = StyleSheet.create({
     letterSpacing: 1,
   },
 
-  // Actions
-  goldBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    backgroundColor: "#E8C547",
-    paddingHorizontal: 28,
-    paddingVertical: 10,
-    borderRadius: 10,
-    minWidth: 220,
-    shadowColor: "#E8C547",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  goldBtnDisabled: { opacity: 0.4, shadowOpacity: 0 },
-  goldBtnText: {
-    fontFamily: font.heading,
-    color: "#1a1a1a",
-    fontSize: 14,
-    letterSpacing: 2,
-  },
+  // Actions — primary uses the shared GoldButton (engraved pinstripe, Cinzel
+  // label) so the lobby's start matches Home's and Lounge's CTA craft.
+  lobbyPrimary: { width: "100%" },
+  lobbyPrimaryDisabled: { opacity: 0.4, shadowOpacity: 0, elevation: 0 },
 
   waitingBox: {
     flexDirection: "row",
@@ -716,13 +695,15 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     width: "100%",
     gap: 16,
-    marginTop: 8,
+    marginTop: 12,
   },
+  // Top-aligned, not centred — the code box should sit level with the players
+  // header in the right column rather than floating to the vertical middle.
   lobbyLeft: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
+    justifyContent: "flex-start",
+    gap: 16,
   },
   lobbyRight: {
     flex: 1,
