@@ -249,6 +249,11 @@ const LoungeScreen = ({ onBack, uid, heroName, onPlay }: LoungeScreenProps) => {
     const cardH = Math.round(Math.min(winH - 188, 178))
     const cardW = Math.round(cardH / 1.46)
     const shrineW = Math.round(Math.min(312, Math.max(224, winW * 0.36)))
+    // A full honor card is only earned by the podium. Off the podium, a big hero
+    // "#7" says less than seeing yourself highlighted in the roll — so rank > 3
+    // collapses to a compact standing strip. Unranked keeps the card (it's a CTA).
+    const isPodium = !!myScore && myRank >= 1 && myRank <= 3
+    const showCard = !myScore || isPodium
 
     return (
       <View style={[z.container, { paddingLeft: padL, paddingRight: padR }]}>
@@ -286,76 +291,107 @@ const LoungeScreen = ({ onBack, uid, heroName, onPlay }: LoungeScreenProps) => {
           <View style={z.contentRow}>
             {/* Left — your standing */}
             <View style={[z.shrine, { width: shrineW }]}>
-              <View style={z.cardZone}>
+              {showCard ? (
+                <View style={z.cardZone}>
+                  <Animated.View
+                    style={[
+                      z.cardPool,
+                      {
+                        width: cardW * 1.7,
+                        height: cardW * 1.7,
+                        borderRadius: cardW * 0.85,
+                        backgroundColor: withAlpha(trim, 0.05),
+                        opacity: glow,
+                      },
+                    ]}
+                  />
+                  <HonorCard
+                    w={cardW}
+                    h={cardH}
+                    trim={trim}
+                    medallion={myRank === 1 ? "crown" : myScore ? "trophy-variant" : "sword-cross"}
+                    deal={deal}
+                    pulse={glow}
+                    float={float}
+                    index={myScore ? String(myRank) : undefined}
+                  >
+                    {myScore ? (
+                      <>
+                        {/* Podium standing — the rank IS the headline. Points and
+                            combo are NOT echoed here; they live in the muster roll. */}
+                        <Text
+                          style={[
+                            z.rankBig,
+                            { color: trim, textShadowColor: withAlpha(trim, 0.45) },
+                          ]}
+                          numberOfLines={1}
+                          adjustsFontSizeToFit
+                        >
+                          #{myRank}
+                        </Text>
+                        <Text style={[z.rankOf, { color: withAlpha(trim, 0.7) }]}>
+                          OF {scores.length} {scores.length === 1 ? "WARRIOR" : "WARRIORS"}
+                        </Text>
+                        <View style={z.plateWrap}>
+                          <NamePlate>{heroName}</NamePlate>
+                        </View>
+                      </>
+                    ) : (
+                      <>
+                        <Text style={[z.cardTitle, { color: trim }]}>UNRANKED</Text>
+                        <View style={z.plateWrap}>
+                          <NamePlate>{heroName}</NamePlate>
+                        </View>
+                        <View style={{ flex: 1 }} />
+                        <Text style={z.cardPrompt}>
+                          Win a battle this week{"\n"}to join the board
+                        </Text>
+                        <View style={{ height: 10 }} />
+                      </>
+                    )}
+                  </HonorCard>
+                </View>
+              ) : (
+                // Off the podium — a compact "your standing" strip, not a hero card.
                 <Animated.View
                   style={[
-                    z.cardPool,
+                    z.standing,
                     {
-                      width: cardW * 1.7,
-                      height: cardW * 1.7,
-                      borderRadius: cardW * 0.85,
-                      backgroundColor: withAlpha(trim, 0.05),
-                      opacity: glow,
+                      opacity: deal,
+                      transform: [
+                        {
+                          translateY: deal.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [18, 0],
+                          }),
+                        },
+                      ],
                     },
                   ]}
-                />
-                <HonorCard
-                  w={cardW}
-                  h={cardH}
-                  trim={trim}
-                  medallion={myRank === 1 ? "crown" : myScore ? "trophy-variant" : "sword-cross"}
-                  deal={deal}
-                  pulse={glow}
-                  float={float}
-                  index={myScore ? String(myRank) : undefined}
                 >
-                  {myScore ? (
-                    <>
-                      {/* Where do I stand — the rank IS the headline, not a title */}
-                      <Text
-                        style={[
-                          z.rankBig,
-                          { color: trim, textShadowColor: withAlpha(trim, 0.45) },
-                        ]}
-                        numberOfLines={1}
-                        adjustsFontSizeToFit
-                      >
-                        #{myRank}
-                      </Text>
-                      <Text style={[z.rankOf, { color: withAlpha(trim, 0.7) }]}>
+                  <View style={z.standingMain}>
+                    <Text
+                      style={[
+                        z.standingRank,
+                        { color: trim, textShadowColor: withAlpha(trim, 0.4) },
+                      ]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                    >
+                      #{myRank}
+                    </Text>
+                    <View style={z.standingMeta}>
+                      <NamePlate>{heroName}</NamePlate>
+                      <Text style={z.standingOf}>
                         OF {scores.length} {scores.length === 1 ? "WARRIOR" : "WARRIORS"}
                       </Text>
-                      <View style={z.plateWrap}>
-                        <NamePlate>{heroName}</NamePlate>
-                      </View>
-                      <View style={{ flex: 1 }} />
-                      <View style={[z.spoilsDiv, { backgroundColor: withAlpha(trim, 0.3) }]} />
-                      <Text
-                        style={[z.cardScore, { textShadowColor: withAlpha(trim, 0.4) }]}
-                        numberOfLines={1}
-                        adjustsFontSizeToFit
-                      >
-                        {myScore.score.toLocaleString()}
-                      </Text>
-                      <Text style={[z.cardCombo, { color: withAlpha(trim, 0.6) }]}>
-                        x{myScore.bestCombo || 0} BEST COMBO
-                      </Text>
-                    </>
-                  ) : (
-                    <>
-                      <Text style={[z.cardTitle, { color: trim }]}>UNRANKED</Text>
-                      <View style={z.plateWrap}>
-                        <NamePlate>{heroName}</NamePlate>
-                      </View>
-                      <View style={{ flex: 1 }} />
-                      <Text style={z.cardPrompt}>
-                        Win a battle this week{"\n"}to join the board
-                      </Text>
-                      <View style={{ height: 10 }} />
-                    </>
-                  )}
-                </HonorCard>
-              </View>
+                    </View>
+                  </View>
+                  <Text style={z.standingHint}>
+                    You're on the board — climb to the podium
+                  </Text>
+                </Animated.View>
+              )}
               <View style={z.shelf} />
               <GoldButton
                 label="ENTER BATTLE"
@@ -637,30 +673,40 @@ const z = StyleSheet.create({
   },
   // Parchment nameplate — the one light surface, the icon's title band (§4.5).
   plateWrap: { marginTop: 7, alignSelf: "stretch" },
-  spoilsDiv: {
-    width: "44%",
-    height: 1,
-    alignSelf: "center",
-    marginBottom: 6,
+  // Off-podium standing strip — compact panel in the venue's sapphire wash.
+  standing: {
+    alignSelf: "stretch",
+    marginHorizontal: 4,
+    backgroundColor: VENUE_WASH,
+    borderWidth: 1,
+    borderColor: VENUE_LINE,
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    gap: 12,
   },
-  cardScore: {
+  standingMain: { flexDirection: "row", alignItems: "center", gap: 14 },
+  standingRank: {
     fontFamily: font.display,
-    color: color.gold,
-    fontSize: 20,
-    textAlign: "center",
-    letterSpacing: 0.5,
+    fontSize: 34,
+    letterSpacing: 1,
     includeFontPadding: false,
-    marginHorizontal: 8,
     textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 8,
+    textShadowRadius: 10,
   },
-  cardCombo: {
-    fontSize: 8,
+  standingMeta: { flex: 1, alignItems: "flex-start", gap: 4 },
+  standingOf: {
+    color: color.steel,
+    fontSize: 9,
     fontWeight: "900",
-    letterSpacing: 1.5,
+    letterSpacing: 2,
+  },
+  standingHint: {
+    color: "rgba(255,255,255,0.4)",
+    fontSize: 10,
+    fontWeight: "600",
+    letterSpacing: 0.5,
     textAlign: "center",
-    marginTop: 1,
-    marginBottom: 10,
   },
   cardPrompt: {
     color: "rgba(255,255,255,0.45)",
