@@ -26,7 +26,7 @@ import ReturnToCastle from "./ReturnToCastle"
 import { Icon, IconName } from "../ui/Icon"
 import { GoldButton } from "../ui/GoldButton"
 import { color, font } from "../ui/theme"
-import { HonorCard, TIER, withAlpha } from "../ui/honor"
+import { HonorCard, NamePlate, TIER, withAlpha } from "../ui/honor"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Lounge — venue weekly tournament. Shares the Hall's two-column board chassis
@@ -149,15 +149,22 @@ const LoungeScreen = ({ onBack, uid, heroName, onPlay }: LoungeScreenProps) => {
         useNativeDriver: true,
       }),
     ]).start()
-    const loop = (v: Animated.Value, lo: number, hi: number, d: number) =>
+    const loop = (
+      v: Animated.Value,
+      lo: number,
+      hi: number,
+      d: number,
+      easing?: (value: number) => number,
+    ) =>
       Animated.loop(
         Animated.sequence([
-          Animated.timing(v, { toValue: hi, duration: d, useNativeDriver: true }),
-          Animated.timing(v, { toValue: lo, duration: d, useNativeDriver: true }),
+          Animated.timing(v, { toValue: hi, duration: d, easing, useNativeDriver: true }),
+          Animated.timing(v, { toValue: lo, duration: d, easing, useNativeDriver: true }),
         ]),
       ).start()
     loop(glow, 0.3, 0.5, 2000)
-    loop(float, 0, 1, 2200)
+    // The crest levitates on a sine breathe, matching Profile's float (§4.5).
+    loop(float, 0, 1, 2200, Easing.inOut(Easing.sin))
     loadLounge()
   }, [])
 
@@ -300,6 +307,7 @@ const LoungeScreen = ({ onBack, uid, heroName, onPlay }: LoungeScreenProps) => {
                   deal={deal}
                   pulse={glow}
                   float={float}
+                  index={myScore ? String(myRank) : undefined}
                 >
                   {myScore ? (
                     <>
@@ -317,6 +325,9 @@ const LoungeScreen = ({ onBack, uid, heroName, onPlay }: LoungeScreenProps) => {
                       <Text style={[z.rankOf, { color: withAlpha(trim, 0.7) }]}>
                         OF {scores.length} {scores.length === 1 ? "WARRIOR" : "WARRIORS"}
                       </Text>
+                      <View style={z.plateWrap}>
+                        <NamePlate>{heroName}</NamePlate>
+                      </View>
                       <View style={{ flex: 1 }} />
                       <View style={[z.spoilsDiv, { backgroundColor: withAlpha(trim, 0.3) }]} />
                       <Text
@@ -333,6 +344,9 @@ const LoungeScreen = ({ onBack, uid, heroName, onPlay }: LoungeScreenProps) => {
                   ) : (
                     <>
                       <Text style={[z.cardTitle, { color: trim }]}>UNRANKED</Text>
+                      <View style={z.plateWrap}>
+                        <NamePlate>{heroName}</NamePlate>
+                      </View>
                       <View style={{ flex: 1 }} />
                       <Text style={z.cardPrompt}>
                         Win a battle this week{"\n"}to join the board
@@ -621,6 +635,8 @@ const z = StyleSheet.create({
     textAlign: "center",
     marginTop: 1,
   },
+  // Parchment nameplate — the one light surface, the icon's title band (§4.5).
+  plateWrap: { marginTop: 7, alignSelf: "stretch" },
   spoilsDiv: {
     width: "44%",
     height: 1,
