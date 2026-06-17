@@ -2,6 +2,8 @@
 
 import React from "react"
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native"
+import { Icon } from "../ui/Icon"
+import { color } from "../ui/theme"
 
 interface ReturnToCastleProps {
   onPress: () => void
@@ -14,7 +16,7 @@ const ReturnToCastle = ({
 }: ReturnToCastleProps) => (
   <TouchableOpacity style={styles.btn} onPress={onPress} activeOpacity={0.7}>
     <View style={styles.ornLine} />
-    <Text style={styles.icon}>🏰</Text>
+    <Icon name="castle" size={14} color={color.goldFaded} />
     <Text style={styles.text}>{label}</Text>
     <View style={styles.ornLine} />
   </TouchableOpacity>
@@ -32,13 +34,10 @@ const styles = StyleSheet.create({
   ornLine: {
     width: 24,
     height: 1,
-    backgroundColor: "rgba(232,197,71,0.2)",
-  },
-  icon: {
-    fontSize: 14,
+    backgroundColor: color.goldLine,
   },
   text: {
-    color: "rgba(232,197,71,0.55)",
+    color: color.goldFaded,
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 2,
