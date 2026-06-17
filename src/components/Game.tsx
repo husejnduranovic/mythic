@@ -881,9 +881,12 @@ const Game = ({
         style={[styles.center, { backgroundColor: theme.battlefieldColor }]}
       >
         {battlefieldMemo}
-        <Text style={styles.loadText}>
-          ⚔ {dailyMode ? "Preparing daily quest..." : "Preparing the field..."}
-        </Text>
+        <View style={styles.loadRow}>
+          <Icon name="sword-cross" size={15} color={palette.goldFaded} />
+          <Text style={styles.loadText}>
+            {dailyMode ? "Preparing daily quest..." : "Preparing the field..."}
+          </Text>
+        </View>
       </View>
     )
 
@@ -1477,8 +1480,13 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: 32,
   },
+  loadRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   loadText: {
-    color: "rgba(232,197,71,0.6)",
+    color: palette.goldFaded,
     fontSize: 15,
     fontWeight: "700",
     letterSpacing: 2,
