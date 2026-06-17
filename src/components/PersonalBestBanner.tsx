@@ -1,16 +1,63 @@
-import React, { useEffect, useRef } from "react"
-import { Animated, StyleSheet, Text, View, Easing } from "react-native"
+import React, { useEffect, useRef, useState } from "react"
+import {
+  Animated,
+  Easing,
+  PanResponder,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native"
+import { Icon } from "../ui/Icon"
+import { color, font } from "../ui/theme"
+import { withAlpha } from "../ui/honor"
 
 interface Props {
   newScore: number
   previousBest: number
 }
 
+const AUTO_DISMISS_MS = 4500
+const DISMISS_DISTANCE = 70
+
 const PersonalBestBanner = ({ newScore, previousBest }: Props) => {
-  const slideY = useRef(new Animated.Value(-60)).current
+  const slideY = useRef(new Animated.Value(-80)).current
+  const drag = useRef(new Animated.Value(0)).current
   const glowPulse = useRef(new Animated.Value(0.3)).current
+  const [dismissed, setDismissed] = useState(false)
   const improvement = newScore - previousBest
   const improvementPct = Math.round((improvement / previousBest) * 100)
+
+  const dismiss = () => {
+    Animated.timing(slideY, {
+      toValue: -140,
+      duration: 220,
+      easing: Easing.in(Easing.cubic),
+      useNativeDriver: true,
+    }).start(() => setDismissed(true))
+  }
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gesture) =>
+        Math.abs(gesture.dy) > 4 || Math.abs(gesture.dx) > 6,
+      onPanResponderMove: (_, gesture) => {
+        // only track upward drags; ignore downward pull
+        drag.setValue(Math.min(0, gesture.dy))
+      },
+      onPanResponderRelease: (_, gesture) => {
+        if (-gesture.dy > DISMISS_DISTANCE || gesture.vy < -0.5) {
+          dismiss()
+        } else {
+          Animated.spring(drag, {
+            toValue: 0,
+            friction: 6,
+            tension: 60,
+            useNativeDriver: true,
+          }).start()
+        }
+      },
+    }),
+  ).current
 
   useEffect(() => {
     Animated.spring(slideY, {
@@ -34,22 +81,32 @@ const PersonalBestBanner = ({ newScore, previousBest }: Props) => {
         }),
       ]),
     ).start()
+
+    const t = setTimeout(dismiss, AUTO_DISMISS_MS)
+    return () => clearTimeout(t)
   }, [])
+
+  if (dismissed) return null
 
   return (
     <Animated.View
-      style={[styles.container, { transform: [{ translateY: slideY }] }]}
+      {...panResponder.panHandlers}
+      style={[
+        styles.container,
+        { transform: [{ translateY: Animated.add(slideY, drag) }] },
+      ]}
     >
       <Animated.View style={[styles.glow, { opacity: glowPulse }]} />
+      <View style={styles.grip} />
       <View style={styles.row}>
-        <Text style={styles.icon}>⚔</Text>
+        <Icon name="sword-cross" size={18} color={color.sage} />
         <View style={styles.middle}>
           <Text style={styles.title}>NEW PERSONAL BEST</Text>
           <Text style={styles.detail}>
             +{improvement.toLocaleString()} spoils · {improvementPct}% better
           </Text>
         </View>
-        <Text style={styles.icon}>⚔</Text>
+        <Icon name="sword-cross" size={18} color={color.sage} />
       </View>
     </Animated.View>
   )
@@ -63,16 +120,25 @@ const styles = StyleSheet.create({
     zIndex: 500,
     backgroundColor: "rgba(15,26,18,0.95)",
     borderWidth: 1.5,
-    borderColor: "#7BED9F",
+    borderColor: color.sage,
     borderRadius: 14,
     paddingHorizontal: 20,
-    paddingVertical: 10,
-    shadowColor: "#7BED9F",
+    paddingTop: 7,
+    paddingBottom: 10,
+    shadowColor: color.sage,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.5,
     shadowRadius: 16,
     elevation: 12,
     overflow: "hidden",
+  },
+  grip: {
+    alignSelf: "center",
+    width: 34,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: withAlpha(color.sage, 0.4),
+    marginBottom: 6,
   },
   glow: {
     position: "absolute",
@@ -80,7 +146,7 @@ const styles = StyleSheet.create({
     left: "25%",
     width: "50%",
     height: 60,
-    backgroundColor: "rgba(123,237,159,0.2)",
+    backgroundColor: withAlpha(color.sage, 0.2),
     borderRadius: 30,
   },
   row: {
@@ -88,27 +154,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 14,
   },
-  icon: {
-    fontSize: 20,
-    color: "#7BED9F",
-    textShadowColor: "rgba(123,237,159,0.6)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 8,
-  },
   middle: {
     alignItems: "center",
   },
   title: {
-    color: "#7BED9F",
+    color: color.sage,
+    fontFamily: font.heading,
     fontSize: 14,
-    fontWeight: "900",
-    letterSpacing: 4,
-    textShadowColor: "rgba(123,237,159,0.5)",
+    letterSpacing: 3,
+    textShadowColor: withAlpha(color.sage, 0.5),
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 10,
   },
   detail: {
-    color: "rgba(123,237,159,0.6)",
+    color: withAlpha(color.sage, 0.6),
     fontSize: 9,
     fontWeight: "700",
     letterSpacing: 1.5,
