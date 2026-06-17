@@ -8,6 +8,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native"
+import { Icon } from "../ui/Icon"
+import { color, font } from "../ui/theme"
+import { withAlpha } from "../ui/honor"
 
 interface RecordCelebrationProps {
   score: number
@@ -157,13 +160,15 @@ const RecordCelebration = ({
   const trophyScale = useRef(new Animated.Value(0)).current
   const trophyRotate = useRef(new Animated.Value(0)).current
 
+  // Festive but on-palette — gold ramp + ember/crimson + white-gold + parchment
+  // (kills the off-brand blue #90CAF9 / pink #FF1744, DESIGN §1.3).
   const confettiColors = [
-    "#FFD700",
-    "#FFC107",
-    "#FF6B35",
-    "#FF1744",
-    "#E8C547",
-    "#90CAF9",
+    color.goldBright,
+    color.gold,
+    color.ember,
+    "#FFE08A", // white-gold accent
+    color.crimson,
+    color.parchment,
   ]
 
   useEffect(() => {
@@ -302,7 +307,7 @@ const RecordCelebration = ({
         <Text style={styles.starRow}>✦ ✦ ✦ ✦ ✦</Text>
 
         {/* Trophy */}
-        <Animated.Text
+        <Animated.View
           style={[
             styles.trophy,
             {
@@ -310,8 +315,8 @@ const RecordCelebration = ({
             },
           ]}
         >
-          🏆
-        </Animated.Text>
+          <Icon name="trophy-variant" size={50} color={color.goldBright} />
+        </Animated.View>
 
         {/* Title */}
         <Text style={styles.titleMain}>RECORD BROKEN</Text>
@@ -356,7 +361,7 @@ const styles = StyleSheet.create({
     left: "15%",
     right: "15%",
     bottom: "15%",
-    backgroundColor: "rgba(255,215,0,0.15)",
+    backgroundColor: withAlpha(color.goldBright, 0.15),
     borderRadius: 300,
   },
   confetti: {
@@ -366,9 +371,9 @@ const styles = StyleSheet.create({
   },
   sparkle: {
     position: "absolute",
-    color: "#FFD700",
+    color: color.goldBright,
     fontSize: 16,
-    textShadowColor: "rgba(255,215,0,0.8)",
+    textShadowColor: withAlpha(color.goldBright, 0.8),
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 8,
   },
@@ -376,11 +381,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "rgba(15,26,18,0.92)",
     borderWidth: 2.5,
-    borderColor: "#FFD700",
+    borderColor: color.goldBright,
     borderRadius: 20,
     paddingHorizontal: 40,
     paddingVertical: 14,
-    shadowColor: "#FFD700",
+    shadowColor: color.goldBright,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
     shadowRadius: 30,
@@ -388,45 +393,44 @@ const styles = StyleSheet.create({
     minWidth: 380,
   },
   starRow: {
-    color: "#FFD700",
+    color: color.goldBright,
     fontSize: 10,
     letterSpacing: 8,
-    textShadowColor: "rgba(255,215,0,0.6)",
+    textShadowColor: withAlpha(color.goldBright, 0.6),
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 5,
   },
   trophy: {
-    fontSize: 50,
     marginVertical: 4,
   },
   titleMain: {
-    color: "#FFD700",
+    color: color.goldBright,
+    fontFamily: font.display,
     fontSize: 28,
-    fontWeight: "900",
-    letterSpacing: 6,
-    textShadowColor: "rgba(255,215,0,0.8)",
+    letterSpacing: 4,
+    textShadowColor: withAlpha(color.goldBright, 0.8),
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 15,
   },
   divider: {
     width: 80,
     height: 1,
-    backgroundColor: "rgba(255,215,0,0.5)",
+    backgroundColor: withAlpha(color.goldBright, 0.5),
     marginVertical: 4,
   },
   subtitle: {
-    color: "rgba(255,215,0,0.7)",
+    color: withAlpha(color.goldBright, 0.7),
     fontSize: 11,
     fontWeight: "800",
     letterSpacing: 4,
   },
   heroName: {
     color: "#FFFFFF",
+    fontFamily: font.heading,
     fontSize: 22,
-    fontWeight: "900",
     letterSpacing: 3,
     marginTop: 8,
-    textShadowColor: "rgba(255,215,0,0.4)",
+    textShadowColor: withAlpha(color.goldBright, 0.4),
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 8,
   },
@@ -436,16 +440,16 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   scoreLabel: {
-    color: "rgba(255,215,0,0.5)",
+    color: withAlpha(color.goldBright, 0.5),
     fontSize: 9,
     fontWeight: "800",
     letterSpacing: 3,
   },
   scoreValue: {
-    color: "#FFD700",
+    color: color.goldBright,
+    fontFamily: font.display,
     fontSize: 26,
-    fontWeight: "900",
-    textShadowColor: "rgba(255,215,0,0.6)",
+    textShadowColor: withAlpha(color.goldBright, 0.6),
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 12,
   },
