@@ -14,8 +14,8 @@ const BackgroundDecor = ({ glowPulse }: Props) => (
     <Text style={[styles.bgRune, { bottom: "18%", left: "10%" }]}>ᚱ</Text>
     <Text style={[styles.bgRune, { bottom: "22%", right: "5%" }]}>ᛟ</Text>
     <Text style={[styles.bgRune, { top: "50%", left: "3%" }]}>ᚲ</Text>
-    <Text style={[styles.bgBeast, { top: "20%", left: "15%" }]}>⚔</Text>
-    <Text style={[styles.bgBeast, { bottom: "25%", right: "12%" }]}>🛡</Text>
+    <Text style={[styles.bgRune, { top: "20%", left: "15%" }]}>ᚷ</Text>
+    <Text style={[styles.bgRune, { bottom: "25%", right: "12%" }]}>ᚹ</Text>
     <View style={styles.bgHLine} />
   </View>
 )

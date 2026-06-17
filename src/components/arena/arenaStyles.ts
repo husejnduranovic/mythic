@@ -298,11 +298,6 @@ export const styles = StyleSheet.create({
     fontSize: 22,
     color: "rgba(232,197,71,0.04)",
   },
-  bgBeast: {
-    position: "absolute",
-    fontSize: 42,
-    color: "rgba(232,197,71,0.035)",
-  },
   bgHLine: {
     position: "absolute",
     top: "52%",
