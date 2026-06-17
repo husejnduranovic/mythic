@@ -5,7 +5,6 @@ import {
   Platform,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native"
 import {
@@ -17,6 +16,17 @@ import {
 } from "@react-native-firebase/remote-config"
 import DeviceInfo from "react-native-device-info"
 import * as SplashScreen from "expo-splash-screen"
+import { Icon } from "../ui/Icon"
+import { GoldButton } from "../ui/GoldButton"
+import { color, font } from "../ui/theme"
+import { withAlpha } from "../ui/honor"
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Version gate ("New Decree"). Brought onto the design system (DESIGN_PLAN §2/§3):
+// token palette, Cinzel title, an MCI decree glyph in a ring medallion (the Guide's
+// established medallion grammar), GoldButton CTA, and the — ◆ — ornament rules.
+// Remote-config check / version compare / update flow unchanged.
+// ─────────────────────────────────────────────────────────────────────────────
 
 interface Props {
   children: React.ReactNode
@@ -77,7 +87,7 @@ const VersionGate = ({ children }: Props) => {
   if (checking) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#E8C547" />
+        <ActivityIndicator size="large" color={color.gold} />
       </View>
     )
   }
@@ -102,8 +112,11 @@ const VersionGate = ({ children }: Props) => {
           <View style={styles.ornLine} />
         </View>
 
-        {/* Icon */}
-        <Text style={styles.crownIcon}>⚔</Text>
+        {/* Decree medallion */}
+        <View style={styles.medallion}>
+          <View style={styles.medallionHalo} />
+          <Icon name="script-text-outline" size={40} color={color.gold} />
+        </View>
 
         {/* Title */}
         <Text style={styles.titleText}>NEW DECREE</Text>
@@ -117,15 +130,11 @@ const VersionGate = ({ children }: Props) => {
         </Text>
 
         {/* Update button */}
-        <TouchableOpacity
-          style={styles.updateBtn}
+        <GoldButton
+          label="UPDATE NOW"
+          icon="download"
           onPress={() => Linking.openURL(url)}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.updateBtnIcon}>⚔</Text>
-          <Text style={styles.updateBtnText}>UPDATE NOW</Text>
-          <Text style={styles.updateBtnIcon}>⚔</Text>
-        </TouchableOpacity>
+        />
 
         {/* Bottom ornament */}
         <View style={[styles.ornRow, { marginTop: 32 }]}>
@@ -143,7 +152,7 @@ const VersionGate = ({ children }: Props) => {
 const styles = StyleSheet.create({
   center: {
     flex: 1,
-    backgroundColor: "#0B1410",
+    backgroundColor: color.bgBase,
     justifyContent: "center",
     alignItems: "center",
     padding: 32,
@@ -152,12 +161,12 @@ const styles = StyleSheet.create({
   // Update required screen
   updateContainer: {
     flex: 1,
-    backgroundColor: "#0B1410",
+    backgroundColor: color.bgBase,
     justifyContent: "center",
     alignItems: "center",
     padding: 32,
   },
-  bgLayer: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
+  bgLayer: { ...StyleSheet.absoluteFillObject },
   bgGlow: {
     position: "absolute",
     top: "25%",
@@ -165,12 +174,12 @@ const styles = StyleSheet.create({
     width: "60%",
     height: "50%",
     borderRadius: 300,
-    backgroundColor: "rgba(232,197,71,0.05)",
+    backgroundColor: withAlpha(color.gold, 0.05),
   },
   bgRune: {
     position: "absolute",
     fontSize: 28,
-    color: "rgba(232,197,71,0.07)",
+    color: withAlpha(color.gold, 0.07),
   },
   ornRow: {
     flexDirection: "row",
@@ -178,25 +187,29 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 24,
   },
-  ornLine: {
-    width: 40,
-    height: 1,
-    backgroundColor: "rgba(232,197,71,0.25)",
+  ornLine: { width: 40, height: 1, backgroundColor: color.goldLine },
+  ornDot: { color: color.goldFaded, fontSize: 10 },
+  // Decree glyph in a ring medallion — the Guide's established grammar.
+  medallion: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    borderWidth: 1.5,
+    borderColor: color.goldLine,
+    backgroundColor: color.goldWash,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 18,
   },
-  ornDot: {
-    color: "rgba(232,197,71,0.5)",
-    fontSize: 10,
-  },
-  crownIcon: {
-    fontSize: 72,
-    marginBottom: 16,
-    color: "#E8C547",
-    textShadowColor: "rgba(232,197,71,0.6)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 24,
+  medallionHalo: {
+    position: "absolute",
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: withAlpha(color.gold, 0.08),
   },
   titleText: {
-    color: "rgba(232,197,71,0.7)",
+    color: color.goldFaded,
     fontSize: 11,
     fontWeight: "900",
     letterSpacing: 5,
@@ -205,60 +218,28 @@ const styles = StyleSheet.create({
   titleDivider: {
     width: 60,
     height: 1,
-    backgroundColor: "rgba(232,197,71,0.3)",
-    marginBottom: 6,
+    backgroundColor: color.goldLine,
+    marginBottom: 8,
   },
   subtitleText: {
-    color: "#E8C547",
-    fontSize: 24,
-    fontWeight: "900",
-    letterSpacing: 6,
+    color: color.gold,
+    fontFamily: font.display,
+    fontSize: 26,
+    letterSpacing: 4,
     marginBottom: 24,
-    textShadowColor: "rgba(232,197,71,0.5)",
+    textShadowColor: withAlpha(color.gold, 0.5),
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 16,
   },
   bodyText: {
-    color: "rgba(255,255,255,0.55)",
+    color: withAlpha("#FFFFFF", 0.55),
     fontSize: 14,
     fontWeight: "500",
     textAlign: "center",
     lineHeight: 22,
     letterSpacing: 0.5,
-    marginBottom: 32,
+    marginBottom: 28,
     maxWidth: 320,
-  },
-  updateBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    backgroundColor: "rgba(232,197,71,0.12)",
-    borderWidth: 1.5,
-    borderColor: "#E8C547",
-    borderRadius: 12,
-    paddingHorizontal: 28,
-    paddingVertical: 14,
-    // shadowColor: "#E8C547",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  updateBtnIcon: {
-    fontSize: 16,
-    color: "#E8C547",
-    textShadowColor: "rgba(232,197,71,0.6)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 10,
-  },
-  updateBtnText: {
-    color: "#E8C547",
-    fontSize: 14,
-    fontWeight: "900",
-    letterSpacing: 3,
-    textShadowColor: "rgba(232,197,71,0.4)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 8,
   },
 })
 
