@@ -3,14 +3,26 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
   ActivityIndicator,
 } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import auth from "@react-native-firebase/auth"
 import firestore from "@react-native-firebase/firestore"
 import { GoogleSignin } from "@react-native-google-signin/google-signin"
 import messaging from "@react-native-firebase/messaging"
+import { Icon } from "../ui/Icon"
+import { GoldButton } from "../ui/GoldButton"
+import { color, font, radius } from "../ui/theme"
+import { withAlpha } from "../ui/honor"
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Auth / sign-in / hero-name. Brought onto the design system (DESIGN_PLAN §2/§3,
+// §3.3 "Auth/Intro could reuse shared components"): token palette, Cinzel titles,
+// the brand splash's title-lockup + ornate divider grammar, GoldButton CTAs, MCI
+// chrome, safe-area insets. The four card-face beasts stay emoji (§9, illustration).
+// Auth flow / validation / Firebase calls unchanged.
+// ─────────────────────────────────────────────────────────────────────────────
 
 const WEB_CLIENT_ID =
   "644045789931-jfeqrr0361mu1qpf6b4si9447bhi21gg.apps.googleusercontent.com"
@@ -26,6 +38,7 @@ interface AuthScreenProps {
 }
 
 const AuthScreen = ({ onAuthenticated }: AuthScreenProps) => {
+  const insets = useSafeAreaInsets()
   const [step, setStep] = useState<"signin" | "heroname" | "loading">("loading")
   const [heroName, setHeroName] = useState("")
   const [error, setError] = useState("")
@@ -128,26 +141,46 @@ const AuthScreen = ({ onAuthenticated }: AuthScreenProps) => {
     }
   }
 
+  // Shared background — scattered runes + a hairline (the splash's established grammar).
+  const background = (
+    <View style={styles.bgLayer} pointerEvents="none">
+      <Text style={[styles.bgRune, { top: "12%", left: "8%" }]}>ᚠ</Text>
+      <Text style={[styles.bgRune, { top: "16%", right: "10%" }]}>ᚦ</Text>
+      <Text style={[styles.bgRune, { bottom: "18%", left: "12%" }]}>ᚱ</Text>
+      <Text style={[styles.bgRune, { bottom: "22%", right: "8%" }]}>ᛟ</Text>
+      <View style={styles.bgHLine} />
+    </View>
+  )
+
+  const pad = { paddingLeft: insets.left, paddingRight: insets.right }
+
   if (step === "loading")
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#E8C547" />
-        <Text style={styles.loadText}>Entering the realm...</Text>
+      <View style={[styles.container, pad]}>
+        {background}
+        <ActivityIndicator size="large" color={color.gold} />
+        <Text style={styles.loadText}>ENTERING THE REALM…</Text>
       </View>
     )
 
   if (step === "heroname")
     return (
-      <View style={styles.container}>
-        <Text style={styles.title}>⚔ CHOOSE YOUR NAME ⚔</Text>
+      <View style={[styles.container, pad]}>
+        {background}
+        <View style={styles.headerOrn}>
+          <View style={styles.ornLine} />
+          <Icon name="sword-cross" size={16} color={color.gold} />
+          <View style={styles.ornLine} />
+        </View>
+        <Text style={styles.title}>CHOOSE YOUR NAME</Text>
         <Text style={styles.subtitle}>
           This is how other warriors will know you
         </Text>
         <View style={styles.inputWrap}>
           <TextInput
             style={styles.input}
-            placeholder="Enter hero name..."
-            placeholderTextColor="rgba(232,197,71,0.3)"
+            placeholder="Enter hero name…"
+            placeholderTextColor={withAlpha(color.gold, 0.3)}
             value={heroName}
             onChangeText={setHeroName}
             maxLength={16}
@@ -156,30 +189,30 @@ const AuthScreen = ({ onAuthenticated }: AuthScreenProps) => {
           <Text style={styles.charCount}>{heroName.length}/16</Text>
         </View>
         {error ? <Text style={styles.error}>{error}</Text> : null}
-        <TouchableOpacity
-          style={[
-            styles.goldBtn,
-            heroName.trim().length < 2 && styles.goldBtnDisabled,
-          ]}
-          onPress={handleSetHeroName}
-          disabled={heroName.trim().length < 2}
-        >
-          <Text style={styles.goldBtnText}>⚔ Enter the Arena</Text>
-        </TouchableOpacity>
+        <GoldButton
+          label="ENTER THE ARENA"
+          icon="sword-cross"
+          onPress={() => {
+            if (heroName.trim().length >= 2) handleSetHeroName()
+          }}
+          style={heroName.trim().length < 2 ? styles.btnDisabled : undefined}
+        />
       </View>
     )
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, pad]}>
+      {background}
       <Text style={styles.beastRow}>🐉 🦅 🐺 🐍</Text>
       <Text style={styles.title}>MYTHIC PEAKS</Text>
       <Text style={styles.tagline}>A Card Game of Beasts & Glory</Text>
       <View style={styles.divider} />
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <TouchableOpacity style={styles.googleBtn} onPress={handleGoogleSignIn}>
-        <Text style={styles.googleIcon}>⚔</Text>
-        <Text style={styles.googleText}>Continue with Google</Text>
-      </TouchableOpacity>
+      <GoldButton
+        label="CONTINUE WITH GOOGLE"
+        icon="google"
+        onPress={handleGoogleSignIn}
+      />
       <Text style={styles.footnote}>
         Sign in to compete on global leaderboards
       </Text>
@@ -190,66 +223,81 @@ const AuthScreen = ({ onAuthenticated }: AuthScreenProps) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0F1A12",
+    backgroundColor: color.bgBase,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 40,
     gap: 12,
   },
+  // Background — established splash grammar.
+  bgLayer: { ...StyleSheet.absoluteFillObject },
+  bgRune: {
+    position: "absolute",
+    color: withAlpha(color.gold, 0.04),
+    fontSize: 30,
+  },
+  bgHLine: {
+    position: "absolute",
+    top: "50%",
+    left: "10%",
+    right: "10%",
+    height: 1,
+    backgroundColor: color.goldLine,
+  },
   loadText: {
-    color: "rgba(232,197,71,0.5)",
-    fontSize: 14,
+    color: color.goldFaded,
+    fontSize: 12,
     marginTop: 12,
-    letterSpacing: 1,
+    letterSpacing: 2.5,
+    fontWeight: "800",
   },
-  beastRow: { fontSize: 28, letterSpacing: 8 },
+  beastRow: { fontSize: 30, letterSpacing: 8, marginBottom: 4 },
   title: {
-    color: "#E8C547",
-    fontSize: 36,
-    fontWeight: "900",
-    letterSpacing: 6,
+    fontFamily: font.display,
+    color: color.gold,
+    fontSize: 38,
+    letterSpacing: 4,
+    textShadowColor: withAlpha(color.gold, 0.4),
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 20,
   },
-  subtitle: { color: "rgba(255,255,255,0.3)", fontSize: 13, marginBottom: 4 },
-  tagline: { color: "rgba(232,197,71,0.4)", fontSize: 12, letterSpacing: 2 },
+  subtitle: {
+    color: color.goldFaded,
+    fontSize: 13,
+    fontWeight: "600",
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  tagline: {
+    color: color.goldFaded,
+    fontSize: 12,
+    fontWeight: "600",
+    letterSpacing: 2,
+  },
   divider: {
     width: 80,
     height: 1,
-    backgroundColor: "rgba(232,197,71,0.15)",
-    marginVertical: 4,
+    backgroundColor: color.goldLine,
+    marginVertical: 6,
   },
-  googleBtn: {
+  // Ornate header rule — the — ◆ — motif (tokenized).
+  headerOrn: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    backgroundColor: "#E8C547",
-    paddingVertical: 12,
-    paddingHorizontal: 28,
-    borderRadius: 10,
-    minWidth: 240,
-    shadowColor: "#E8C547",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 6,
+    gap: 8,
+    marginBottom: 2,
   },
-  googleIcon: { fontSize: 18 },
-  googleText: {
-    fontSize: 15,
-    fontWeight: "900",
-    color: "#1a1a1a",
-    letterSpacing: 1,
-  },
-  footnote: { color: "rgba(255,255,255,0.15)", fontSize: 10, marginTop: 4 },
+  ornLine: { width: 24, height: 1, backgroundColor: color.goldLine },
+  footnote: { color: withAlpha(color.gold, 0.3), fontSize: 10, marginTop: 4 },
   inputWrap: { position: "relative", width: "100%", maxWidth: 280 },
   input: {
-    backgroundColor: "rgba(232,197,71,0.06)",
+    backgroundColor: color.goldWash,
     borderWidth: 1.5,
-    borderColor: "rgba(232,197,71,0.2)",
-    borderRadius: 10,
+    borderColor: color.goldLine,
+    borderRadius: radius.md,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    color: "#E8C547",
+    color: color.gold,
     fontSize: 18,
     fontWeight: "700",
     textAlign: "center",
@@ -259,30 +307,11 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 12,
     top: 14,
-    color: "rgba(232,197,71,0.25)",
+    color: withAlpha(color.gold, 0.25),
     fontSize: 10,
   },
-  error: { color: "#FF6B6B", fontSize: 12, fontWeight: "600" },
-  goldBtn: {
-    backgroundColor: "#E8C547",
-    paddingHorizontal: 28,
-    paddingVertical: 12,
-    borderRadius: 10,
-    minWidth: 200,
-    alignItems: "center",
-    shadowColor: "#E8C547",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  goldBtnDisabled: { opacity: 0.4 },
-  goldBtnText: {
-    color: "#1a1a1a",
-    fontSize: 16,
-    fontWeight: "900",
-    letterSpacing: 1,
-  },
+  error: { color: color.crimson, fontSize: 12, fontWeight: "700" },
+  btnDisabled: { opacity: 0.4 },
 })
 
 export default AuthScreen
