@@ -25,6 +25,41 @@ import { color, font } from "../../ui/theme"
 import { HonorCard, withAlpha } from "../../ui/honor"
 import { getEquippedKit, MiniBack, MiniBounty, type ThemeConfig } from "../Armory"
 
+// One face-down battlefield on the road — deals in on its own beat.
+const RoadCard = ({ idx }: { idx: number }) => {
+  const a = useRef(new Animated.Value(0)).current
+  useEffect(() => {
+    Animated.timing(a, {
+      toValue: 1,
+      duration: 240,
+      delay: 300 + idx * 70,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start()
+  }, [])
+  return (
+    <Animated.View
+      style={[
+        p.roadCard,
+        {
+          opacity: a,
+          transform: [
+            {
+              translateY: a.interpolate({
+                inputRange: [0, 1],
+                outputRange: [12, 0],
+              }),
+            },
+          ],
+        },
+      ]}
+    >
+      <View style={p.roadCardFrame} />
+      <Text style={p.roadCardNum}>{idx + 1}</Text>
+    </Animated.View>
+  )
+}
+
 export const PreBattleScreen = ({
   theme,
   background,
@@ -230,10 +265,7 @@ export const PreBattleScreen = ({
                 <Text style={p.roadLabel}>THE ROAD AHEAD</Text>
                 <View style={p.roadCards}>
                   {Array.from({ length: TOTAL_LEVELS }).map((_, i) => (
-                    <View key={i} style={p.roadCard}>
-                      <View style={p.roadCardFrame} />
-                      <Text style={p.roadCardNum}>{i + 1}</Text>
-                    </View>
+                    <RoadCard key={i} idx={i} />
                   ))}
                 </View>
               </View>

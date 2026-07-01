@@ -26,7 +26,7 @@ import { color, font } from "../../ui/theme"
 import { HonorCard, TIER, withAlpha } from "../../ui/honor"
 import type { ThemeConfig } from "../Armory"
 
-// One battlefield in the march: sealed (cleared), next (pulsing), or face-down.
+// One battlefield in the march: sealed (cleared), next (igniting), or face-down.
 const MarchCard = ({
   idx,
   level,
@@ -39,6 +39,20 @@ const MarchCard = ({
   const done = idx <= level
   const isNext = idx === level + 1 && level < TOTAL_LEVELS
   const h = Math.round(w * 1.4)
+  // The next field ignites — the march's one beat: it pops alight after the
+  // result card has landed.
+  const ignite = useRef(new Animated.Value(isNext ? 0 : 1)).current
+  useEffect(() => {
+    if (isNext) {
+      Animated.timing(ignite, {
+        toValue: 1,
+        duration: 340,
+        delay: 420,
+        easing: Easing.out(Easing.back(2.6)),
+        useNativeDriver: true,
+      }).start()
+    }
+  }, [])
   if (done) {
     return (
       <View style={[mc.card, mc.done, { width: w, height: h }]}>
@@ -49,10 +63,28 @@ const MarchCard = ({
   }
   if (isNext) {
     return (
-      <View style={[mc.card, mc.next, { width: w, height: h }]}>
+      <Animated.View
+        style={[
+          mc.card,
+          mc.next,
+          {
+            width: w,
+            height: h,
+            opacity: ignite,
+            transform: [
+              {
+                scale: ignite.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.6, 1],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
         <View style={[mc.frame, { borderColor: withAlpha(color.gold, 0.5) }]} />
         <Text style={mc.nextNum}>{idx}</Text>
-      </View>
+      </Animated.View>
     )
   }
   return (
@@ -337,6 +369,9 @@ export const BetweenLevelsScreen = ({
                 {!isFinal && nextCfg && (
                   <View style={b.preview}>
                     <Text style={b.previewLabel}>NEXT BATTLEFIELD</Text>
+                    <Text style={b.previewName} numberOfLines={1}>
+                      {nextCfg.name.toUpperCase()}
+                    </Text>
                     <View style={b.previewStats}>
                       <View style={b.previewStat}>
                         <Text style={b.previewVal}>{nextMult}×</Text>
@@ -512,6 +547,14 @@ const b = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: 3,
     textAlign: "center",
+  },
+  previewName: {
+    fontFamily: font.heading,
+    color: color.gold,
+    fontSize: 15,
+    letterSpacing: 1.5,
+    textAlign: "center",
+    marginTop: 2,
     marginBottom: 6,
   },
   previewStats: { flexDirection: "row", alignItems: "center", justifyContent: "center" },
