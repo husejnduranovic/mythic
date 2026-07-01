@@ -1230,10 +1230,10 @@ const Game = ({
                             {
                               color: comboColor,
                               textShadowColor:
-                                combo >= 10 ? comboColor : "transparent",
+                                combo >= 12 ? comboColor : "transparent",
                               textShadowOffset: { width: 0, height: 0 },
                               textShadowRadius:
-                                combo >= 25 ? 18 : combo >= 10 ? 9 : 0,
+                                combo >= 24 ? 18 : combo >= 12 ? 9 : 0,
                             },
                           ]}
                         >
