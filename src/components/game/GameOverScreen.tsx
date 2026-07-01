@@ -9,7 +9,7 @@
 // actions. Landscape-first; this screen replaces the board, so it carries no
 // 28-card cost and motion is free.
 
-import React, { useEffect, useRef } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import {
   Animated,
   Easing,
@@ -35,11 +35,40 @@ import {
 } from "../../ui/honor"
 import type { ThemeConfig } from "../Armory"
 
+// The spoils are counted into the card, not printed on it: 26 eased steps
+// (~900ms). Runs on a static full-screen moment — no board cost.
+const useCountUp = (target: number, duration = 900, delay = 460) => {
+  const [val, setVal] = useState(0)
+  useEffect(() => {
+    if (target <= 0) {
+      setVal(0)
+      return
+    }
+    let interval: ReturnType<typeof setInterval> | null = null
+    const steps = 26
+    let i = 0
+    const t = setTimeout(() => {
+      interval = setInterval(() => {
+        i++
+        const eased = 1 - Math.pow(1 - i / steps, 3)
+        setVal(Math.round(target * eased))
+        if (i >= steps && interval) clearInterval(interval)
+      }, duration / steps)
+    }, delay)
+    return () => {
+      clearTimeout(t)
+      if (interval) clearInterval(interval)
+    }
+  }, [target])
+  return val
+}
+
 export const GameOverScreen = ({
   theme,
   background,
   score,
   bestCombo,
+  bannersPlanted = 0,
   totalCleared,
   totalFieldCards,
   dailyMode,
@@ -62,6 +91,7 @@ export const GameOverScreen = ({
   background: React.ReactNode
   score: number
   bestCombo: number
+  bannersPlanted?: number
   totalCleared: number
   totalFieldCards: number
   dailyMode: boolean
@@ -90,6 +120,10 @@ export const GameOverScreen = ({
   const pulse = useRef(new Animated.Value(0.3)).current
   const crownPulse = useRef(new Animated.Value(0.7)).current
   const shimmer = useRef(new Animated.Value(0.35)).current
+  const stamp = useRef(new Animated.Value(0)).current
+  const rankPop = useRef(new Animated.Value(0)).current
+
+  const displayScore = useCountUp(score)
 
   useEffect(() => {
     Animated.parallel([
@@ -111,6 +145,14 @@ export const GameOverScreen = ({
       duration: 420,
       delay: 140,
       easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start()
+    // The outcome title stamps onto the sealed card once it has landed.
+    Animated.timing(stamp, {
+      toValue: 1,
+      duration: 300,
+      delay: 380,
+      easing: Easing.out(Easing.back(2.2)),
       useNativeDriver: true,
     }).start()
     const loop = (v: Animated.Value, lo: number, hi: number, d: number) =>
@@ -199,6 +241,18 @@ export const GameOverScreen = ({
   const rankValue = dailyMode ? dailyRank : rank
   const rankLabel = dailyMode ? "IN TODAY'S QUEST" : "AMONG ALL WARRIORS"
 
+  // The rank punches in the moment it resolves out of the shimmer.
+  useEffect(() => {
+    if (rankResolved) {
+      Animated.timing(rankPop, {
+        toValue: 1,
+        duration: 260,
+        easing: Easing.out(Easing.back(2.4)),
+        useNativeDriver: true,
+      }).start()
+    }
+  }, [rankResolved])
+
   // ── "One more battle" goal (§6.5, lite — uses data already on screen) ──
   const pbDelta = previousBest > 0 ? score - previousBest : 0
   const goalStruck = isPersonalBest && !isAllTimeRecord
@@ -209,14 +263,28 @@ export const GameOverScreen = ({
 
   const cardBody = (
     <>
-      <Text
-        style={[g.cardTitle, { color: outcome.trim }]}
+      <Animated.Text
+        style={[
+          g.cardTitle,
+          {
+            color: outcome.trim,
+            opacity: stamp,
+            transform: [
+              {
+                scale: stamp.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [1.6, 1],
+                }),
+              },
+            ],
+          },
+        ]}
         numberOfLines={1}
         adjustsFontSizeToFit
         minimumFontScale={0.6}
       >
         {outcome.title}
-      </Text>
+      </Animated.Text>
       <View style={{ flex: 1 }} />
       <Text style={[g.cardOverline, { color: withAlpha(outcome.trim, 0.55) }]}>
         SPOILS
@@ -226,7 +294,7 @@ export const GameOverScreen = ({
         numberOfLines={1}
         adjustsFontSizeToFit
       >
-        {score.toLocaleString()}
+        {displayScore.toLocaleString()}
       </Text>
       <Text style={[g.cardCombo, { color: withAlpha(outcome.trim, 0.6) }]}>
         x{bestCombo} BEST COMBO
@@ -342,7 +410,22 @@ export const GameOverScreen = ({
                 {/* async rank slot — reserved height, shimmer until resolved */}
                 <View style={g.rankSlot}>
                   {rankResolved ? (
-                    <View style={g.rankResolved}>
+                    <Animated.View
+                      style={[
+                        g.rankResolved,
+                        {
+                          opacity: rankPop,
+                          transform: [
+                            {
+                              scale: rankPop.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0.55, 1],
+                              }),
+                            },
+                          ],
+                        },
+                      ]}
+                    >
                       <Icon
                         name="trophy-variant"
                         size={14}
@@ -350,7 +433,7 @@ export const GameOverScreen = ({
                       />
                       <Text style={g.rankNum}>#{rankValue}</Text>
                       <Text style={g.rankLabel}>{rankLabel}</Text>
-                    </View>
+                    </Animated.View>
                   ) : (
                     <Animated.Text
                       style={[g.rankShimmer, { opacity: shimmer }]}
@@ -381,6 +464,13 @@ export const GameOverScreen = ({
                     label="Best Combo"
                     value={`x${bestCombo}`}
                     index={2}
+                  />
+                  <LedgerSep />
+                  <LedgerRow
+                    icon="flag-variant"
+                    label="Banners Planted"
+                    value={`${bannersPlanted}`}
+                    index={3}
                   />
                 </View>
 

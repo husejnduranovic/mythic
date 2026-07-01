@@ -126,6 +126,7 @@ const Game = ({
   const [score, setScore] = useState(0)
   const [combo, setCombo] = useState(0)
   const [bestCombo, setBestCombo] = useState(0)
+  const [bannersPlanted, setBannersPlanted] = useState(0)
   const [totalCleared, setTotalCleared] = useState(0)
   const [totalFieldCards, setTotalFieldCards] = useState(0)
   const [betweenLevels, setBetweenLevels] = useState(false)
@@ -407,6 +408,7 @@ const Game = ({
           gloryActiveRef.current,
         )
         setScore((s) => s + bank)
+        setBannersPlanted((b) => b + 1)
         showMilestone(
           m.text,
           m.color,
@@ -755,6 +757,7 @@ const Game = ({
     setScore(0)
     setFreeDrawAvailable(true)
     setBestCombo(0)
+    setBannersPlanted(0)
     setTotalCleared(0)
     setTotalFieldCards(0)
     setLevel(1)
@@ -864,6 +867,7 @@ const Game = ({
         // Reset all local state and restart
         setScore(0)
         setBestCombo(0)
+        setBannersPlanted(0)
         setTotalCleared(0)
         setTotalFieldCards(0)
         setLevel(1)
@@ -985,6 +989,7 @@ const Game = ({
         background={battlefieldMemo}
         score={score}
         bestCombo={bestCombo}
+        bannersPlanted={bannersPlanted}
         totalCleared={totalCleared}
         totalFieldCards={totalFieldCards}
         dailyMode={dailyMode}
