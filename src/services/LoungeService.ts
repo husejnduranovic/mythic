@@ -2,6 +2,7 @@ import firestore from "@react-native-firebase/firestore"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import { Collections, loungeScoreId } from "./collections"
 import { StorageKeys } from "./storageKeys"
+import { SCORING_VERSION } from "../game/scoring"
 import { logError } from "./logError"
 
 const LOUNGE_KEY = StorageKeys.loungeCode
@@ -113,6 +114,7 @@ export const submitLoungeScore = async (
         heroName,
         score,
         bestCombo,
+        scoringV: SCORING_VERSION,
         playedAt: firestore.FieldValue.serverTimestamp(),
       })
     }

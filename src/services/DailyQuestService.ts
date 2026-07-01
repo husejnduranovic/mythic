@@ -1,6 +1,7 @@
 import firestore from "@react-native-firebase/firestore"
 import { getTodayString } from "./CardService"
 import { Collections, dailyScoreId } from "./collections"
+import { SCORING_VERSION } from "../game/scoring"
 import { logError } from "./logError"
 
 export interface DailyScore {
@@ -53,6 +54,7 @@ export const submitDailyScore = async (
         bestCombo,
         clearedPct,
         date: today,
+        scoringV: SCORING_VERSION,
         playedAt: firestore.FieldValue.serverTimestamp(),
       })
     // Increment daily quests count on user profile

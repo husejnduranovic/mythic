@@ -12,6 +12,7 @@ import {
 } from "./LoungeService"
 import { updatePlayerScore } from "./ArenaService"
 import { TOTAL_LEVELS } from "../game/config"
+import { SCORING_VERSION } from "../game/scoring"
 import type { DailyScore } from "./DailyQuestService"
 
 // Get all-time best scores (top 50).
@@ -57,6 +58,7 @@ export const submitAllTimeScore = async (
         score,
         bestCombo,
         gamesPlayed,
+        scoringV: SCORING_VERSION,
         updatedAt: firestore.FieldValue.serverTimestamp(),
       })
     } else if (doc.exists()) {
@@ -91,6 +93,7 @@ export const submitGameScore = async (
       bestCombo,
       isDaily,
       gamesPlayed,
+      scoringV: SCORING_VERSION,
       playedAt: firestore.FieldValue.serverTimestamp(),
     })
 

@@ -12,6 +12,7 @@ import {
   generateDailyDeck,
   getTodayString,
   isCardMatch,
+  pickSeededIndices,
 } from "../services/CardService"
 import { SoundService } from "../services/SoundService"
 import { ICard } from "./Card"
@@ -64,12 +65,15 @@ import Reanimated, {
   runOnJS,
 } from "react-native-reanimated"
 import {
+  BANNER_FREEZE_SECONDS,
+  BANNER_MILESTONES,
   COMBO_MILESTONES,
   LEVEL_CONFIG,
   SECOND_CARD_COMBO,
   TOTAL_LEVELS,
 } from "../game/config"
 import {
+  getBannerBank,
   getBountyBonus,
   getDeckBonus,
   getMatchPoints,
@@ -96,11 +100,6 @@ const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window")
 const CARD_SCALE = Math.min(SCREEN_W / 780, SCREEN_H / 360, 1)
 const CARD_W = Math.round(52 * CARD_SCALE)
 const CARD_H = Math.round(74 * CARD_SCALE)
-
-// The banner ladder — drives the combo meter's next-flag readout.
-const MILESTONE_KEYS = Object.keys(COMBO_MILESTONES)
-  .map(Number)
-  .sort((a, b) => a - b)
 
 const Game = ({
   onHome,
@@ -384,7 +383,7 @@ const Game = ({
           name: "crown",
         })
       }
-      if (combo >= 10) {
+      if (combo >= 12) {
         comboGlowOpacity.setValue(0.8)
         Animated.timing(comboGlowOpacity, {
           toValue: 0.3,
@@ -399,19 +398,24 @@ const Game = ({
         withTiming(1, { duration: 80 }),
       )
 
-      const newMatches = combo - comboBaseRef.current
-
-      // Milestones based on new matches
-      const m = COMBO_MILESTONES[newMatches]
-      if (m) showMilestone(m.text, m.color, m.icon)
-
-      // Freeze timer on combo milestones
-      if (newMatches === 5) freezeTimerForCombo(3)
-      else if (newMatches === 10) freezeTimerForCombo(5)
-      else if (newMatches === 15) freezeTimerForCombo(3)
-      else if (newMatches === 20) freezeTimerForCombo(5)
-      else if (newMatches === 25) freezeTimerForCombo(3)
-      else if (newMatches === 30) freezeTimerForCombo(5)
+      // Banner planted (scoring v2): the milestone banks a permanent bonus and
+      // freezes the clock — one ladder for bank, freeze, banner and sound.
+      const m = COMBO_MILESTONES[combo]
+      if (m) {
+        const bank = getBannerBank(
+          combo,
+          levelRef.current,
+          gloryActiveRef.current,
+        )
+        setScore((s) => s + bank)
+        showMilestone(
+          m.text,
+          m.color,
+          m.icon,
+          `+${bank.toLocaleString()} BANKED`,
+        )
+        freezeTimerForCombo(BANNER_FREEZE_SECONDS)
+      }
     }
   }, [combo])
 
@@ -495,10 +499,12 @@ const Game = ({
     if (allCleared) {
       const perfectBonus = getPerfectClearBonus(level, gloryActiveRef.current)
       setScore((s) => s + perfectBonus)
-      showMilestone("PERFECT CLEAR!", "#7BED9F", {
-        fam: "mci",
-        name: "star-four-points",
-      })
+      showMilestone(
+        "PERFECT CLEAR!",
+        "#7BED9F",
+        { fam: "mci", name: "star-four-points" },
+        `+${perfectBonus.toLocaleString()}`,
+      )
     }
 
     SoundService.playLevelComplete()
@@ -521,8 +527,6 @@ const Game = ({
     setBetweenLevels(true)
   }, [cards, config.fieldCards])
 
-  const comboBaseRef = useRef(0)
-
   const initLevel = useCallback(() => {
     if (alreadyPlayed) return
     setLoading(true)
@@ -536,16 +540,28 @@ const Game = ({
         ? generateDailyDeck(`${roomCode}-${round}`, level)
         : generateDeck()
     setCards(deck.map((c, i) => ({ ...c, visible: i < config.fieldCards })))
-    const shuffledIndices = Array.from(
-      { length: config.fieldCards },
-      (_, i) => i,
-    ).sort(() => Math.random() - 0.5)
-    setBountyIndices(new Set(shuffledIndices.slice(0, 2)))
+    // Bounty placement: seeded on shared decks (Daily/Arena) so every player
+    // faces the same bounties — same-deck fairness (GAMEPLAY.md §8). Free play
+    // stays random.
+    const bountySeedBase = dailyMode
+      ? getTodayString()
+      : arenaMode && roomCode
+        ? `${roomCode}-${round}`
+        : null
+    const bountyPicks = bountySeedBase
+      ? pickSeededIndices(
+          config.fieldCards,
+          2,
+          `mythic-${bountySeedBase}-level-${level}-bounty`,
+        )
+      : Array.from({ length: config.fieldCards }, (_, i) => i)
+          .sort(() => Math.random() - 0.5)
+          .slice(0, 2)
+    setBountyIndices(new Set(bountyPicks))
     setCurrentIndex(config.deckStart)
     setDeckIndex(config.deckStart + 1)
 
     setCombo(0)
-    comboBaseRef.current = 0
 
     setSecondCard(null)
     setTimerFrozen(false)
@@ -556,7 +572,18 @@ const Game = ({
       SoundService.playShuffle()
       setTimeout(() => setReady(true), 50)
     }, 20)
-  }, [level, config.fieldCards, config.deckStart, dailyMode, alreadyPlayed])
+    // round/roomCode feed the deck + bounty seeds — they must be deps or an
+    // arena rematch re-deals the previous round's deck from a stale closure.
+  }, [
+    level,
+    round,
+    config.fieldCards,
+    config.deckStart,
+    dailyMode,
+    arenaMode,
+    roomCode,
+    alreadyPlayed,
+  ])
 
   useEffect(() => {
     if (!alreadyPlayed && !preBattle) initLevel()
@@ -643,13 +670,21 @@ const Game = ({
     const nc = combo + 1
     const isBounty = bountyIndices.has(index)
     const pts = getMatchPoints(nc, level, gloryActiveRef.current)
-    // Bounty = fiksni bonus, ne množi se s comboom
-    const bountyBonus = isBounty ? getBountyBonus(level) : 0
+    // Bounty v2: worth 3× the card's match points at the current combo tier —
+    // capturing one late in a chain is the payoff for routing toward it.
+    const bountyBonus = isBounty
+      ? getBountyBonus(nc, level, gloryActiveRef.current)
+      : 0
 
     if (isBounty)
-      showMilestone("BOUNTY!", palette.goldBright, { fam: "mci", name: "sack" })
+      showMilestone(
+        "BOUNTY!",
+        palette.goldBright,
+        { fam: "mci", name: "sack" },
+        `×3 · +${(pts + bountyBonus).toLocaleString()}`,
+      )
     SoundService.playMatch(nc)
-    showPointsAnimation(pts)
+    showPointsAnimation(pts + bountyBonus)
 
     vanquishTierRef.current = nc >= 24 ? 3 : nc >= 16 ? 2 : nc >= 8 ? 1 : 0
     setCards((prev) => {
@@ -704,7 +739,6 @@ const Game = ({
     setCurrentIndex(deckIndex)
     setDeckIndex((i) => i + 1)
     setCombo(0)
-    comboBaseRef.current = 0
     setTimerFrozen(false)
     if (freezeTimer.current) clearTimeout(freezeTimer.current)
     setSecondCard(null)
@@ -845,11 +879,12 @@ const Game = ({
   }, [arenaMode, roomCode, gameOver, wantsRematch])
 
   // Combo tint color — memoized so the inline style object stays referentially
-  // stable across renders that don't change the combo tier.
+  // stable across renders that don't change the combo tier. Tiers sit on the
+  // banner ladder (12/24), in the fire language — no more purple.
   const comboTintColor = useMemo(() => {
-    if (combo >= 25) return "rgba(160,40,210,0.08)"
-    if (combo >= 15) return "rgba(230,60,60,0.07)"
-    return "rgba(255,200,50,0.05)"
+    if (combo >= 24) return "rgba(192,57,43,0.08)"
+    if (combo >= 16) return "rgba(230,60,60,0.07)"
+    return "rgba(255,180,50,0.05)"
   }, [combo])
 
   const remaining = cards.length - deckIndex
@@ -877,20 +912,15 @@ const Game = ({
         return <Layout1 key={layoutKey} {...p} />
     }
   }
+  // HUD tiers derive from the banner ladder — the last planted banner owns the
+  // combo's color and title, so meter, banner popup and titles never disagree.
+  const nextBanner = BANNER_MILESTONES.find((k) => k > combo) ?? null
+  const prevBanner =
+    [...BANNER_MILESTONES].reverse().find((k) => k <= combo) ?? 0
   const comboColor =
-    combo >= 10
-      ? "#FF4757"
-      : combo >= 7
-        ? "#FF6B35"
-        : combo >= 5
-          ? "#FFD700"
-          : combo >= 3
-            ? "#7BED9F"
-            : "#E8C547"
-
-  // Distance to the next banner — the push-your-luck state, readable at a glance.
-  const nextBanner = MILESTONE_KEYS.find((k) => k > combo) ?? null
-  const prevBanner = [...MILESTONE_KEYS].reverse().find((k) => k <= combo) ?? 0
+    prevBanner >= 5 ? COMBO_MILESTONES[prevBanner].color : "#E8C547"
+  const comboTitle =
+    prevBanner >= 5 ? COMBO_MILESTONES[prevBanner].text.replace("!", "") : ""
   const bannerFrom = Math.max(prevBanner, 2)
   const bannerPct =
     nextBanner === null
@@ -1034,7 +1064,7 @@ const Game = ({
           ]}
         >
           {battlefieldMemo}
-          {combo >= 10 && (
+          {combo >= 12 && (
             <Animated.View
               pointerEvents="none"
               style={[
@@ -1236,24 +1266,15 @@ const Game = ({
                           />
                         )}
                       </View>
-                      {combo >= 5 && (
+                      {comboTitle !== "" && (
                         <Text
                           style={[
                             styles.comboTitle,
                             { color: comboColor + "90" },
                           ]}
+                          numberOfLines={1}
                         >
-                          {combo >= 30
-                            ? "MYTHIC"
-                            : combo >= 25
-                              ? "RAMPAGE"
-                              : combo >= 20
-                                ? "LEGENDARY"
-                                : combo >= 15
-                                  ? "GLORIOUS"
-                                  : combo >= 10
-                                    ? "VALIANT"
-                                    : "WORTHY"}
+                          {comboTitle}
                         </Text>
                       )}
                     </>
@@ -1269,49 +1290,29 @@ const Game = ({
                   styles.pointsText,
                   {
                     fontSize:
-                      combo >= 25
+                      combo >= 24
                         ? 40
-                        : combo >= 15
+                        : combo >= 16
                           ? 34
-                          : combo >= 10
+                          : combo >= 12
                             ? 30
                             : 26,
-                    color:
-                      combo >= 25
-                        ? "#FF4757"
-                        : combo >= 15
-                          ? "#FF6B35"
-                          : combo >= 10
-                            ? "#FFD700"
-                            : "#E8C547",
+                    color: comboColor,
                   },
                 ]}
               >
                 +{lastPoints.toLocaleString()}
               </Text>
-              {combo >= 5 && (
+              {comboTitle !== "" && (
                 <Text
                   style={{
-                    fontSize: combo >= 25 ? 14 : combo >= 15 ? 12 : 10,
+                    fontSize: combo >= 24 ? 14 : combo >= 16 ? 12 : 10,
                     fontWeight: "900",
                     letterSpacing: 2,
-                    color:
-                      combo >= 25
-                        ? "rgba(255,71,87,0.7)"
-                        : combo >= 15
-                          ? "rgba(255,107,53,0.6)"
-                          : "rgba(255,200,50,0.5)",
+                    color: comboColor + "99",
                   }}
                 >
-                  {combo >= 25
-                    ? "RAMPAGE"
-                    : combo >= 20
-                      ? "LEGENDARY"
-                      : combo >= 15
-                        ? "GLORIOUS"
-                        : combo >= 10
-                          ? "VALIANT"
-                          : "WORTHY"}
+                  {comboTitle}
                 </Text>
               )}
             </Reanimated.View>
@@ -1330,7 +1331,7 @@ const Game = ({
           >
             <Sigil
               sigil={milestoneIcon}
-              size={combo >= 20 ? 30 : 24}
+              size={combo >= 16 ? 30 : 24}
               color={milestoneColor}
             />
             <View style={styles.milestoneTextWrap}>
@@ -1340,11 +1341,11 @@ const Game = ({
                   {
                     color: milestoneColor,
                     fontSize:
-                      combo >= 25
+                      combo >= 24
                         ? 28
-                        : combo >= 20
+                        : combo >= 16
                           ? 24
-                          : combo >= 15
+                          : combo >= 12
                             ? 20
                             : 18,
                   },

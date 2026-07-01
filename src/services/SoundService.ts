@@ -69,32 +69,35 @@ export const SoundService = {
     }
   },
 
+  // Escalation sounds fire on the banner ladder (5/8/12/16/20/24/28/32 —
+  // scoring v2's milestone keys). Asset filenames keep their historical names;
+  // the mapping is tier order, not the number in the name.
   async playMatch(combo: number) {
     try {
       matchToggle = !matchToggle
       this.play(matchToggle ? matchSound1 : matchSound2)
 
-      if (combo >= 30 && combo % 5 === 0) {
-        this.play(combo30Sound)
-      } else if (combo === 25) {
-        this.play(combo25Sound)
+      if (combo >= 24 && (combo - 24) % 4 === 0) {
+        this.play(combo30Sound) // 24, 28, 32, 36…
       } else if (combo === 20) {
+        this.play(combo25Sound)
+      } else if (combo === 16) {
         this.play(combo20Sound)
-      } else if (combo === 15) {
+      } else if (combo === 12) {
         this.play(combo15Sound)
-      } else if (combo === 10) {
+      } else if (combo === 8) {
         this.play(combo10Sound)
       } else if (combo === 5) {
         this.play(combo5Sound)
       }
 
-      if (combo >= 25) {
+      if (combo >= 24) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
         setTimeout(
           () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy),
           100,
         )
-      } else if (combo >= 10) {
+      } else if (combo >= 12) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
       } else if (combo >= 5) {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)

@@ -22,6 +22,47 @@ Found two concrete defects worth fixing regardless of design direction: the **co
 
 ---
 
+## 1.5 Scoring v2 — "Spoils, Banners & Bounties" (SHIPPED 2026-07-01)
+
+The redesign that answers §1.1's convergence finding. Implemented in `src/game/scoring.ts` + `Game.tsx`; described here as the scoring source of truth. Everything in §2 below describes **v1** and is kept as the historical analysis.
+
+### The model
+
+1. **Chain curve tamed, capped at 100×** (`getComboMultiplier`). Combos 1–5 keep the v1 hook almost exactly (1 / 2 / 3.5 / 5 / 7), then the curve goes stepwise-linear: +2 per combo to 10 (17×), +3 to 16 (35×), +4 to 24 (67×), +5 beyond, **hard cap 100× from combo 31**. v1 reached 300× — one combo-32 card outvalued sixty bounties, which is why chain length was the only strategy on every board. Chains remain the biggest single source (as they should be — they're the fun), but they no longer round every other system to zero.
+
+2. **Banners — banked milestone bonuses** (new). At combos **5 / 8 / 12 / 16 / 20 / 24 / 28 / 32** (exactly the `COMBO_MILESTONES` keys) the chain *plants a banner*: an instant, permanent bank of **`milestone × 1,000 × fieldMult × glory`** spoils, plus a **flat 3-second timer freeze**. Sum of all eight banners on one field = 145k × fieldMult — material next to a strong chain's match points, so a chain that dies at 19 still walked away with its 5/8/12/16 banks. This is the push-your-luck axis: the HUD combo meter fills toward the next flag, and "banner 20 is two taps away — push or draw?" is now a real, visible decision. **Fixes the §4 defect** by construction: banners, freezes, sounds, HUD tiers and titles all key off one ladder; the dead `comboBaseRef` indirection is deleted.
+
+3. **Bounty = 3× your current tier** (was: flat +5000×fieldMult). A bounty card pays its match points **plus `getBountyBonus` = 2× match points** — i.e. worth three cards at whatever combo tier you're on when you take it. Early capture ≈ nothing, late-chain capture is enormous → bounties become *routing* decisions (steer the chain to end through them), answering §2.2. And bounty **placement is now seeded** in Daily/Arena (`pickSeededIndices`, seed = `mythic-<seedBase>-level-<N>-bounty`) — every player on a shared deck faces the same bounties, closing the §8 fairness defect. Free play keeps random placement.
+
+4. **Unchanged**: perfect clear (50,000 × fieldMult × glory — now genuinely big relative to a capped chain), time bonus (50/s), deck bonus (200/card), Glory Hunt (2× everything, 50% time, once), field multipliers (1.0→3.5×), the two-active-card rule, Free Draw, deck-draw combo reset (chains still die — banners just leave a grave marker).
+
+### Strategy divergence (the point of all this)
+
+- **Deep boards** (Snake Eyes' spine, the Warfront breach) → chain/banner hunting: long guarded chains reach the high flags.
+- **Open boards** (Dragon's Spine finale) → clear + speed: the cap means a mid-length chain plus perfect clear plus time bonus beats greeding for the tail.
+- **Every board** → per-seed bounty routing as a micro-goal that moves daily.
+
+### Leaderboard implication — stated for the owner
+
+v2 runs score **~5–20× lower** than v1 (single runs drop from tens of millions to ~1–5M). Existing `allTimeScores` entries become unbeatable ghosts. **Recommendation: wipe `allTimeScores` (and treat pre-v2 `bestScore` fields as historical) when 1.4 ships** — with ~6 active players this is cheap now and impossible later. Every score document now carries **`scoringV: 2`**, so if the wipe is skipped the leaderboards can filter by version instead.
+
+### Aligned ladders (one source of truth)
+
+| Combo | Mult | Banner bank (×fieldMult) | Freeze | Title | Sound |
+|---|---|---|---|---|---|
+| 5 | 7× | 5,000 | 3s | WORTHY | combo5 |
+| 8 | 13× | 8,000 | 3s | VALIANT | combo10 |
+| 12 | 23× | 12,000 | 3s | GLORIOUS | combo15 |
+| 16 | 35× | 16,000 | 3s | LEGENDARY | combo20 |
+| 20 | 51× | 20,000 | 3s | RAMPAGE | combo25 |
+| 24 | 67× | 24,000 | 3s | UNSTOPPABLE | combo30 |
+| 28 | 87× | 28,000 | 3s | DIVINE | combo30 |
+| 32 | 100× (cap) | 32,000 | 3s | MASTER OF PEAKS | combo30 |
+
+Capture-flash tiers on the field (Card.tsx) sit on the same ladder: ≥8 gold ring, ≥16 ember, ≥24 red.
+
+---
+
 ## 2. Per-feature analysis
 
 ### 2.1 Combo system — *the* core mechanic

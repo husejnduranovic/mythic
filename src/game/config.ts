@@ -19,10 +19,12 @@ export const TOTAL_LEVELS = Object.keys(LEVEL_CONFIG).length
 export const BASE_CARD_VALUE = 500
 export const SECOND_CARD_COMBO = 2
 
-// Milestone escalation now climbs within the fire/metal language (§4.2.4) —
-// sage → gold → ember → red → crimson → white-gold → white — and the icons are
-// heraldic sigils (rendered via <Sigil>) instead of platform emoji. Kills the
-// old magenta/pink/cyan neon (#FF00FF / #FF1493 / #7DF9FF).
+// Milestone escalation climbs within the fire/metal language (§4.2.4) —
+// sage → gold → ember → red → crimson → white-gold → white — icons are
+// heraldic sigils (rendered via <Sigil>).
+// Since scoring v2 these keys ARE the banner ladder: each one banks a banner
+// (getBannerBank), freezes the timer, fires the tier sound, and drives the
+// HUD tier color/title. One ladder, one source of truth (GAMEPLAY.md §1.5).
 export const COMBO_MILESTONES: Record<
   number,
   { text: string; color: string; icon: SigilSpec }
@@ -36,6 +38,14 @@ export const COMBO_MILESTONES: Record<
   28: { text: "DIVINE!", color: "#FFE08A", icon: { fam: "mci", name: "eye" } },
   32: { text: "MASTER OF PEAKS!", color: "#FFFFFF", icon: { fam: "mci", name: "fleur-de-lis" } },
 }
+
+// The banner ladder, ascending — derived once from the milestone keys.
+export const BANNER_MILESTONES = Object.keys(COMBO_MILESTONES)
+  .map(Number)
+  .sort((a, b) => a - b)
+
+// Every planted banner freezes the clock for a flat, learnable 3 seconds.
+export const BANNER_FREEZE_SECONDS = 3
 
 export const RUNES = [
   "ᚠ",

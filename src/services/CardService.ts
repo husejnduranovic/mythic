@@ -74,6 +74,22 @@ const buildDeck = (): ICard[] => {
 // Regular random deck
 export const generateDeck = (): ICard[] => shuffle(buildDeck())
 
+// Seeded index pick — deterministic bounty placement for Daily/Arena, so every
+// player on a shared deck faces the same bounties (GAMEPLAY.md §8 fairness fix).
+export const pickSeededIndices = (
+  total: number,
+  pick: number,
+  seed: string,
+): number[] => {
+  const rng = mulberry32(stringToSeed(seed))
+  const idx = Array.from({ length: total }, (_, i) => i)
+  for (let i = idx.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1))
+    ;[idx[i], idx[j]] = [idx[j], idx[i]]
+  }
+  return idx.slice(0, pick)
+}
+
 // Daily deck — same for all players on the same date
 // Seed format: "mythic-2026-03-27-level-1"
 export const generateDailyDeck = (date: string, level: number): ICard[] => {
