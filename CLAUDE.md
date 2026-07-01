@@ -18,15 +18,16 @@ Medieval fantasy tri-peaks solitaire. React Native mobile app, live on Google Pl
 - Keystore path hardcoded in build.gradle (local, not EAS managed)
 - Never suggest EAS-managed Android builds; local builds only
 
-## Core gameplay concepts
+## Core gameplay concepts (scoring v2, 2026-07-01 — spec in GAMEPLAY.md §1.5)
 
-- 6 board layouts with per-layout score multipliers (1x–3x)
-- Combo system: milestones at 3/5/7/10/15/20/25/30, tiered visual feedback
-- Wild cards (earned at combo 10 and 20), Free Draw (one per layout, doesn't reset combo)
-- Combo insurance (partial save on dead-end, layout-dependent)
-- Bounty cards (5x points), Carry Combo (abandon layout, keep combo)
-- Glory Hunt (opt-in: 2x points, 50% time, once per game)
-- Timer freeze on combo milestones; personal-best banner mid-run
+- 6 board layouts (Battlements, Cross of Clans, The Stronghold, Snake Eyes, The Warfront, Dragon's Spine) with per-level multipliers 1.0x–3.5x
+- Combo system: chain multiplier capped at 100x (combo 31+); **banners** at 5/8/12/16/20/24/28/32 bank `milestone × 1,000 × fieldMult × glory` permanently and freeze the timer 3s — one ladder drives bank/freeze/sound/HUD tier
+- Free Draw (one per layout, doesn't reset combo); deck draw resets combo
+- Bounty cards: 3x match points at the current combo tier (routing decision); placement seeded on shared decks (Daily/Arena)
+- Glory Hunt (opt-in: 2x points, 50% time, once per game); perfect clear 50,000 × fieldMult × glory
+- Personal-best banner mid-run; two-active-card rule (second card retained from combo 2)
+- Removed mechanics (v1.4): wild cards, carry combo, combo insurance — code and Armory inventory deleted
+- Score docs carry `scoringV: 2`; v2 scores are ~5–20x lower than v1 — `allTimeScores` wipe recommended at 1.4 release
 
 ## Multiplayer (Arena)
 
@@ -37,7 +38,7 @@ Medieval fantasy tri-peaks solitaire. React Native mobile app, live on Google Pl
 
 - Daily Quest (seeded, one attempt/day, own leaderboard)
 - Hall of Glory: all-time / daily / weekly leaderboards (Firestore)
-- Armory: 34 unlockables across 5 categories, unlock conditions (games played, streaks, score milestones)
+- Armory: 28 pieces across 4 racks (backs / battlefields / bounty / tables); gates: battles played, streaks, best combo (×12/×20/×28), 1M-spoils battle
 - Streak system with milestone unlocks (7/21/42/60 days)
 - Hookah Lounge tournaments: venue codes (e.g. "VIENNA"), venue-specific weekly leaderboards
 - Version gating via Remote Config (`minimum_app_version`)
@@ -57,7 +58,7 @@ Medieval fantasy tri-peaks solitaire. React Native mobile app, live on Google Pl
 
 ## Current state
 
-v1.3.5 in production. Recent: SDK 52→54, Reanimated v3→v4, 16 KB compliance, Arena disconnect handling, 2 new layouts, combo insurance, Armory at 34 items, scoring rebalance.
+v1.3.x in production; **v1.4 in progress on `refactor/v1.4-phase3`** — Phase 3 redesign (design system in `src/ui/`, all screens recomposed; log in DESIGN_PLAN.md) + scoring v2 / Warfront layout / Armory skill gates (GAMEPLAY.md). v1.4 release checklist: owner playtest of Warfront + Dragon's Spine base, `allTimeScores` wipe decision. Earlier: SDK 52→54, Reanimated v3→v4, 16 KB compliance, Arena disconnect handling.
 
 ## Working rules
 

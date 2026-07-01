@@ -174,21 +174,21 @@ Shelved (not in rotation): `Layout2.tsx` (unnamed piles — replaced by the Warf
 
 Ordered by leverage on the stated goal ("variation so players pursue different score strategies; scores don't converge") × safety.
 
-| # | Proposal | Addresses | Risk | Phase |
+| # | Proposal | Addresses | Risk | Status (2026-07-01) |
 |---|---|---|---|---|
-| G1 | **Fix combo-freeze ↔ milestone threshold mismatch** (§2.4); delete dead `comboBaseRef` | Consistency defect | Low (behavior-adjacent) | 3, own commit + approval |
-| G2 | **Seed bounty placement** off the deck seed in Daily/Arena (§8) | Same-deck fairness defect | Low-Med | 3/4, approval |
-| G3 | **Re-point 3–4 Armory unlocks at skill gates** (combo/score/perfect-clear) (§2.9) | Mastery has nothing to chase; CLAUDE.md drift | Low | 3/4 |
-| G4 | **Make bounty a combo-booster, not a flat bonus** (§2.2) | Bounties are ignorable; adds routing choice | Med | 4 |
-| G5 | **De-homogenize level openings** — give 2–3 active layouts a smaller/blocked base (or none, like L2) | The "first 10 seconds feel the same" convergence lever (§3.2) | Med (board feel → playtest) | 4 |
-| G6 | **Add one asymmetric / irregular layout** to the pool | Symmetry halves decision space (§3.2) | Med (new content + feel-gate) | 4 |
-| G7 | **A scoring axis that rewards spread/clear over pure chaining** (e.g. escalating perfect-clear, or a "no-deck-draw" bonus) so layouts can favor different strategies | Strategy convergence — the root cause (§1.1) | High (scoring change) | 4, gated |
-| G8 | Free Draw carry-over (§2.5); Glory charge earned at combo 15 (§2.6); combo-bank push-your-luck (§2.1) | Deepen existing verbs | Med | 4 |
+| G1 | **Fix combo-freeze ↔ milestone threshold mismatch** (§2.4); delete dead `comboBaseRef` | Consistency defect | Low | ✅ **shipped** — one banner ladder (§1.5) |
+| G2 | **Seed bounty placement** off the deck seed in Daily/Arena (§8) | Same-deck fairness defect | Low-Med | ✅ **shipped** (`pickSeededIndices`) |
+| G3 | **Re-point 3–4 Armory unlocks at skill gates** (combo/score) (§2.9) | Mastery has nothing to chase | Low | ✅ **shipped** (×12/×20/×28 combo, 1M spoils) |
+| G4 | **Make bounty a combo-booster, not a flat bonus** (§2.2) | Bounties are ignorable | Med | ✅ **shipped** as ×3-at-tier (§1.5) |
+| G5 | **De-homogenize level openings** | The "first 10 seconds feel the same" lever (§3.2) | Med | ✅ **shipped** — Dragon's Spine interlocked base (playtest-gated) |
+| G6 | **Add one asymmetric / irregular layout** | Symmetry halves decision space (§3.2) | Med | ✅ **shipped** — The Warfront (playtest-gated) |
+| G7 | **A scoring axis that rewards spread/clear over pure chaining** | Strategy convergence root cause (§1.1) | High | ✅ **shipped** via the v2 cap + banners (perfect-clear/time now material) |
+| G8 | Free Draw carry-over (§2.5); Glory charge earned at combo 15 (§2.6); combo-bank (§2.1) | Deepen existing verbs | Med | 🟡 combo-bank shipped as **banners**; Free-Draw carry-over + Glory charges still open (Phase 4) |
 
 **Feel-gate to record for §8 (DESIGN_PLAN):** cascade ratio in the 1.2–1.8 band (§3.3); avoid a third L1/L3-archetype layout; prefer non-symmetric or base-less structures to widen the opening decision.
 
 ---
 
-## 5. CLAUDE.md corrections surfaced
+## 5. CLAUDE.md corrections surfaced — ✅ RESOLVED 2026-07-01
 
-(Consolidates with DESIGN §9.) Combo milestones are **5/8/12/16/20/24/28/32** (banners) with freezes at 5/10/15/20/25/30 — not "3/5/7/10/15/20/25/30." Multipliers reach **3.5×** — not "1–3×." Wild cards / carry combo / combo insurance are **removed from gameplay** (vestigial data only) — should not be listed as core concepts. Armory unlocks are battles/streak only — **no score milestones exist** despite the claim. "34 unlockables" counts 6 unreachable wilds (28 selectable).
+(Consolidates with DESIGN §9.) All applied: CLAUDE.md now documents the v2 banner ladder (5/8/12/16/20/24/28/32, one ladder for bank/freeze/sound/tier), 1.0–3.5× multipliers, the removed mechanics (wilds/carry-combo/insurance — inventory deleted too), and the true Armory count (28 pieces / 4 racks) with the new skill gates.
