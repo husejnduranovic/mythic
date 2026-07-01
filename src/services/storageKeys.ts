@@ -10,7 +10,8 @@ export const StorageKeys = {
   bestComboEver: "@mythic_best_combo_ever",
   cardBack: "@mythic_card_back",
   battlefield: "@mythic_battlefield",
-  wildStyle: "@mythic_wild_style",
+  // "@mythic_wild_style" retired 2026-07-01 with the wild-style inventory —
+  // stale values on old installs are orphaned, never read.
   warTable: "@mythic_war_table",
   bountyStyle: "@mythic_bounty_style",
   armoryMigratedV2: "@mythic_armory_migrated_v2",

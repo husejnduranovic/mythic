@@ -55,28 +55,17 @@ export interface ThemeConfig {
   cardBackColor: string
   battlefield: string
   battlefieldColor: string
-  wildStyle?: string
   warTable?: string
   bountyStyle?: string
 }
 
 // Back medallion icons moved to ui/sigils.tsx (BACK_STYLES) — monochrome glyphs
 // keyed by the same back colors, plus each item's accent for the frame engraving.
-
-// Vestigial: the wild-card mechanic was removed from Game.tsx (158f5c9), so
-// these styles have no picker tab and no in-game consumer. Kept because
-// ThemeConfig/getSelectedTheme still carry wildStyle for storage compatibility.
-export const WILD_STYLE_CONFIG: Record<
-  string,
-  { color: string; accent: string; icon: string }
-> = {
-  spark: { color: "#1C1200", accent: "#FFD700", icon: "⚡" },
-  steel: { color: "#1A1A1E", accent: "#C0C8D0", icon: "⚔" },
-  frost: { color: "#061C2A", accent: "#8FCDE8", icon: "❄️" },
-  venom: { color: "#081A08", accent: "#57C878", icon: "☠️" },
-  storm: { color: "#110820", accent: "#9A7FD4", icon: "🌩" },
-  inferno_bolt: { color: "#1E0400", accent: "#E85A2A", icon: "🔥" }, // 42-day streak
-}
+//
+// Wild styles deleted 2026-07-01: the wild-card mechanic left the game in
+// 158f5c9 and the six styles (incl. the 42-day Inferno Bolt) were unreachable
+// inventory — selling styles for a card that never renders. The old
+// @mythic_wild_style storage value is simply orphaned (harmless).
 
 export const WAR_TABLE_CONFIG: Record<
   string,
@@ -98,6 +87,10 @@ interface ArmoryItem {
   accent: string
   unlockReq: number
   streakReq?: number
+  // Skill gates (2026-07-01): mastery unlocks that no amount of grinding
+  // reaches — a lifetime-best combo or a single-battle spoils threshold.
+  comboReq?: number
+  scoreReq?: number
   unlockLabel?: string
 }
 
@@ -150,8 +143,9 @@ const CARD_BACKS: ArmoryItem[] = [
     icon: "🦅",
     color: "#2A1C00",
     accent: "#E8B84B",
-    unlockReq: 25,
-    unlockLabel: "25 battles",
+    unlockReq: 0,
+    comboReq: 12,
+    unlockLabel: "×12 combo",
   },
   {
     id: "royal_banner",
@@ -159,8 +153,9 @@ const CARD_BACKS: ArmoryItem[] = [
     icon: "👑",
     color: "#1E0A3C",
     accent: "#C87DFF",
-    unlockReq: 60,
-    unlockLabel: "60 battles",
+    unlockReq: 0,
+    comboReq: 20,
+    unlockLabel: "×20 combo",
   },
   {
     id: "flame_sworn",
@@ -247,63 +242,6 @@ const BATTLEFIELDS: ArmoryItem[] = [
   },
 ]
 
-// Vestigial — see WILD_STYLE_CONFIG note above.
-const WILD_STYLES: ArmoryItem[] = [
-  {
-    id: "spark",
-    name: "Spark",
-    icon: "⚡",
-    color: "#1C1200",
-    accent: "#FFD700",
-    unlockReq: 0,
-  },
-  {
-    id: "steel",
-    name: "Steel Clash",
-    icon: "⚔",
-    color: "#1A1A1E",
-    accent: "#C0C8D0",
-    unlockReq: 0,
-  },
-  {
-    id: "frost",
-    name: "Frost Strike",
-    icon: "❄️",
-    color: "#061C2A",
-    accent: "#8FCDE8",
-    unlockReq: 5,
-    unlockLabel: "5 battles",
-  },
-  {
-    id: "venom",
-    name: "Venom Fang",
-    icon: "☠️",
-    color: "#081A08",
-    accent: "#57C878",
-    unlockReq: 20,
-    unlockLabel: "20 battles",
-  },
-  {
-    id: "storm",
-    name: "Storm Surge",
-    icon: "🌩",
-    color: "#110820",
-    accent: "#9A7FD4",
-    unlockReq: 60,
-    unlockLabel: "60 battles",
-  },
-  {
-    id: "inferno_bolt",
-    name: "Inferno Bolt",
-    icon: "🔥",
-    color: "#1E0400",
-    accent: "#E85A2A",
-    unlockReq: 0,
-    streakReq: 42,
-    unlockLabel: "42 day streak",
-  },
-]
-
 const WAR_TABLES: ArmoryItem[] = [
   {
     id: "oak_plank",
@@ -354,8 +292,9 @@ const WAR_TABLES: ArmoryItem[] = [
     icon: "🖤",
     color: "#0A0A0C",
     accent: "#5566AA",
-    unlockReq: 120,
-    unlockLabel: "120 battles",
+    unlockReq: 0,
+    comboReq: 28,
+    unlockLabel: "×28 combo",
   },
 ]
 
@@ -400,8 +339,9 @@ const BOUNTY_STYLES: ArmoryItem[] = [
     icon: "💠",
     color: "#080E1E",
     accent: "#99EEFF",
-    unlockReq: 60,
-    unlockLabel: "60 battles",
+    unlockReq: 0,
+    scoreReq: 1000000,
+    unlockLabel: "1M spoils in a battle",
   },
   {
     id: "eternal_crown",
@@ -477,7 +417,6 @@ const STORAGE_KEYS = {
   gamesPlayed: StorageKeys.gamesPlayed,
   selectedBack: StorageKeys.cardBack,
   selectedField: StorageKeys.battlefield,
-  selectedWild: StorageKeys.wildStyle,
   selectedTable: StorageKeys.warTable,
   selectedBounty: StorageKeys.bountyStyle,
   bestStreak: StorageKeys.bestStreak,
@@ -521,7 +460,6 @@ export const migrateArmoryIfNeeded = async () => {
     const validIds = {
       [STORAGE_KEYS.selectedBack]: CARD_BACKS.map((i) => i.id),
       [STORAGE_KEYS.selectedField]: BATTLEFIELDS.map((i) => i.id),
-      [STORAGE_KEYS.selectedWild]: WILD_STYLES.map((i) => i.id),
       [STORAGE_KEYS.selectedTable]: WAR_TABLES.map((i) => i.id),
       [STORAGE_KEYS.selectedBounty]: BOUNTY_STYLES.map((i) => i.id),
     }
@@ -545,8 +483,6 @@ export const getSelectedTheme = async (): Promise<ThemeConfig> => {
       (await AsyncStorage.getItem(STORAGE_KEYS.selectedBack)) || "oak_shield"
     const fieldId =
       (await AsyncStorage.getItem(STORAGE_KEYS.selectedField)) || "forest_camp"
-    const wildId =
-      (await AsyncStorage.getItem(STORAGE_KEYS.selectedWild)) || "spark"
     const tableId =
       (await AsyncStorage.getItem(STORAGE_KEYS.selectedTable)) || "oak_plank"
     const bountyId =
@@ -558,7 +494,6 @@ export const getSelectedTheme = async (): Promise<ThemeConfig> => {
       cardBackColor: back.color,
       battlefield: field.id,
       battlefieldColor: field.color,
-      wildStyle: wildId,
       warTable: tableId,
       bountyStyle: bountyId,
     }
@@ -568,7 +503,6 @@ export const getSelectedTheme = async (): Promise<ThemeConfig> => {
       cardBackColor: "#1A1410",
       battlefield: "forest_camp",
       battlefieldColor: "#0A1F10",
-      wildStyle: "spark",
       warTable: "oak_plank",
       bountyStyle: "gold_coin",
     }
@@ -942,6 +876,7 @@ const RackTile = ({
   }, [])
 
   const streakLock = !unlocked && !!item.streakReq
+  const skillLock = !unlocked && (!!item.comboReq || !!item.scoreReq)
 
   return (
     <Animated.View
@@ -977,9 +912,23 @@ const RackTile = ({
           {!unlocked && (
             <View style={[t.lockChip, streakLock && t.lockChipStreak]}>
               <Icon
-                name={streakLock ? "key-variant" : "lock"}
+                name={
+                  streakLock
+                    ? "key-variant"
+                    : item.comboReq
+                      ? "flag-variant"
+                      : item.scoreReq
+                        ? "sack"
+                        : "lock"
+                }
                 size={18}
-                color={streakLock ? color.ember : color.steel}
+                color={
+                  streakLock
+                    ? color.ember
+                    : skillLock
+                      ? color.gold
+                      : color.steel
+                }
               />
             </View>
           )}
@@ -993,7 +942,9 @@ const RackTile = ({
                 ? item.accent
                 : streakLock
                   ? "rgba(255,140,0,0.55)"
-                  : color.steel,
+                  : skillLock
+                    ? "rgba(232,197,71,0.55)"
+                    : color.steel,
             },
           ]}
           numberOfLines={1}
@@ -1003,7 +954,13 @@ const RackTile = ({
           {item.name}
         </Text>
         {!unlocked && (
-          <Text style={[t.req, streakLock && { color: "rgba(255,140,0,0.4)" }]}>
+          <Text
+            style={[
+              t.req,
+              streakLock && { color: "rgba(255,140,0,0.4)" },
+              skillLock && { color: "rgba(232,197,71,0.45)" },
+            ]}
+          >
             {(item.unlockLabel || "").toUpperCase()}
           </Text>
         )}
@@ -1113,6 +1070,8 @@ const t = StyleSheet.create({
 const Armory = ({ onBack }: ArmoryProps) => {
   const [gamesPlayed, setGamesPlayed] = useState(0)
   const [bestStreak, setBestStreak] = useState(0)
+  const [bestCombo, setBestCombo] = useState(0)
+  const [bestScore, setBestScore] = useState(0)
   const [selectedBack, setSelectedBack] = useState("oak_shield")
   const [selectedField, setSelectedField] = useState("forest_camp")
   const [selectedTable, setSelectedTable] = useState("oak_plank")
@@ -1139,6 +1098,17 @@ const Armory = ({ onBack }: ArmoryProps) => {
       const streakStr = await AsyncStorage.getItem(STORAGE_KEYS.bestStreak)
       setGamesPlayed(gamesStr ? parseInt(gamesStr) : 0)
       setBestStreak(streakStr ? parseInt(streakStr) : 0)
+      // Skill-gate stats: lifetime best combo (written by Game.tsx) and the
+      // best single-battle score from the local score history.
+      const comboStr = await AsyncStorage.getItem(StorageKeys.bestComboEver)
+      setBestCombo(comboStr ? parseInt(comboStr) : 0)
+      try {
+        const scoresRaw = await AsyncStorage.getItem(StorageKeys.localScores)
+        const scores = scoresRaw ? JSON.parse(scoresRaw) : []
+        setBestScore(scores[0]?.score || 0)
+      } catch {
+        setBestScore(0)
+      }
       setSelectedBack(
         (await AsyncStorage.getItem(STORAGE_KEYS.selectedBack)) || "oak_shield",
       )
@@ -1259,7 +1229,13 @@ const Armory = ({ onBack }: ArmoryProps) => {
   }
 
   const isUnlocked = (i: ArmoryItem) =>
-    i.streakReq ? bestStreak >= i.streakReq : gamesPlayed >= i.unlockReq
+    i.streakReq
+      ? bestStreak >= i.streakReq
+      : i.comboReq
+        ? bestCombo >= i.comboReq
+        : i.scoreReq
+          ? bestScore >= i.scoreReq
+          : gamesPlayed >= i.unlockReq
 
   const items = RACKS[tab]
   const selectedByTab: Record<TabType, string> = {
@@ -1323,7 +1299,9 @@ const Armory = ({ onBack }: ArmoryProps) => {
     }
   }
 
-  // Next-unlock ladder for the active rack (§4.9.3 progress bar).
+  // Next-unlock ladder for the active rack (§4.9.3 progress bar). Ladder kind
+  // mirrors the gate: streak = ember fire, combo = banner flag, spoils = sack,
+  // battles = crossed swords.
   const progress = nextLock
     ? nextLock.streakReq
       ? {
@@ -1332,12 +1310,26 @@ const Armory = ({ onBack }: ArmoryProps) => {
           cur: Math.min(bestStreak, nextLock.streakReq),
           req: nextLock.streakReq,
         }
-      : {
-          icon: "sword-cross" as IconName,
-          tint: color.gold,
-          cur: Math.min(gamesPlayed, nextLock.unlockReq),
-          req: nextLock.unlockReq,
-        }
+      : nextLock.comboReq
+        ? {
+            icon: "flag-variant" as IconName,
+            tint: color.gold,
+            cur: Math.min(bestCombo, nextLock.comboReq),
+            req: nextLock.comboReq,
+          }
+        : nextLock.scoreReq
+          ? {
+              icon: "sack" as IconName,
+              tint: color.gold,
+              cur: Math.min(bestScore, nextLock.scoreReq),
+              req: nextLock.scoreReq,
+            }
+          : {
+              icon: "sword-cross" as IconName,
+              tint: color.gold,
+              cur: Math.min(gamesPlayed, nextLock.unlockReq),
+              req: nextLock.unlockReq,
+            }
     : null
 
   return (

@@ -113,7 +113,6 @@ const Game = ({
     cardBackColor: "#162A47",
     battlefield: "forest",
     battlefieldColor: "#0F1A12",
-    wildStyle: "classic",
     warTable: "classic",
   })
   const [cards, setCards] = useState<ICard[]>([])
