@@ -9,6 +9,7 @@ import {
 } from "react-native"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import ReturnToCastle from "./ReturnToCastle"
+import Card, { ICard } from "./Card"
 import { StorageKeys } from "../services/storageKeys"
 import { Icon, IconName } from "../ui/Icon"
 import { GoldButton } from "../ui/GoldButton"
@@ -17,14 +18,38 @@ import { withAlpha } from "../ui/honor"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Intro / How-to-play (Guide). First-run shows the brand splash then the
-// tutorial; opened from Home it skips straight to the tutorial. Brought onto the
-// design system (DESIGN_PLAN §2/§3): token palette, Cinzel titles, MCI tutorial
-// icons in ring medallions (reusing the in-game vocabulary — restore = Free Draw,
-// sack = Bounty, lightning-bolt = Glory Hunt), GoldButton nav. The four card-face
-// beasts on the splash stay emoji (§9, illustration).
+// tutorial; opened from Home it skips straight to the tutorial.
+//
+// The card-teaching slides demonstrate with THE REAL PIECES — actual Card
+// components fanned in a tableau (a 7 beside an 8 for matching, an ascending
+// run for combos, a deck back for the reset, a plain back beside a bounty back
+// for "spot the special card") — instead of an abstract icon in a ring. The
+// non-card slides (Free Draw, fields, Glory, prizes) keep the ring medallion
+// with the in-game icon vocabulary. GoldButton nav; splash beasts stay emoji
+// (§9, illustration).
 // ─────────────────────────────────────────────────────────────────────────────
 
 const INTRO_KEY = StorageKeys.introSeen
+
+const mk = (value: string, suit: ICard["suit"]): ICard => ({
+  value,
+  suit,
+  displayValue: value,
+  visible: true,
+})
+
+// Slide index → the real pieces on display. Faces render CardFace, backs render
+// the tooled-leather CardBackView / jeweled BountyCardBack — always current with
+// the live game, never a drawing of it.
+const SLIDE_DEMOS: Record<
+  number,
+  { faces?: ICard[]; backs?: ("plain" | "bounty")[] }
+> = {
+  0: { faces: [mk("7", "diamonds"), mk("8", "hearts")] },
+  1: { faces: [mk("5", "clubs"), mk("6", "hearts"), mk("7", "spades")] },
+  2: { backs: ["plain"] },
+  4: { backs: ["plain", "bounty"] },
+}
 
 interface IntroScreenProps {
   onComplete: () => void
@@ -48,13 +73,13 @@ const TUTORIAL_SLIDES: {
   {
     icon: "fire",
     title: "Build Your Combo",
-    desc: "Each match in a row builds your combo.\nThe higher your combo, the more points every card is worth.\n\nThis is the heart of the game — chain as many matches as you can.",
-    example: "More matches in a row = far more points",
+    desc: "Each match in a row builds your combo, and every card is worth more.\nAt combo milestones you PLANT A BANNER — banking bonus spoils that stay yours even if the chain breaks.\n\nThis is the heart of the game.",
+    example: "Banners at 5 · 8 · 12 · 16 · 20 · 24 · 28 · 32",
   },
   {
     icon: "refresh",
     title: "The Deck Resets It",
-    desc: "If no field card matches, draw from the deck.\nBut drawing resets your combo to zero.\n\nDraw only when you're truly stuck — every match you make first is worth it.",
+    desc: "If no field card matches, draw from the deck.\nDrawing resets your combo to zero — only your planted banners survive.\n\nDraw only when you're truly stuck.",
     example: "Match → Match → Match → then draw if needed",
   },
   {
@@ -66,8 +91,8 @@ const TUTORIAL_SLIDES: {
   {
     icon: "sack",
     title: "Bounty Cards",
-    desc: "Two special cards are hidden on every battlefield.\nThey look different from the rest.\n\nMatch them for a bonus reward.",
-    example: "Spot the special cards and match them",
+    desc: "Two marked cards hide on every battlefield.\nA bounty pays TRIPLE your current combo value.\n\nRoute your chain to capture them late — that's where the treasure is.",
+    example: "A bounty deep in a chain = three cards' spoils",
   },
   {
     icon: "image-filter-hdr",
@@ -363,14 +388,58 @@ const IntroScreen = ({
           { opacity: slideOpacity, transform: [{ translateX: slideSlide }] },
         ]}
       >
-        {/* Left — Icon medallion + Title */}
+        {/* Left — the demonstration (real cards where the lesson is about
+            cards; the ring medallion elsewhere) + Title */}
         <View style={z.slideLeft}>
           <View style={z.iconZone}>
-            <Animated.View style={[z.iconHalo, { opacity: halo }]} />
-            <View style={z.iconWrap}>
-              <View style={z.iconRing} />
-              <Icon name={slide.icon} size={30} color={color.gold} />
-            </View>
+            {(() => {
+              const demo = SLIDE_DEMOS[slideIndex]
+              if (!demo) {
+                return (
+                  <>
+                    <Animated.View style={[z.iconHalo, { opacity: halo }]} />
+                    <View style={z.iconWrap}>
+                      <View style={z.iconRing} />
+                      <Icon name={slide.icon} size={30} color={color.gold} />
+                    </View>
+                  </>
+                )
+              }
+              const pieces: React.ReactNode[] = [
+                ...(demo.faces || []).map((c, i) => (
+                  <Card key={`f${i}`} card={c} isOpen disabled />
+                )),
+                ...(demo.backs || []).map((b, i) => (
+                  <Card key={`b${i}`} bounty={b === "bounty"} disabled />
+                )),
+              ]
+              const n = pieces.length
+              return (
+                <>
+                  <Animated.View
+                    style={[z.iconHalo, z.demoHalo, { opacity: halo }]}
+                  />
+                  <View style={z.demoRow}>
+                    {pieces.map((piece, i) => (
+                      <View
+                        key={i}
+                        style={{
+                          marginHorizontal: n > 1 ? -6 : 0,
+                          transform: [
+                            { rotate: `${(i - (n - 1) / 2) * 9}deg` },
+                            {
+                              translateY: Math.abs(i - (n - 1) / 2) * 5,
+                            },
+                          ],
+                        }}
+                      >
+                        {piece}
+                      </View>
+                    ))}
+                  </View>
+                </>
+              )
+            })()}
           </View>
           <Text style={z.slideTitle}>{slide.title}</Text>
         </View>
@@ -565,6 +634,9 @@ const z = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: withAlpha(color.gold, 0.3),
   },
+  // Real-piece tableau — the halo widens into a glow pool under the fan.
+  demoHalo: { width: 130, height: 86, borderRadius: 30 },
+  demoRow: { flexDirection: "row", alignItems: "center" },
   slideTitle: {
     color: color.gold,
     fontFamily: font.display,
