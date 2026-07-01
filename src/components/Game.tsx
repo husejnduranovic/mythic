@@ -96,6 +96,11 @@ const CARD_SCALE = Math.min(SCREEN_W / 780, SCREEN_H / 360, 1)
 const CARD_W = Math.round(52 * CARD_SCALE)
 const CARD_H = Math.round(74 * CARD_SCALE)
 
+// The banner ladder — drives the combo meter's next-flag readout.
+const MILESTONE_KEYS = Object.keys(COMBO_MILESTONES)
+  .map(Number)
+  .sort((a, b) => a - b)
+
 const Game = ({
   onHome,
   dailyMode = false,
@@ -133,6 +138,7 @@ const Game = ({
   const [alreadyPlayed, setAlreadyPlayed] = useState(false)
   const [alreadyPlayedScore, setAlreadyPlayedScore] = useState(0)
   const [milestoneText, setMilestoneText] = useState("")
+  const [milestoneSub, setMilestoneSub] = useState("")
   const [milestoneIcon, setMilestoneIcon] = useState<SigilSpec>({
     fam: "mci",
     name: "sword-cross",
@@ -140,7 +146,8 @@ const Game = ({
   const [milestoneColor, setMilestoneColor] = useState("#ffffff")
 
   const milestoneOpacity = useSharedValue(0)
-  const milestoneScale = useSharedValue(0.5)
+  const milestoneScale = useSharedValue(0.9)
+  const milestoneUnfurl = useSharedValue(0.5)
 
   const levelCompleteRef = useRef(false)
   const autoAdvanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -160,8 +167,10 @@ const Game = ({
   const [arenaPlayers, setArenaPlayers] = useState<any[]>([])
   const arenaUnsubRef = useRef<(() => void) | null>(null)
   const [arenaCountdown, setArenaCountdown] = useState<number | null>(null)
-  const freezePulse = useRef(new Animated.Value(0)).current
   const comboGlowOpacity = useRef(new Animated.Value(0)).current
+  // The dais breath — the one idle loop on the board: a single native-driver
+  // opacity pulse on the current-card dais (2 views), nothing per-card.
+  const daisBreath = useRef(new Animated.Value(0.55)).current
   const [rank, setRank] = useState<number | null>(null)
   const [dailyRank, setDailyRank] = useState<number | null>(null)
   const [isAllTimeRecord, setIsAllTimeRecord] = useState(false)
@@ -200,15 +209,43 @@ const Game = ({
     transform: [{ scale: scorePulse.value }],
   }))
 
+  // Gold wash over the treasury when spoils land — the points feel collected.
+  const treasuryFlash = useSharedValue(0)
+  const treasuryFlashStyle = useAnimatedStyle(() => ({
+    opacity: treasuryFlash.value,
+  }))
+
   const pointsPopupStyle = useAnimatedStyle(() => ({
     opacity: pointsOpacity.value,
     transform: [{ translateY: pointsMove.value }],
   }))
 
+  // The milestone banner unfurls: pops wide while the cloth drops open (scaleY).
   const milestoneStyle = useAnimatedStyle(() => ({
     opacity: milestoneOpacity.value,
-    transform: [{ scale: milestoneScale.value }],
+    transform: [
+      { scale: milestoneScale.value },
+      { scaleY: milestoneUnfurl.value },
+    ],
   }))
+
+  // Start the dais breath once — battlements/dais live for the whole session.
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(daisBreath, {
+          toValue: 1,
+          duration: 1300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(daisBreath, {
+          toValue: 0.55,
+          duration: 1300,
+          useNativeDriver: true,
+        }),
+      ]),
+    ).start()
+  }, [])
 
   useEffect(() => {
     if (!arenaMode || !betweenLevels || arenaPlayers.length === 0) return
@@ -379,18 +416,33 @@ const Game = ({
         withTiming(1.15, { duration: 60 }),
         withTiming(1, { duration: 100 }),
       )
+      treasuryFlash.value = withSequence(
+        withTiming(0.28, { duration: 60 }),
+        withTiming(0, { duration: 300 }),
+      )
     }
   }, [score])
 
-  const showMilestone = (text: string, color: string, icon: SigilSpec) => {
+  const showMilestone = (
+    text: string,
+    color: string,
+    icon: SigilSpec,
+    sub = "",
+  ) => {
     setMilestoneText(text)
+    setMilestoneSub(sub)
     setMilestoneColor(color)
     setMilestoneIcon(icon)
-    milestoneOpacity.value = 1
-    milestoneScale.value = 1
+    milestoneOpacity.value = withTiming(1, { duration: 90 })
+    milestoneScale.value = withSequence(
+      withTiming(1.05, { duration: 140 }),
+      withTiming(1, { duration: 110 }),
+    )
+    milestoneUnfurl.value = 0.5
+    milestoneUnfurl.value = withTiming(1, { duration: 190 })
     setTimeout(() => {
       milestoneOpacity.value = withTiming(0, { duration: 250 })
-    }, 400)
+    }, 480)
   }
 
   const freezeTimerForCombo = (seconds: number) => {
@@ -399,12 +451,6 @@ const Game = ({
     freezeTimer.current = setTimeout(() => {
       setTimerFrozen(false)
     }, seconds * 1000)
-    freezePulse.setValue(0.8)
-    Animated.timing(freezePulse, {
-      toValue: 0.2,
-      duration: 3000,
-      useNativeDriver: true,
-    }).start()
     SoundService.playFreeze()
   }
 
@@ -837,6 +883,15 @@ const Game = ({
             ? "#7BED9F"
             : "#E8C547"
 
+  // Distance to the next banner — the push-your-luck state, readable at a glance.
+  const nextBanner = MILESTONE_KEYS.find((k) => k > combo) ?? null
+  const prevBanner = [...MILESTONE_KEYS].reverse().find((k) => k <= combo) ?? 0
+  const bannerFrom = Math.max(prevBanner, 2)
+  const bannerPct =
+    nextBanner === null
+      ? 1
+      : Math.min(1, Math.max(0, (combo - bannerFrom) / (nextBanner - bannerFrom)))
+
   // Already played daily
   if (alreadyPlayed)
     return (
@@ -987,7 +1042,7 @@ const Game = ({
             onPress={handleBackPress}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Text style={styles.backBtnText}>✕</Text>
+            <Icon name="close" size={13} color={palette.goldFaded} />
           </TouchableOpacity>
           {gloryActive && (
             <View style={styles.gloryBadge}>
@@ -1064,7 +1119,10 @@ const Game = ({
                     </TouchableOpacity>
                   )}
                 <View style={styles.treasury}>
-                  <View style={styles.treasuryFrame} pointerEvents="none" />
+                  <Reanimated.View
+                    style={[styles.treasuryFlash, treasuryFlashStyle]}
+                    pointerEvents="none"
+                  />
                   <View style={styles.treasuryMedal}>
                     <Icon name="sack" size={12} color={palette.goldDeep} />
                   </View>
@@ -1078,9 +1136,14 @@ const Game = ({
                   </View>
                 </View>
               </View>
-              <View style={styles.centerCards}>
-                <View style={styles.openCardGlow} />
-                <>
+              {/* The dais — the current card(s) stand center-table, rising past
+                  the battlement line, on a breathing engraved inlay. */}
+              <View style={styles.centerCards} pointerEvents="box-none">
+                <View style={styles.dais}>
+                  <Animated.View
+                    style={[styles.daisGlow, { opacity: daisBreath }]}
+                  />
+                  <View style={styles.daisFrame} pointerEvents="none" />
                   <Card
                     card={cards[currentIndex]}
                     isOpen
@@ -1095,7 +1158,7 @@ const Game = ({
                       cardBackColor={theme.cardBackColor}
                     />
                   )}
-                </>
+                </View>
               </View>
               <View style={styles.rightBox}>
                 <Timer
@@ -1115,51 +1178,57 @@ const Game = ({
                 <View style={styles.comboWrap}>
                   {/* Hidden entirely below x2 — a persistent x0/x1 in the corner
                       communicates nothing (§4.2.3). comboWrap reserves the height
-                      so the timer above never shifts when it appears. */}
+                      so the timer above never shifts when it appears. The meter
+                      fills toward the next banner milestone — the push-your-luck
+                      state, always readable. */}
                   {combo >= 2 && (
                     <>
                       <View style={styles.comboRow}>
-                        {combo >= 3 && (
-                          <View
-                            style={[
-                              styles.comboBar,
-                              {
-                                width: Math.min(combo * 2.5, 45),
-                                backgroundColor: comboColor,
-                              },
-                            ]}
-                          />
-                        )}
                         <Reanimated.Text
                           style={[
                             styles.comboValue,
                             comboPulseStyle,
                             {
                               color: comboColor,
-                              fontSize:
-                                combo >= 25
-                                  ? 20
-                                  : combo >= 15
-                                    ? 19
-                                    : combo >= 10
-                                      ? 18
-                                      : 17,
                               textShadowColor:
                                 combo >= 10 ? comboColor : "transparent",
                               textShadowOffset: { width: 0, height: 0 },
                               textShadowRadius:
-                                combo >= 25
-                                  ? 20
-                                  : combo >= 15
-                                    ? 14
-                                    : combo >= 10
-                                      ? 8
-                                      : 0,
+                                combo >= 25 ? 18 : combo >= 10 ? 9 : 0,
                             },
                           ]}
                         >
                           x{combo}
                         </Reanimated.Text>
+                        <View style={styles.bannerTrack}>
+                          <View
+                            style={[
+                              styles.bannerFill,
+                              {
+                                width: `${Math.round(bannerPct * 100)}%`,
+                                backgroundColor: comboColor,
+                              },
+                            ]}
+                          />
+                        </View>
+                        {nextBanner !== null ? (
+                          <View style={styles.bannerNext}>
+                            <Icon
+                              name="flag-variant"
+                              size={10}
+                              color={palette.goldFaded}
+                            />
+                            <Text style={styles.bannerNextNum}>
+                              {nextBanner}
+                            </Text>
+                          </View>
+                        ) : (
+                          <Icon
+                            name="flag-checkered"
+                            size={11}
+                            color={palette.goldBright}
+                          />
+                        )}
                       </View>
                       {combo >= 5 && (
                         <Text
@@ -1247,6 +1316,7 @@ const Game = ({
               milestoneStyle,
               {
                 borderColor: milestoneColor + "30",
+                borderTopColor: milestoneColor + "AA",
                 shadowColor: milestoneColor,
               },
             ]}
@@ -1276,6 +1346,13 @@ const Game = ({
               >
                 {milestoneText}
               </Text>
+              {milestoneSub ? (
+                <Text
+                  style={[styles.milestoneBank, { color: milestoneColor }]}
+                >
+                  {milestoneSub}
+                </Text>
+              ) : null}
               <Text
                 style={[
                   styles.milestoneMultiplier,
@@ -1327,20 +1404,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(232,197,71,0.2)",
   },
-  backBtnText: {
-    color: "rgba(232,197,71,0.7)",
-    fontSize: 13,
-    fontWeight: "700",
-  },
-
-  // ─────────────────────────────────────
-  //  DAILY BADGE
-  // ─────────────────────────────────────
-
   // ═══════════════════════════════════════════
-  //  ██  BOTTOM BAR — COMPLETE REDESIGN  ██
+  //  ██  THE WAR TABLE — bottom bar  ██
+  //  One continuous engraved surface. Stations are carved wells set into the
+  //  wood (dark inset + catch-light edge), not bordered widgets floating on it;
+  //  the current card stands on a breathing dais rising past the battlements.
   // ═══════════════════════════════════════════
-  wallContainer: { width: "100%" },
+  wallContainer: { width: "100%", zIndex: 3 },
   wall: {
     width: "100%",
     flexDirection: "row",
@@ -1351,7 +1421,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#18120E",
     borderTopWidth: 1.5,
     borderTopColor: "rgba(232,197,71,0.1)",
-    overflow: "hidden",
   },
 
   // Deck + Spoils
@@ -1361,30 +1430,31 @@ const styles = StyleSheet.create({
     gap: 8,
     zIndex: 2,
   },
-  // SPOILS treasury — an engraved cartouche set into the war table (a mini plaque
-  // in the honor-card grammar: framed, with the sack crest in a dark well), not a
-  // floating calculator readout.
+  // SPOILS treasury — carved into the table: dark well, shadowed top lip,
+  // catch-light bottom edge. Flashes gold when spoils land.
   treasury: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "rgba(8,16,9,0.5)",
-    borderWidth: 1,
-    borderColor: palette.goldLine,
+    backgroundColor: "rgba(4,8,5,0.55)",
     borderRadius: 9,
     paddingLeft: 7,
     paddingRight: 13,
     paddingVertical: 4,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0,0,0,0.55)",
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.05)",
+    overflow: "hidden",
   },
-  treasuryFrame: {
+  treasuryFlash: {
     position: "absolute",
-    top: 2,
-    left: 2,
-    right: 2,
-    bottom: 2,
-    borderRadius: 6,
-    borderWidth: 0.5,
-    borderColor: "rgba(232,197,71,0.14)",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: palette.gold,
+    borderRadius: 9,
   },
   treasuryMedal: {
     width: 22,
@@ -1397,46 +1467,63 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  // Center active cards
+  // Center dais — positions the station; the dais itself hugs the cards.
   centerCards: {
     flexDirection: "row",
-    gap: 4,
     alignItems: "center",
     position: "absolute",
     left: 0,
     right: 0,
     justifyContent: "center",
   },
-  // Quiet gold frame marking the active card(s). Tokenized; the old always-on
-  // "wild" variant (a vestige of the removed wild-card mechanic) is gone.
-  openCardGlow: {
+  dais: {
+    flexDirection: "row",
+    gap: 4,
+    alignItems: "center",
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    marginTop: -7,
+  },
+  daisGlow: {
     position: "absolute",
-    top: -8,
-    left: -12,
-    right: -12,
-    bottom: -8,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     borderRadius: 14,
-    backgroundColor: palette.goldWash,
+    backgroundColor: "rgba(232,197,71,0.07)",
     borderWidth: 1,
     borderColor: palette.goldLine,
     shadowColor: palette.gold,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+  },
+  daisFrame: {
+    position: "absolute",
+    top: 3,
+    left: 3,
+    right: 3,
+    bottom: 3,
+    borderRadius: 11,
+    borderWidth: 0.5,
+    borderColor: "rgba(232,197,71,0.14)",
   },
 
-  // Timer + Combo gauge station — a framed instrument panel mirroring the treasury.
+  // Timer + combo gauge station — the treasury's carved-well twin.
   rightBox: {
     alignItems: "center",
     gap: 2,
-    minWidth: 84,
+    minWidth: 96,
     zIndex: 2,
-    backgroundColor: "rgba(8,16,9,0.45)",
-    borderWidth: 1,
-    borderColor: palette.goldLine,
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    backgroundColor: "rgba(4,8,5,0.55)",
+    borderRadius: 9,
+    paddingHorizontal: 10,
     paddingVertical: 4,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0,0,0,0.55)",
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.05)",
   },
   spoilsLabel: {
     fontFamily: font.heading,
@@ -1524,7 +1611,7 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
 
-  // ── Combo Display — Bottom bar ──
+  // ── Combo gauge — fills toward the next banner ──
   comboWrap: {
     alignItems: "center",
     height: 30,
@@ -1533,18 +1620,38 @@ const styles = StyleSheet.create({
   comboRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-  },
-  comboBar: {
-    height: 3,
-    borderRadius: 2,
-    opacity: 0.5,
+    gap: 5,
   },
   comboValue: {
     fontFamily: font.display,
-    fontSize: 18,
+    fontSize: 16,
     includeFontPadding: false,
-    textAlign: "center",
+    textAlign: "right",
+    minWidth: 30,
+  },
+  bannerTrack: {
+    width: 46,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderWidth: 0.5,
+    borderColor: "rgba(232,197,71,0.12)",
+    overflow: "hidden",
+  },
+  bannerFill: {
+    height: "100%",
+    borderRadius: 2,
+  },
+  bannerNext: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 1,
+  },
+  bannerNextNum: {
+    color: palette.goldFaded,
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 0.5,
   },
   comboTitle: {
     fontSize: Math.round(6 * CARD_SCALE),
@@ -1554,7 +1661,9 @@ const styles = StyleSheet.create({
     marginTop: -1,
   },
 
-  // ── Milestone Popup — Dramatic banner ──
+  // ── Milestone Popup — the war banner. A colored rod along the top edge,
+  //    cloth unfurling beneath it (scaleY entrance), the bank line when a
+  //    banner is planted.
   milestone: {
     position: "absolute",
     top: 50,
@@ -1562,13 +1671,14 @@ const styles = StyleSheet.create({
     zIndex: 999,
     elevation: 999,
     alignItems: "center",
-    backgroundColor: "rgba(10,8,5,0.85)",
+    backgroundColor: "rgba(10,8,5,0.88)",
     paddingHorizontal: 28,
     paddingVertical: 10,
     borderRadius: 14,
     flexDirection: "row",
     gap: 12,
     borderWidth: 1.5,
+    borderTopWidth: 2.5,
     borderColor: "rgba(232,197,71,0.2)",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.6,
@@ -1583,6 +1693,12 @@ const styles = StyleSheet.create({
     textShadowColor: "rgba(0,0,0,0.9)",
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 8,
+  },
+  milestoneBank: {
+    fontFamily: font.heading,
+    fontSize: 12,
+    letterSpacing: 1.5,
+    marginTop: 1,
   },
   milestoneMultiplier: {
     fontSize: Math.round(7 * CARD_SCALE),

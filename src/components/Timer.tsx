@@ -5,6 +5,11 @@ import { color, font } from "../ui/theme"
 
 const AnimatedIcon = Animated.createAnimatedComponent(MaterialCommunityIcons)
 
+// Fixed track width lets the fuse animate as a left-pinned scaleX — fully
+// native-driver (the old width interpolation ran on the JS thread every tick,
+// the one per-second JS animation on the live board).
+const TRACK_W = 76
+
 interface ITimerProps {
   initialTime: number
   onTimeUp: () => void
@@ -53,7 +58,7 @@ const Timer = ({
     Animated.timing(barAnim, {
       toValue: timeLeft / initialTime,
       duration: 800,
-      useNativeDriver: false,
+      useNativeDriver: true,
     }).start()
   }, [timeLeft])
 
@@ -108,7 +113,7 @@ const Timer = ({
 
   const isLow = timeLeft <= 10
   // Spoils burning down: healthy gold → warn ember (≤20s) → low crimson (≤10s);
-  // frozen reads frost. De-neoned from the old blue/green/red traffic light.
+  // frozen reads frost.
   const barColor = frozen
     ? color.frost
     : isLow
@@ -120,6 +125,13 @@ const Timer = ({
   const secs = timeLeft % 60
   const timeStr =
     mins > 0 ? `${mins}:${secs.toString().padStart(2, "0")}` : `${secs}`
+
+  // Left-pinned shrink: scaleX collapses around center, the translateX
+  // re-anchors the fill's left edge to the track's left edge.
+  const fillShift = barAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-TRACK_W / 2, 0],
+  })
 
   return (
     <View style={styles.container}>
@@ -149,10 +161,7 @@ const Timer = ({
             styles.barFill,
             {
               backgroundColor: barColor,
-              width: barAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: ["0%", "100%"],
-              }),
+              transform: [{ translateX: fillShift }, { scaleX: barAnim }],
             },
           ]}
         />
@@ -173,9 +182,8 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 8,
   },
-  // The fuse — a touch thicker and framed so it reads as a gauge, not a hairline.
   barTrack: {
-    width: 78,
+    width: TRACK_W,
     height: 5,
     backgroundColor: "rgba(255,255,255,0.1)",
     borderRadius: 3,
@@ -187,7 +195,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(159,216,239,0.15)",
     borderColor: "rgba(159,216,239,0.35)",
   },
-  barFill: { height: "100%", borderRadius: 3 },
+  barFill: { width: TRACK_W, height: "100%", borderRadius: 3 },
 })
 
 export default Timer
