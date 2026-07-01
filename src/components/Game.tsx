@@ -34,6 +34,7 @@ import { StorageKeys } from "../services/storageKeys"
 import {
   BountyStyleContext,
   CardBackColorContext,
+  VanquishTierContext,
 } from "../context/ThemeContext"
 import {
   leaveRoom,
@@ -193,6 +194,10 @@ const Game = ({
   const freeDrawAvailableRef = useRef(true)
 
   const [bountyIndices, setBountyIndices] = useState<Set<number>>(new Set())
+
+  // Combo tier at the moment of capture — read by FallingCard's flash through
+  // a stable ref-context (never re-renders the field).
+  const vanquishTierRef = useRef(0)
 
   const [isPersonalBest, setIsPersonalBest] = useState(false)
   const [previousBest, setPreviousBest] = useState(0)
@@ -646,6 +651,7 @@ const Game = ({
     SoundService.playMatch(nc)
     showPointsAnimation(pts)
 
+    vanquishTierRef.current = nc >= 24 ? 3 : nc >= 16 ? 2 : nc >= 8 ? 1 : 0
     setCards((prev) => {
       const u = [...prev]
       u[index] = { ...u[index], visible: false }
@@ -854,7 +860,6 @@ const Game = ({
       cards,
       onClick: handleCardPress,
       bountyIndices,
-      bountyConfig,
     }
 
     switch (config.layout) {
@@ -1021,6 +1026,7 @@ const Game = ({
       value={dailyMode ? "#3D2E0A" : theme.cardBackColor}
     >
       <BountyStyleContext.Provider value={bountyConfig}>
+        <VanquishTierContext.Provider value={vanquishTierRef}>
         <Animated.View
           style={[
             styles.container,
@@ -1371,7 +1377,8 @@ const Game = ({
               onConfirmQuit={handleConfirmQuit}
             />
           )}
-        </Animated.View>
+          </Animated.View>
+        </VanquishTierContext.Provider>
       </BountyStyleContext.Provider>
     </CardBackColorContext.Provider>
   )

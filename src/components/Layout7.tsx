@@ -6,7 +6,7 @@ import { ICard } from "./Card"
 interface ILayout7Props {
   cards: ICard[]
   onClick: (index: number) => void
-  pendingIndex?: number | null
+  bountyIndices?: Set<number>
 }
 
 /**
@@ -65,17 +65,19 @@ const Layout7 = React.memo(
   ({
     cards,
     onClick,
-    pendingIndex,
+    bountyIndices = new Set(),
   }: ILayout7Props) => {
     if (cards.length < 30) return null
 
+    // Bounty threading was missing here — the Stronghold had live (scoring)
+    // bounties that never rendered as bounty cards.
     const C = (i: number, open: boolean) => (
       <Card
         card={cards[i]}
         isOpen={open}
         remove={!cards[i].visible}
         onClick={() => onClick(i)}
-        pending={pendingIndex === i}
+        bounty={bountyIndices?.has(i)}
       />
     )
 

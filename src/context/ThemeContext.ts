@@ -21,3 +21,13 @@ export const BountyStyleContext = createContext<{
 })
 
 export const useBountyStyle = () => useContext(BountyStyleContext)
+
+// Combo tier at the moment a card is vanquished, read by the capture flash.
+// Deliberately a ref-in-context: the value object is stable, so combo changes
+// never re-render the 28 memoized field cards — FallingCard reads .current
+// once, at the instant it mounts.
+export const VanquishTierContext = createContext<{ current: number }>({
+  current: 0,
+})
+
+export const useVanquishTier = () => useContext(VanquishTierContext)

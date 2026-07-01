@@ -7,7 +7,6 @@ interface ILayout9Props {
   cards: ICard[]
   onClick: (index: number) => void
   bountyIndices?: Set<number>
-  pendingIndex?: number | null
 }
 
 const isOpen = (cards: ICard[], ...blockers: number[]) =>
@@ -56,7 +55,6 @@ const Layout9 = React.memo(
     cards,
     onClick,
     bountyIndices = new Set(),
-    pendingIndex,
   }: ILayout9Props) => {
     if (cards.length < 32) return null
 
@@ -67,7 +65,6 @@ const Layout9 = React.memo(
         remove={!cards[i].visible}
         onClick={() => onClick(i)}
         bounty={bountyIndices?.has(i)}
-        pending={pendingIndex === i}
       />
     )
 

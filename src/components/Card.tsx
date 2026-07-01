@@ -17,7 +17,11 @@ import Animated, {
   runOnJS,
   interpolate,
 } from "react-native-reanimated"
-import { useBountyStyle, useCardBackColor } from "../context/ThemeContext"
+import {
+  useBountyStyle,
+  useCardBackColor,
+  useVanquishTier,
+} from "../context/ThemeContext"
 import {
   BACK_STYLES,
   BOUNTY_FALLBACK_SIGIL,
@@ -45,13 +49,6 @@ interface ICardProps {
   remaining?: number
   cardBackColor?: string
   bounty?: boolean
-  bountyConfig?: {
-    backColor: string
-    accent: string
-    frontBg: string
-    textColor: string
-  }
-  pending?: boolean
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -760,7 +757,7 @@ const FlippingCard = ({
   useEffect(() => {
     progress.value = withTiming(
       1,
-      { duration: 200, easing: Easing.inOut(Easing.cubic) },
+      { duration: 240, easing: Easing.inOut(Easing.cubic) },
       () => {
         runOnJS(onDone)()
       },
@@ -779,13 +776,19 @@ const FlippingCard = ({
     width: "100%",
     height: "100%",
   }))
+  // The reveal lands with a slight over-rotation settle — the card snaps flat
+  // like it was dealt, instead of easing to a stop.
   const faceStyle = useAnimatedStyle(() => ({
     transform: [
       { perspective: 1000 },
       {
-        rotateY: `${interpolate(progress.value, [0, 0.5, 1], [-90, -90, 0])}deg`,
+        rotateY: `${interpolate(
+          progress.value,
+          [0, 0.5, 0.86, 1],
+          [-90, -90, 7, 0],
+        )}deg`,
       },
-      { scale: interpolate(progress.value, [0, 0.5, 1], [1, 1.05, 1]) },
+      { scale: interpolate(progress.value, [0, 0.5, 1], [1, 1.06, 1]) },
     ],
     opacity: progress.value >= 0.5 ? 1 : 0,
     position: "absolute" as const,
@@ -804,6 +807,9 @@ const FlippingCard = ({
   )
 }
 
+// Tier colors for the capture flash — mirrors the HUD combo ramp.
+const TIER_FLASH = ["", "#E8C547", "#FF8C00", "#FF4757"]
+
 const FallingCard = ({
   card,
   isOpen,
@@ -821,12 +827,18 @@ const FallingCard = ({
     o = useSharedValue(1),
     sc = useSharedValue(1),
     r = useSharedValue(0)
+  const ring = useSharedValue(0)
+  // Combo tier at capture, read once at mount from the ref-context (no
+  // reactivity → combo changes never touch the other 27 memoized cards).
+  const tier = useVanquishTier().current
   useEffect(() => {
     // Vanquish — a quick recoil pop (which punches up the combo feel), then the
     // card shrinks and rises as it dissolves, instead of a flat drop-and-fade.
     // One card at a time, entirely on the UI thread (transform + opacity).
+    // Higher combo tiers recoil harder and throw a shockwave ring.
+    const pop = tier >= 3 ? 1.18 : tier >= 2 ? 1.15 : 1.12
     sc.value = withSequence(
-      withTiming(1.12, { duration: 60, easing: Easing.out(Easing.quad) }),
+      withTiming(pop, { duration: 60, easing: Easing.out(Easing.quad) }),
       withTiming(0.45, { duration: 175, easing: Easing.in(Easing.cubic) }),
     )
     y.value = withDelay(
@@ -843,6 +855,12 @@ const FallingCard = ({
         if (finished) runOnJS(onDone)()
       }),
     )
+    if (tier > 0) {
+      ring.value = withTiming(1, {
+        duration: 230,
+        easing: Easing.out(Easing.quad),
+      })
+    }
   }, [])
   const style = useAnimatedStyle(() => ({
     transform: [
@@ -852,6 +870,11 @@ const FallingCard = ({
     ],
     opacity: o.value,
   }))
+  const ringStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(ring.value, [0, 0.15, 1], [0, 0.7, 0]),
+    transform: [{ scale: interpolate(ring.value, [0, 1], [0.85, 1.5]) }],
+  }))
+  const flash = TIER_FLASH[Math.min(tier, 3)]
   return (
     <Animated.View style={[styles.wrap, style]}>
       {isOpen && card ? (
@@ -864,6 +887,16 @@ const FallingCard = ({
         <BountyCardBack />
       ) : (
         <CardBackView color={backColor} />
+      )}
+      {tier > 0 && (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.captureRing,
+            { borderColor: flash, shadowColor: flash },
+            ringStyle,
+          ]}
+        />
       )}
     </Animated.View>
   )
@@ -881,7 +914,6 @@ const Card = React.memo(
       remaining,
       cardBackColor: propBackColor,
       bounty,
-      pending,
     } = props
     const contextBackColor = useCardBackColor()
     const cardBackColor =
@@ -956,15 +988,10 @@ const Card = React.memo(
         hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
         style={[
           isDeck ? styles.touchDeck : styles.touch,
-          { zIndex: pending ? 10 : isOpen ? 2 : 1 },
+          { zIndex: isOpen ? 2 : 1 },
         ]}
       >
-        <View
-          style={[
-            isDeck ? styles.wrapDeck : styles.wrap,
-            pending && styles.wrapPending,
-          ]}
-        >
+        <View style={isDeck ? styles.wrapDeck : styles.wrap}>
           {isDeck ? (
             <DeckCard remaining={remaining!} backColor={cardBackColor} />
           ) : isOpen && card ? (
@@ -990,8 +1017,6 @@ const Card = React.memo(
     if (prev.alwaysEnabled !== next.alwaysEnabled) return false
     if (prev.remaining !== next.remaining) return false
     if (prev.cardBackColor !== next.cardBackColor) return false
-    if (prev.pending !== next.pending) return false
-    // if (prev.onClick !== next.onClick) return false // ← ADD THIS
 
     const pc = prev.card
     const nc = next.card
@@ -1019,11 +1044,19 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.45, // was 0.25 — deeper shadow for depth
     shadowRadius: 5, // was 3
   },
-  wrapPending: {
-    transform: [{ scale: 1.15 }],
+  // Shockwave ring thrown by high-tier captures — mounted only on the one
+  // falling card, for the 230ms of its fall.
+  captureRing: {
+    position: "absolute",
+    top: -4,
+    left: -4,
+    right: -4,
+    bottom: -4,
+    borderRadius: CARD_RADIUS + 4,
     borderWidth: 2,
-    borderColor: "#E8C547",
-    borderRadius: CARD_RADIUS,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
   },
   wrapDeck: {
     width: DECK_W,

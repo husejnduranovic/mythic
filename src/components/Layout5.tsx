@@ -7,7 +7,6 @@ interface ILayout5Props {
   cards: ICard[]
   onClick: (index: number) => void
   bountyIndices?: Set<number>
-  pendingIndex?: number | null
 }
 
 /**
@@ -39,7 +38,6 @@ const Layout5 = React.memo(
     cards,
     onClick,
     bountyIndices = new Set(),
-    pendingIndex,
   }: ILayout5Props) => {
     if (cards.length < 28) return null
 
@@ -50,7 +48,6 @@ const Layout5 = React.memo(
         remove={!cards[i].visible}
         onClick={() => onClick(i)}
         bounty={bountyIndices?.has(i)}
-        pending={pendingIndex === i}
       />
     )
 
