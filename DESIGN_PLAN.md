@@ -4,6 +4,26 @@ Written 2026-06-12 from a full audit of the codebase (branch `refactor/v1.4-phas
 
 **North star:** the app icon (`assets/icon.png`) is the best-looking asset the product has — engraved gold/teal beast crests on dark-green cards, ornate serif title, painterly forest. The in-app UI should converge on that look. Today the gap is: system emojis as icons, off-palette neon accents (blue/purple/magenta), default Roboto everywhere, and "glows" that render as hard-edged blobs.
 
+> ## ⏸ Pause checkpoint — 2026-06-16
+>
+> Phase 3 is paused here. State for whoever resumes (slice-by-slice detail in the **Implementation status (live)** table below):
+>
+> **Redesign shipped** (built; device-verify pending unless owner-confirmed): **Home** (slice 6), **Hall of Glory / Champions' Cards** (5), **Profile / Warrior's Crest** (8), **Armory / Quartermaster's Stage** (7, 10, +25 lock visibility), **Card / Engraver's Deck** (9) + the shared sigil system (`src/ui/sigils.tsx`), **game-board chrome** (11–12 board+felt, 18 war-table stations, 19 GoldButton, 20–21 Cinzel numerals, 22 vanquish), **Between-levels / The March** (15), **Pre-battle / The Muster** (16), **Game-over / The Spoils Card** (14), **utility states** (17), **Lounge / Venue Hall** (24 + 26 identity/CTA), **Guide** (23). Shared UI in `src/ui/`: `theme.ts`, `Icon.tsx`, `GoldButton.tsx`, `honor.tsx`, `sigils.tsx`.
+>
+> **Paused — needs a higher-tier creative pass ("Fable-level"), currently unavailable:**
+> - **Game board** — tokenized chrome only; no marquee composition+motion recomposition like the other hero screens (card *field* owner-locked; the surround is the target).
+> - **Lounge** & **Guide** — first passes shipped (24/23, + Lounge 25/26), but not yet at the hero-screen bar; earmarked for a Fable-level revisit.
+>
+> Deliberately held rather than ship a lesser pass.
+>
+> **Unresolved bug — Hall of Glory, Daily tab:** the player's freshly-submitted Daily card shows on first view but disappears after switching to All-Time and back. Two fixes squashed into commit `182ad5f` (refetch the active tab on every switch + native-driver "deal" animation stranding fix — `stopAnimation()` before `setValue()`); **owner reports it persists → OPEN.** Likely-final fallback: stop resetting podium card opacity to 0 on tab switch (cards stay visible, only the ledger re-staggers) — not yet applied. Needs on-device repro.
+>
+> **Open items / decisions:**
+> - **Wild styles** (Findings #1 below): vestigial — delete the data (+ `wildStyle` from `ThemeConfig`) or restore the mechanic in Phase 4. Kept for storage compat until decided.
+> - **`migrateArmoryIfNeeded`** (Findings #2 below): **now wired into startup (`App.tsx:82`)** — the "never called" finding is resolved; open question is only whether to retire the one-time migration later.
+> - **Uncommitted:** `check_activity.js` moved root → `functions/` (not committed). **`Arenascreen.tsx`: clean — no uncommitted diff** (flagged as an open item but nothing to commit).
+> - Carryover: shared-component migration sweep (extract `TabBar`; menu screens → `GoldButton`/`honor.tsx`); CLAUDE.md drift (§9).
+
 **Screenshot → screen → file map** (for the implementing session):
 
 | Screenshot | Screen | Files |
@@ -80,7 +100,7 @@ Backlog status: **P0-5** (theme.ts) ✅ done. **P0-2** (Profile fix) ✅ done �
 
 Findings logged during commit 7 (owner decisions pending, **not** changed in that commit):
 1. **Wild styles are vestigial.** The wild-card mechanic was removed from `Game.tsx` (`158f5c9` "remove dead/commented wild-card, carry-combo & insurance code"); `WILD_STYLES`/`WILD_STYLE_CONFIG` now have no picker tab (dropped in `b3e0b1f`, pre-dating this branch) **and no in-game consumer** — 6 items incl. the 42-day-streak Inferno Bolt are unreachable, and CLAUDE.md still lists wild cards as a core gameplay concept (drift, see §9). A Wilds tab was deliberately **not** restored in commit 7: selling styles for a card that never renders would be dishonest. Owner call: either delete the wild data (+ `wildStyle` from `ThemeConfig`) or restore the mechanic in Phase 4 — until then the data stays for storage compatibility.
-2. **`migrateArmoryIfNeeded` is exported but never called** (no call site anywhere in `src/` or `App.tsx`) — the legacy-cosmetic-ID cleanup it implements has never run in production. Either wire it into app startup or delete it. Low risk either way (invalid stored IDs fall back to defaults via `getSelectedTheme`'s `find(...) || [0]`).
+2. **`migrateArmoryIfNeeded` is exported but never called** (no call site anywhere in `src/` or `App.tsx`) — the legacy-cosmetic-ID cleanup it implements has never run in production. Either wire it into app startup or delete it. Low risk either way (invalid stored IDs fall back to defaults via `getSelectedTheme`'s `find(...) || [0]`). **— UPDATE 2026-06-16: resolved (wired in). `App.tsx:82` now calls it in a mount `useEffect`, so it runs at startup; the only remaining question is whether to retire this one-time migration once the playerbase has migrated.**
 
 Known dead-code carryover: ~~Homescreen `menuGrid`/`loungeBtn` blocks~~ — cleaned in commit 6.
 

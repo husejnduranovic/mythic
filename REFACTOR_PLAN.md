@@ -2,6 +2,31 @@
 
 Ordered smallest-risk-first. Each Phase 1 step is a separate commit; the app must build (`tsc --noEmit` + `gradlew assembleRelease`) after every step. No behavior changes in Phase 1.
 
+---
+
+## ⏸ Pause checkpoint — 2026-06-16
+
+Work is paused here. State for whoever resumes (branch `refactor/v1.4-phase3`):
+
+**Done & committed:**
+- **Phase 1 refactor** ✅ (Steps 1.0–1.7; 1.8 skipped). **Phase 2 bug fixes** ✅ — Bug 1 (atomic rename + all-time source) and Bug 2 (global arena invites), both verified on a real build.
+- **Phase 3 redesign** — substantially shipped (per-slice log lives in `DESIGN_PLAN.md` → *Implementation status*): Home, Hall of Glory, Profile, Armory, Card (+ `src/ui/sigils.tsx`), full game-board **chrome** (Timer/Spoils/war-bar/combo/milestones/Cinzel numerals/vanquish), Between-levels, Pre-battle, Game-over, utility screen-states, Lounge, Guide. Shared UI extracted to `src/ui/`: `theme.ts`, `Icon.tsx`, `GoldButton.tsx`, `honor.tsx`, `sigils.tsx`.
+
+**Paused — pending a higher-tier creative pass ("Fable-level", currently unavailable):**
+- **Game board** — chrome is tokenized, but the screen hasn't had the marquee composition+motion recomposition the other hero screens got (the card *field* is owner-locked; the surround is the target).
+- **Lounge** & **Guide** — first recomposition passes shipped (slices 24/23 + Lounge follow-ups 25/26), but not yet at the hero-screen bar; flagged for a Fable-level revisit.
+Held deliberately rather than forcing a lesser pass.
+
+**Unresolved bug — Hall of Glory, Daily tab:** a freshly-submitted Daily card shows on first view but disappears after switching to All-Time and back to Daily. Two fix attempts squashed into commit `182ad5f` (refetch the active tab on every switch + a native-driver "deal" animation stranding fix — `stopAnimation()` before `setValue()`); **owner reports the symptom persists → OPEN.** Needs on-device repro; likely-final fallback identified (stop resetting podium card opacity to 0 on tab switch — cards stay visible, only the ledger re-staggers) but not yet applied.
+
+**Open items / cleanup:**
+- **Wild styles decision** (`DESIGN_PLAN.md` Findings #1): mechanic removed in `158f5c9`; `WILD_STYLES`/`WILD_STYLE_CONFIG` have no in-game consumer (Game.tsx only sets a vestigial `wildStyle: "classic"` field), no picker, 6 unreachable items. Delete the data (+ `wildStyle` from `ThemeConfig`) or restore the mechanic in Phase 4 — kept for storage compat until decided.
+- **`migrateArmoryIfNeeded`** — **now wired into startup (`App.tsx:82`)**, so `DESIGN_PLAN.md` Finding #2's "never called" is stale/resolved; the only open question is whether to retire the one-time legacy-ID migration once the playerbase has run it.
+- **Uncommitted working tree:** `check_activity.js` relocated root → `functions/` (root deletion + untracked `functions/check_activity.js`), not committed — debug script; decide keep-in-`functions/` vs gitignore. **`Arenascreen.tsx`: no uncommitted diff (clean vs HEAD — nothing to commit)** despite being flagged as an open item.
+- Carryover: CLAUDE.md drift (combo milestones / multipliers / wild cards / item count — `DESIGN_PLAN.md` §9); shared-component migration sweep (extract `TabBar`; migrate the menu screens onto `GoldButton`/`honor.tsx`).
+
+---
+
 ## Current state (findings)
 
 Lines below are the **baseline at plan-writing time**; the *Now* column tracks Phase 1 progress.

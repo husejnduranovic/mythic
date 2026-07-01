@@ -545,30 +545,38 @@ const Scoreboard = ({ onBack, uid }: ScoreboardProps) => {
   const isLoading = tab === "daily" ? loadingDaily : loadingAllTime
   const showContent = !isLoading && scores.length > 0
 
-  // Deal the trio in whenever fresh content shows (mount, tab switch, or a
-  // background refresh that changes the roster): sides first, champion lands
-  // last. stopAnimation() before setValue() is essential — these values are
-  // native-driven, and re-issuing setValue() on a value that has already run a
-  // native animation can fail to propagate, which left the champion card
-  // stranded at opacity 0 (invisible) when returning to a tab. Stopping first
-  // clears the native animation so the reset + re-deal reliably reaches 1. The
-  // cleanup cancels an in-flight deal so overlapping staggers can't fight.
+  // Deal the trio in ONCE, on the first reveal: sides first, champion lands
+  // last. On every later reveal (tab switch or background refresh) we must NOT
+  // reset the deals to 0 — a native-driven value re-set to 0 and re-animated
+  // can fail to propagate, stranding the champion card at opacity 0 (invisible)
+  // when returning to the Daily tab. Instead we keep the podium mounted and
+  // simply snap the deals to 1 (visible); only the ledger rows re-stagger, via
+  // their tab-keyed remount. The cleanup cancels an in-flight first deal.
+  const hasDealt = useRef(false)
   useEffect(() => {
     if (!showContent) return
-    const t = (i: number, dur = 300) =>
-      Animated.timing(deals[i], {
-        toValue: 1,
-        duration: dur,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
+    if (!hasDealt.current) {
+      hasDealt.current = true
+      const t = (i: number, dur = 300) =>
+        Animated.timing(deals[i], {
+          toValue: 1,
+          duration: dur,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        })
+      deals.forEach((d) => {
+        d.stopAnimation()
+        d.setValue(0)
       })
+      const anim = Animated.stagger(90, [t(1), t(2), t(0, 340)])
+      anim.start()
+      return () => anim.stop()
+    }
+    // Subsequent reveals: keep cards visible, never strand at 0.
     deals.forEach((d) => {
       d.stopAnimation()
-      d.setValue(0)
+      d.setValue(1)
     })
-    const anim = Animated.stagger(90, [t(1), t(2), t(0, 340)])
-    anim.start()
-    return () => anim.stop()
   }, [showContent, tab, scores.length])
 
   const myIndex = uid ? scores.findIndex((s) => s.uid === uid) : -1
@@ -588,13 +596,10 @@ const Scoreboard = ({ onBack, uid }: ScoreboardProps) => {
   const switchTab = (next: "daily" | "alltime") => {
     if (tab === next) return
     SoundService.playDeckDraw()
-    // Reset before the re-render so the new tab's cards never flash at full
-    // opacity for a frame before the deal effect kicks in. stopAnimation()
-    // first so a still-running native deal can't strand the value (see effect).
-    deals.forEach((d) => {
-      d.stopAnimation()
-      d.setValue(0)
-    })
+    // Do NOT reset the podium deals here — keeping the honor-cards mounted and
+    // visible across the switch is what prevents the champion card from being
+    // stranded at opacity 0 on return to the Daily tab. Only the ledger rows
+    // re-animate (they remount via their tab-keyed key).
     scrollRef.current?.scrollTo({ y: 0, animated: false })
     setTab(next)
   }

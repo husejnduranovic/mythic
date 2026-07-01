@@ -116,8 +116,16 @@ export const GameOverScreen = ({
     const loop = (v: Animated.Value, lo: number, hi: number, d: number) =>
       Animated.loop(
         Animated.sequence([
-          Animated.timing(v, { toValue: hi, duration: d, useNativeDriver: true }),
-          Animated.timing(v, { toValue: lo, duration: d, useNativeDriver: true }),
+          Animated.timing(v, {
+            toValue: hi,
+            duration: d,
+            useNativeDriver: true,
+          }),
+          Animated.timing(v, {
+            toValue: lo,
+            duration: d,
+            useNativeDriver: true,
+          }),
         ]),
       ).start()
     loop(pulse, 0.3, 0.5, 2000)
@@ -141,20 +149,40 @@ export const GameOverScreen = ({
   // Outcome → metal + crest medallion (mirrors the podium place metals).
   const outcome: { title: string; trim: string; medallion: IconName } =
     isAllTimeRecord
-      ? { title: "ALL-TIME RECORD", trim: color.goldBright, medallion: "trophy-variant" }
+      ? {
+          title: "ALL-TIME RECORD",
+          trim: color.goldBright,
+          medallion: "trophy-variant",
+        }
       : dailyMode
-        ? { title: "QUEST COMPLETE", trim: color.gold, medallion: "script-text" }
+        ? {
+            title: "QUEST COMPLETE",
+            trim: color.gold,
+            medallion: "script-text",
+          }
         : arenaMode
           ? !allFinished
             ? { title: "FINALIZING", trim: TIER.steel, medallion: "timer-sand" }
             : myArenaRank === 1
               ? { title: "VICTORY", trim: color.gold, medallion: "crown" }
-              : { title: `RANK #${myArenaRank}`, trim: TIER.steel, medallion: "sword-cross" }
+              : {
+                  title: `RANK #${myArenaRank}`,
+                  trim: TIER.steel,
+                  medallion: "sword-cross",
+                }
           : isVictory
             ? { title: "VICTORY", trim: color.gold, medallion: "crown" }
             : isMidBattle
-              ? { title: "BATTLE OVER", trim: TIER.steel, medallion: "sword-cross" }
-              : { title: "RETREAT", trim: TIER.bronze, medallion: "shield-half-full" }
+              ? {
+                  title: "BATTLE OVER",
+                  trim: TIER.steel,
+                  medallion: "sword-cross",
+                }
+              : {
+                  title: "RETREAT",
+                  trim: TIER.bronze,
+                  medallion: "shield-half-full",
+                }
 
   const crowned = isAllTimeRecord || (!arenaMode && isVictory && !dailyMode)
 
@@ -166,7 +194,8 @@ export const GameOverScreen = ({
   const cardW = Math.round(cardH / 1.46)
 
   // ── Async rank slot ──
-  const rankResolved = !arenaMode && (dailyMode ? dailyRank !== null : rank !== null)
+  const rankResolved =
+    !arenaMode && (dailyMode ? dailyRank !== null : rank !== null)
   const rankValue = dailyMode ? dailyRank : rank
   const rankLabel = dailyMode ? "IN TODAY'S QUEST" : "AMONG ALL WARRIORS"
 
@@ -268,13 +297,21 @@ export const GameOverScreen = ({
                     key={p.uid || i}
                     style={[g.arenaRow, p.uid === uid && g.arenaRowYou]}
                   >
-                    <Text style={[g.arenaPos, p.uid === uid && { color: color.gold }]}>
+                    <Text
+                      style={[
+                        g.arenaPos,
+                        p.uid === uid && { color: color.gold },
+                      ]}
+                    >
                       {i + 1}
                     </Text>
                     <View
                       style={[
                         g.arenaRing,
-                        i === 0 && { borderColor: color.gold, backgroundColor: color.goldWash },
+                        i === 0 && {
+                          borderColor: color.gold,
+                          backgroundColor: color.goldWash,
+                        },
                       ]}
                     >
                       <Icon
@@ -284,14 +321,19 @@ export const GameOverScreen = ({
                       />
                     </View>
                     <Text
-                      style={[g.arenaName, p.uid === uid && { color: color.gold }]}
+                      style={[
+                        g.arenaName,
+                        p.uid === uid && { color: color.gold },
+                      ]}
                       numberOfLines={1}
                     >
                       {p.heroName}
                     </Text>
                     <View style={{ flex: 1 }} />
                     <Text style={g.arenaCombo}>x{p.bestCombo || 0}</Text>
-                    <Text style={g.arenaScore}>{(p.score || 0).toLocaleString()}</Text>
+                    <Text style={g.arenaScore}>
+                      {(p.score || 0).toLocaleString()}
+                    </Text>
                   </View>
                 ))}
               </ScrollView>
@@ -301,12 +343,18 @@ export const GameOverScreen = ({
                 <View style={g.rankSlot}>
                   {rankResolved ? (
                     <View style={g.rankResolved}>
-                      <Icon name="trophy-variant" size={14} color={color.goldBright} />
+                      <Icon
+                        name="trophy-variant"
+                        size={14}
+                        color={color.goldBright}
+                      />
                       <Text style={g.rankNum}>#{rankValue}</Text>
                       <Text style={g.rankLabel}>{rankLabel}</Text>
                     </View>
                   ) : (
-                    <Animated.Text style={[g.rankShimmer, { opacity: shimmer }]}>
+                    <Animated.Text
+                      style={[g.rankShimmer, { opacity: shimmer }]}
+                    >
                       — counting ranks —
                     </Animated.Text>
                   )}
@@ -339,7 +387,11 @@ export const GameOverScreen = ({
                 {/* one-more-battle goal */}
                 {goalStruck ? (
                   <View style={[g.goal, g.goalStruck]}>
-                    <Icon name="star-four-points" size={12} color={color.goldBright} />
+                    <Icon
+                      name="star-four-points"
+                      size={12}
+                      color={color.goldBright}
+                    />
                     <Text style={g.goalStruckTxt}>
                       NEW PERSONAL BEST
                       {pbDelta > 0 ? `  ·  +${pbDelta.toLocaleString()}` : ""}
@@ -348,14 +400,16 @@ export const GameOverScreen = ({
                 ) : goalGap > 0 ? (
                   <View style={g.goal}>
                     <Text style={g.goalTxt}>
-                      <Text style={g.goalNum}>{goalGap.toLocaleString()}</Text> spoils
-                      from your personal best
+                      <Text style={g.goalNum}>{goalGap.toLocaleString()}</Text>{" "}
+                      spoils from your personal best
                     </Text>
                     <View style={g.goalTrack}>
                       <View
                         style={[
                           g.goalFill,
-                          { width: `${Math.min(100, (score / previousBest) * 100)}%` },
+                          {
+                            width: `${Math.min(100, (score / previousBest) * 100)}%`,
+                          },
                         ]}
                       />
                     </View>
