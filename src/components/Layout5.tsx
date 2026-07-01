@@ -19,7 +19,7 @@ interface ILayout5Props {
  *       [3]     [5]                             [16]      [20]
  *              [6]
  *
- *     [21] [22] [23] [24] [25] [26] [27]   ← OPEN base
+ *     [21] [22] [23] [24] [25] [26] [27]   ← interlocked base (hoard pockets)
  *
  * LEFT DIAMOND (0-3):   [0]←[1,2]  [1]←[3]  [2]←[3]  [3]=OPEN
  * LEFT CHAIN (4-6):     [4]←[5]  [5]←[6]  [6]=OPEN
@@ -27,7 +27,11 @@ interface ILayout5Props {
  *                        [11],[12],[13]=OPEN
  * RIGHT CHAIN (14-16):  [14]←[15]  [15]←[16]  [16]=OPEN
  * RIGHT DIAMOND (17-20): [17]←[18,19]  [18]←[20]  [19]←[20]  [20]=OPEN
- * BASE (21-27):          all OPEN
+ * BASE (21-27) — interlocked since 2026-07-01 (GAMEPLAY §3.2 G5: a 7-card
+ * open base made the finale's opening "tap freely along the bottom"):
+ *   [21],[23],[25],[27] OPEN — [22]←[21,23]  [24]←[23,25]  [26]←[25,27]
+ *   The three pockets sit face-down between their guards; no card slot moved.
+ *   Open count 14 → 11. OWNER PLAYTEST GATE (this is the money level).
  */
 
 const isCleared = (cards: ICard[], ...i: number[]) =>
@@ -145,15 +149,15 @@ const Layout5 = React.memo(
           </View>
         </View>
 
-        {/* BASE ROW — always open */}
+        {/* BASE ROW — hoard pockets: even slots locked between their guards */}
         <View style={styles.baseRow}>
-          {C(21, cards[21].visible)}
-          {C(22, cards[22].visible)}
-          {C(23, cards[23].visible)}
-          {C(24, cards[24].visible)}
-          {C(25, cards[25].visible)}
-          {C(26, cards[26].visible)}
-          {C(27, cards[27].visible)}
+          {C(21, true)}
+          {C(22, isCleared(cards, 21, 23))}
+          {C(23, true)}
+          {C(24, isCleared(cards, 23, 25))}
+          {C(25, true)}
+          {C(26, isCleared(cards, 25, 27))}
+          {C(27, true)}
         </View>
       </View>
     )

@@ -18,8 +18,7 @@ import { SoundService } from "../services/SoundService"
 import { ICard } from "./Card"
 import Card from "./Card"
 import Layout1 from "./Layout1"
-import Layout2 from "./Layout2"
-import Layout3 from "./Layout3"
+import LayoutWarfront from "./LayoutWarfront"
 import Timer from "./Timer"
 import { saveScore } from "../services/LocalScoreService"
 import {
@@ -898,6 +897,8 @@ const Game = ({
     }
 
     switch (config.layout) {
+      case 10:
+        return <LayoutWarfront key={layoutKey} {...p} />
       case 9:
         return <Layout9 key={layoutKey} {...p} />
       case 8:
@@ -906,8 +907,6 @@ const Game = ({
         return <Layout7 key={layoutKey} {...p} />
       case 5:
         return <Layout5 key={layoutKey} {...p} />
-      case 2:
-        return <Layout2 key={layoutKey} {...p} />
       default:
         return <Layout1 key={layoutKey} {...p} />
     }

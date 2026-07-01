@@ -136,10 +136,12 @@ Seeded deck per `getTodayString()`, all 6 levels, one attempt/day, own leaderboa
 | 2 | 1.5× | 9 | `Layout9.tsx` | Cross of Clans | 32 | **12** | 3 | none |
 | 3 | 2.0× | 7 | `Layout7.tsx` | The Stronghold | 30 | **10** | 4 (pyramid) | 4 open |
 | 4 | 2.5× | 8 | `Layout8.tsx` | Snake Eyes | 32 | **9** | 5 (spine) | 4 open |
-| 5 | 3.0× | 2 | `Layout2.tsx` | (unnamed piles) | 32 | **12** | 3 | 4 open |
-| 6 | 3.5× | 5 | `Layout5.tsx` | Dragon's Spine | 28 | **14** | 3 | 7 open |
+| 5 | 3.0× | 10 | `LayoutWarfront.tsx` | **The Warfront** *(2026-07-01, playtest-gated)* | 32 | **9** | 4 (breach) | **none** |
+| 6 | 3.5× | 5 | `Layout5.tsx` | Dragon's Spine | 28 | **11** *(was 14 — base interlocked 2026-07-01)* | 3 | 7 slots, 4 open |
 
-Shelved (not in rotation): `Layout3.tsx` "Fortress" (36), `Layout4c.tsx` "Reverse Tripeaks" (36), `Layout6.tsx` "Colosseum" (32).
+Shelved (not in rotation): `Layout2.tsx` (unnamed piles — replaced by the Warfront at level 5), `Layout3.tsx` "Fortress" (36), `Layout4c.tsx` "Reverse Tripeaks" (36), `Layout6.tsx` "Colosseum" (32).
+
+> **2026-07-01 — The Warfront (new, level 5).** The set's first asymmetric, no-base-row board, answering §3.2's two convergence levers directly (symmetry halves the decision space; base rows homogenize openings). Three unequal structures: a guarded **Siege Tower** (keystone 1→2→2), the **Breach** — an escalating 2→3→4→5 fan, the inverse of the Stronghold pyramid and the set's biggest cascade — and a shallow **Supply Line** (1:1 fuel you ration between pushes). 9 opens (Snake Eyes' count, right for 3.0×). Cascade-event ratios sit in the §3.3 band for 23/32 cards; the supply is deliberately flat as chain fuel. Blocking graph machine-verified fully-clearable. **Owner feel-gate before release** — same judgment that picked the active six.
 
 ### 3.1 The six active layouts
 

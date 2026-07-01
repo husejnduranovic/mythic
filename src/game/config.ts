@@ -11,7 +11,9 @@ export const LEVEL_CONFIG: Record<
   2: { fieldCards: 32, deckStart: 32, time: 85, layout: 9 },
   3: { fieldCards: 30, deckStart: 30, time: 80, layout: 7 },
   4: { fieldCards: 32, deckStart: 32, time: 80, layout: 8 },
-  5: { fieldCards: 32, deckStart: 32, time: 85, layout: 2 },
+  // Layout 10 "The Warfront" replaced the unnamed piles+wall (layout 2,
+  // shelved) — asymmetric, no base row; owner playtest gate applies.
+  5: { fieldCards: 32, deckStart: 32, time: 85, layout: 10 },
   6: { fieldCards: 28, deckStart: 28, time: 75, layout: 5 },
 }
 
