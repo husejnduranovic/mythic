@@ -20,6 +20,7 @@ import {
   View,
 } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { TOTAL_LEVELS } from "../../game/config"
 import ReturnToCastle from "../ReturnToCastle"
 import RecordCelebration from "../RecordCelebration"
 import PersonalBestBanner from "../PersonalBestBanner"
@@ -69,6 +70,7 @@ export const GameOverScreen = ({
   score,
   bestCombo,
   bannersPlanted = 0,
+  perfectFields = 0,
   totalCleared,
   totalFieldCards,
   dailyMode,
@@ -92,6 +94,7 @@ export const GameOverScreen = ({
   score: number
   bestCombo: number
   bannersPlanted?: number
+  perfectFields?: number
   totalCleared: number
   totalFieldCards: number
   dailyMode: boolean
@@ -188,6 +191,9 @@ export const GameOverScreen = ({
     ? arenaPlayers.findIndex((p: any) => p.uid === uid) + 1
     : 0
 
+  // The apex accolade: every field of the campaign cleared perfectly.
+  const isFlawless = !arenaMode && perfectFields >= TOTAL_LEVELS
+
   // Outcome → metal + crest medallion (mirrors the podium place metals).
   const outcome: { title: string; trim: string; medallion: IconName } =
     isAllTimeRecord
@@ -196,6 +202,12 @@ export const GameOverScreen = ({
           trim: color.goldBright,
           medallion: "trophy-variant",
         }
+      : isFlawless
+        ? {
+            title: "FLAWLESS CONQUEST",
+            trim: color.goldBright,
+            medallion: "star-four-points",
+          }
       : dailyMode
         ? {
             title: "QUEST COMPLETE",
@@ -226,7 +238,8 @@ export const GameOverScreen = ({
                   medallion: "shield-half-full",
                 }
 
-  const crowned = isAllTimeRecord || (!arenaMode && isVictory && !dailyMode)
+  const crowned =
+    isAllTimeRecord || isFlawless || (!arenaMode && isVictory && !dailyMode)
 
   // ── Geometry ──
   const padL = Math.max(14, insets.left)
@@ -342,7 +355,13 @@ export const GameOverScreen = ({
                 pulse={pulse}
                 float={float}
                 index={rankResolved && rankValue ? `#${rankValue}` : undefined}
-                badge={isAllTimeRecord ? "RECORD" : undefined}
+                badge={
+                  isAllTimeRecord
+                    ? "RECORD"
+                    : isFlawless
+                      ? "FLAWLESS"
+                      : undefined
+                }
               >
                 {cardBody}
               </HonorCard>
@@ -453,10 +472,15 @@ export const GameOverScreen = ({
                   />
                   <LedgerSep />
                   <LedgerRow
-                    icon="sword-cross"
-                    label="Beasts Captured"
-                    value={totalCleared.toLocaleString()}
+                    icon="star-four-points"
+                    label="Perfect Fields"
+                    value={`${perfectFields}/${TOTAL_LEVELS}`}
                     index={1}
+                    valueColor={
+                      perfectFields >= TOTAL_LEVELS
+                        ? color.goldBright
+                        : color.gold
+                    }
                   />
                   <LedgerSep />
                   <LedgerRow

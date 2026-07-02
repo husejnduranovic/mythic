@@ -1041,6 +1041,7 @@ const Game = ({
         score={score}
         bestCombo={bestCombo}
         bannersPlanted={bannersPlanted}
+        perfectFields={perfectFields}
         totalCleared={totalCleared}
         totalFieldCards={totalFieldCards}
         dailyMode={dailyMode}
