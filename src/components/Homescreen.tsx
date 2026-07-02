@@ -170,6 +170,28 @@ const f = StyleSheet.create({
 
 // ── Screen ──────────────────────────────────────────────────────────────────
 
+// Press weight — the dais-punch grammar from the war table, applied to the
+// menu's pressables: dip on press-in, spring back with a slight overshoot.
+// Event-driven native-driver transforms only; nothing runs while idle.
+const usePressPunch = (dip = 0.965) => {
+  const scale = useRef(new Animated.Value(1)).current
+  const pressIn = () =>
+    Animated.spring(scale, {
+      toValue: dip,
+      speed: 40,
+      bounciness: 0,
+      useNativeDriver: true,
+    }).start()
+  const pressOut = () =>
+    Animated.spring(scale, {
+      toValue: 1,
+      speed: 24,
+      bounciness: 9,
+      useNativeDriver: true,
+    }).start()
+  return { scale, pressIn, pressOut }
+}
+
 const HomeScreen = ({
   onPlay,
   onScoreboard,
@@ -197,6 +219,10 @@ const HomeScreen = ({
   const glowPulse = useRef(new Animated.Value(0.3)).current
   const fanFloat = useRef(new Animated.Value(0)).current
   const dotPulse = useRef(new Animated.Value(0.55)).current
+
+  const playPunch = usePressPunch(0.97)
+  const dailyPunch = usePressPunch()
+  const arenaPunch = usePressPunch()
 
   const [prizeModalVisible, setPrizeModalVisible] = useState(false)
 
@@ -347,9 +373,43 @@ const HomeScreen = ({
 
   return (
     <View style={styles.container}>
-      {/* Background atmosphere */}
+      {/* Background atmosphere — layered table-light pool under the crest
+          fan (the battlefield's light grammar: hot core fading to dark edges;
+          all three layers breathe on the one existing glowPulse loop). */}
       <View style={styles.bgLayer} pointerEvents="none">
-        <Animated.View style={[styles.bgGlow, { opacity: glowPulse }]} />
+        <Animated.View
+          style={[
+            styles.poolHalo,
+            {
+              opacity: glowPulse.interpolate({
+                inputRange: [0.3, 0.5],
+                outputRange: [0.55, 1],
+              }),
+            },
+          ]}
+        />
+        <Animated.View
+          style={[
+            styles.poolMid,
+            {
+              opacity: glowPulse.interpolate({
+                inputRange: [0.3, 0.5],
+                outputRange: [0.5, 1],
+              }),
+            },
+          ]}
+        />
+        <Animated.View
+          style={[
+            styles.poolCore,
+            {
+              opacity: glowPulse.interpolate({
+                inputRange: [0.3, 0.5],
+                outputRange: [0.4, 1],
+              }),
+            },
+          ]}
+        />
         <Text style={[styles.bgRune, { top: "8%", left: "4%" }]}>ᚠ</Text>
         <Text style={[styles.bgRune, { top: "12%", right: "55%" }]}>ᚦ</Text>
         <Text style={[styles.bgRune, { bottom: "15%", left: "8%" }]}>ᚱ</Text>
@@ -401,6 +461,28 @@ const HomeScreen = ({
           </Animated.View>
         </Animated.View>
 
+        {/* Shelf shadow — grounds the levitating fan; counter-breathes with
+            it (fan rises → shadow tightens and lightens). */}
+        <Animated.View
+          style={[
+            styles.fanShadow,
+            {
+              opacity: fanFloat.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0.4, 0.22],
+              }),
+              transform: [
+                {
+                  scaleX: fanFloat.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [1, 0.92],
+                  }),
+                },
+              ],
+            },
+          ]}
+        />
+
         {/* Identity — name, streak, prize */}
         <Animated.View style={[styles.greetingWrap, { opacity: titleOpacity }]}>
           <View style={styles.greetingLine} />
@@ -416,16 +498,35 @@ const HomeScreen = ({
             onPress={onProfile}
             activeOpacity={0.8}
           >
-            <Icon name="fire" size={13} color={color.ember} />
+            {/* the ember flickers — rides the existing dotPulse loop */}
+            <Animated.View
+              style={{
+                opacity: dotPulse.interpolate({
+                  inputRange: [0.55, 1],
+                  outputRange: [0.65, 1],
+                }),
+              }}
+            >
+              <Icon name="fire" size={13} color={color.ember} />
+            </Animated.View>
             <Text style={styles.streakBadgeCount}>{currentStreak}</Text>
             <Text style={styles.streakBadgeLabel}>DAY STREAK</Text>
             {/* Ember Ward spent — the ember survived the night */}
             {emberWarded && (
-              <Icon
-                name="shield-half-full"
-                size={11}
-                color="rgba(255,140,0,0.75)"
-              />
+              <Animated.View
+                style={{
+                  opacity: dotPulse.interpolate({
+                    inputRange: [0.55, 1],
+                    outputRange: [1, 0.65],
+                  }),
+                }}
+              >
+                <Icon
+                  name="shield-half-full"
+                  size={11}
+                  color="rgba(255,140,0,0.75)"
+                />
+              </Animated.View>
             )}
           </TouchableOpacity>
         )}
@@ -450,29 +551,38 @@ const HomeScreen = ({
           { opacity: menuOpacity, transform: [{ translateX: menuX }] },
         ]}
       >
-        {/* Main action — Enter Battle */}
-        <TouchableOpacity
-          style={styles.playBtn}
-          onPress={onPlay}
-          activeOpacity={0.85}
-        >
-          <View style={styles.playPinstripe} pointerEvents="none" />
-          <View style={styles.playBtnInner}>
-            <Icon name="sword-cross" size={22} color="#1a1a1a" />
-            <View>
-              <Text style={styles.playText}>Enter Battle</Text>
-              <Text style={styles.playSubtext}>Start a new conquest</Text>
+        {/* Main action — Enter Battle (dais-punch press weight) */}
+        <Animated.View style={{ transform: [{ scale: playPunch.scale }] }}>
+          <TouchableOpacity
+            style={styles.playBtn}
+            onPress={onPlay}
+            onPressIn={playPunch.pressIn}
+            onPressOut={playPunch.pressOut}
+            activeOpacity={0.92}
+          >
+            <View style={styles.playPinstripe} pointerEvents="none" />
+            <View style={styles.playBtnInner}>
+              <Icon name="sword-cross" size={22} color="#1a1a1a" />
+              <View>
+                <Text style={styles.playText}>Enter Battle</Text>
+                <Text style={styles.playSubtext}>Start a new conquest</Text>
+              </View>
             </View>
-          </View>
-          <Text style={styles.playArrow}>›</Text>
-        </TouchableOpacity>
+            <Text style={styles.playArrow}>›</Text>
+          </TouchableOpacity>
+        </Animated.View>
 
         {/* Mode pair — Daily Quest | Arena */}
         <View style={styles.modeRow}>
+          <Animated.View
+            style={{ flex: 1, transform: [{ scale: dailyPunch.scale }] }}
+          >
           <TouchableOpacity
-            style={[styles.modeCard, styles.modeCardGold]}
+            style={[styles.modeCard, styles.modeCardGold, styles.modeCardFill]}
             onPress={onDailyQuest}
-            activeOpacity={0.85}
+            onPressIn={dailyPunch.pressIn}
+            onPressOut={dailyPunch.pressOut}
+            activeOpacity={0.9}
           >
             <View
               style={[styles.modePinstripe, { borderColor: "rgba(232,197,71,0.14)" }]}
@@ -486,11 +596,17 @@ const HomeScreen = ({
             <Text style={styles.modeTitleGold}>Daily Quest</Text>
             <Text style={styles.modeDesc}>Same deck for all</Text>
           </TouchableOpacity>
+          </Animated.View>
 
+          <Animated.View
+            style={{ flex: 1, transform: [{ scale: arenaPunch.scale }] }}
+          >
           <TouchableOpacity
-            style={[styles.modeCard, styles.modeCardEmber]}
+            style={[styles.modeCard, styles.modeCardEmber, styles.modeCardFill]}
             onPress={onArena}
-            activeOpacity={0.85}
+            onPressIn={arenaPunch.pressIn}
+            onPressOut={arenaPunch.pressOut}
+            activeOpacity={0.9}
           >
             <View
               style={[styles.modePinstripe, { borderColor: "rgba(255,140,0,0.14)" }]}
@@ -509,6 +625,7 @@ const HomeScreen = ({
             <Text style={styles.modeTitleEmber}>Arena</Text>
             <Text style={styles.modeDesc}>Real-time duels</Text>
           </TouchableOpacity>
+          </Animated.View>
         </View>
 
         {/* Section divider */}
@@ -634,14 +751,34 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
-  bgGlow: {
+  // Table-light pool — three stacked layers, hot core to soft halo (the
+  // in-game battlefield light grammar; replaces the old single hard blob).
+  poolHalo: {
     position: "absolute",
-    top: "20%",
+    top: "18%",
+    left: "5%",
+    width: "42%",
+    height: "60%",
+    borderRadius: 999,
+    backgroundColor: "rgba(232,197,71,0.035)",
+  },
+  poolMid: {
+    position: "absolute",
+    top: "28%",
     left: "10%",
-    width: "30%",
-    height: "50%",
-    borderRadius: 200,
-    backgroundColor: "rgba(232,197,71,0.05)",
+    width: "32%",
+    height: "42%",
+    borderRadius: 999,
+    backgroundColor: "rgba(232,197,71,0.045)",
+  },
+  poolCore: {
+    position: "absolute",
+    top: "36%",
+    left: "16%",
+    width: "20%",
+    height: "26%",
+    borderRadius: 999,
+    backgroundColor: "rgba(240,210,110,0.06)",
   },
   bgRune: {
     position: "absolute",
@@ -717,6 +854,13 @@ const styles = StyleSheet.create({
   cardLeft: { marginRight: -16, zIndex: 1 },
   cardCenter: { zIndex: 2 },
   cardRight: { marginLeft: -16, zIndex: 1 },
+  fanShadow: {
+    width: 150,
+    height: 9,
+    borderRadius: 999,
+    backgroundColor: "#000",
+    marginTop: 2,
+  },
 
   // Greeting
   greetingWrap: {
@@ -861,6 +1005,12 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     paddingVertical: 9,
     paddingHorizontal: 12,
+  },
+  // Inside the press-punch wrapper (which owns the row's flex:1) the card
+  // must size by content, not flex — flex:1 in an auto-height parent collapses.
+  modeCardFill: {
+    flex: 0,
+    width: "100%",
   },
   modeCardGold: {
     backgroundColor: "rgba(232,197,71,0.05)",
