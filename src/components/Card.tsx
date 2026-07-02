@@ -116,8 +116,10 @@ const BACK_RUNES = ["ᚠ", "ᚦ", "ᚱ", "ᛟ"]
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window")
 const CARD_SCALE = Math.min(SCREEN_W / 780, SCREEN_H / 360, 1)
-const CARD_W = Math.round(52 * CARD_SCALE)
-const CARD_H = Math.round(74 * CARD_SCALE)
+// Exported for layouts that need exact brick/half-card alignment (Siege ring,
+// Mythic Peaks classic offsets) — everything else keeps centering rows.
+export const CARD_W = Math.round(52 * CARD_SCALE)
+export const CARD_H = Math.round(74 * CARD_SCALE)
 const DECK_W = Math.round(56 * CARD_SCALE)
 const DECK_H = Math.round(78 * CARD_SCALE)
 const CARD_RADIUS = Math.round(10 * CARD_SCALE)

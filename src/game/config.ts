@@ -14,7 +14,9 @@ export const LEVEL_CONFIG: Record<
   }
 > = {
   1: { fieldCards: 29, deckStart: 29, time: 75, layout: 1, name: "Battlements" },
-  2: { fieldCards: 32, deckStart: 32, time: 85, layout: 9, name: "Cross of Clans" },
+  // Layout 11 "The Siege" replaced Cross of Clans (layout 9, shelved) after
+  // the 2026-07-02 layout audit — 75% dead taps, four identical clusters.
+  2: { fieldCards: 32, deckStart: 32, time: 85, layout: 11, name: "The Siege" },
   3: { fieldCards: 30, deckStart: 30, time: 80, layout: 7, name: "The Stronghold" },
   4: { fieldCards: 32, deckStart: 32, time: 80, layout: 8, name: "Snake Eyes" },
   // Layout 10 "The Citadel" (mirror-symmetric successor to the unshipped
