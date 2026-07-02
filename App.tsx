@@ -24,6 +24,7 @@ import { View } from "react-native"
 import { logError } from "./src/services/logError"
 import { usePresence } from "./src/hooks/usePresence"
 import { useUserStats } from "./src/hooks/useUserStats"
+import { ScreenEnter } from "./src/ui/ScreenEnter"
 import { useGameFonts } from "./src/hooks/Fonts"
 import VersionGate from "./src/components/VersionGate"
 import { SafeAreaProvider } from "react-native-safe-area-context"
@@ -265,7 +266,7 @@ function App() {
   return (
     <>
       <StatusBar hidden />
-      {renderScreen()}
+      <ScreenEnter key={screen}>{renderScreen()}</ScreenEnter>
       {incomingInvite && (
         <InviteModal
           invite={incomingInvite}
