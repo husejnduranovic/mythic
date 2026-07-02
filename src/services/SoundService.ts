@@ -129,6 +129,27 @@ export const SoundService = {
     }
   },
 
+  // Unbroken Conquest — the apex moment gets the apex fanfare: the top combo
+  // sting layered over the level-complete flourish, with a double-heavy
+  // haptic. No new asset; the layering is the new sound.
+  async playUnbroken() {
+    try {
+      this.play(combo30Sound)
+      setTimeout(() => this.play(levelCompleteSound), 140)
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+      setTimeout(
+        () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy),
+        120,
+      )
+      setTimeout(
+        () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy),
+        280,
+      )
+    } catch (err) {
+      logError("Sound", err)
+    }
+  },
+
   async playShuffle() {
     try {
       this.play(shuffleSound)

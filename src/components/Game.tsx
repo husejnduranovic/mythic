@@ -78,8 +78,10 @@ import {
   getMatchPoints,
   getPerfectClearBonus,
   getTimeBonus,
+  getUnbrokenBonus,
 } from "../game/scoring"
 import { Battlefield } from "./game/Battlefield"
+import { BoardBurst } from "./game/BoardBurst"
 import { Battlements, WallTexture } from "./game/Wall"
 import { LayoutEntrance } from "./game/LayoutEntrance"
 import { Icon } from "../ui/Icon"
@@ -127,6 +129,14 @@ const Game = ({
   const [bestCombo, setBestCombo] = useState(0)
   const [bannersPlanted, setBannersPlanted] = useState(0)
   const [perfectFields, setPerfectFields] = useState(0)
+  // Fields consumed by a single unbroken chain — the apex accolade counter.
+  const [unbrokenFields, setUnbrokenFields] = useState(0)
+  // One-shot board detonation (banner ≥20, perfect clear, unbroken conquest).
+  const [burst, setBurst] = useState<{
+    key: number
+    color: string
+    big: boolean
+  } | null>(null)
   // Spoils taken on the field just fought — feeds the between-levels count-up.
   const [fieldSpoils, setFieldSpoils] = useState(0)
   // The ghost: per-field cumulative score of the player's best completed run.
@@ -155,6 +165,9 @@ const Game = ({
 
   const levelCompleteRef = useRef(false)
   const autoAdvanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // The clear-hold: a won field's moment plays ON the board before The Breath.
+  const clearHoldTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const milestoneHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Migrated to Reanimated — run on UI thread
   const pointsOpacity = useSharedValue(0)
@@ -445,12 +458,18 @@ const Game = ({
     }
   }, [score])
 
+  // holdMs tiers the moment: everyday banners read-and-go, the top of the
+  // ladder and the clear accolades hold long enough to feel witnessed. The
+  // hide timer is cleared on every show so a same-tap pair (bounty + banner)
+  // can't fade the survivor early.
   const showMilestone = (
     text: string,
     color: string,
     icon: SigilSpec,
     sub = "",
+    holdMs = 480,
   ) => {
+    if (milestoneHideTimer.current) clearTimeout(milestoneHideTimer.current)
     setMilestoneText(text)
     setMilestoneSub(sub)
     setMilestoneColor(color)
@@ -462,9 +481,9 @@ const Game = ({
     )
     milestoneUnfurl.value = 0.5
     milestoneUnfurl.value = withTiming(1, { duration: 190 })
-    setTimeout(() => {
+    milestoneHideTimer.current = setTimeout(() => {
       milestoneOpacity.value = withTiming(0, { duration: 250 })
-    }, 480)
+    }, holdMs)
   }
 
   const freezeTimerForCombo = (seconds: number) => {
@@ -493,7 +512,6 @@ const Game = ({
     levelCompleteRef.current = true
     if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current)
     if (freezeTimer.current) clearTimeout(freezeTimer.current)
-    setTimerFrozen(false)
     const cl = cards
       .slice(0, config.fieldCards)
       .filter((c) => !c.visible).length
@@ -503,6 +521,16 @@ const Game = ({
     const allCleared = cards
       .slice(0, config.fieldCards)
       .every((c) => !c.visible)
+    // Unbroken Conquest: every capture on this field landed in one chain —
+    // the final combo equals the field's card count. (comboRef, not closure:
+    // the ref-sync effect above runs before the all-cleared effect calls us.
+    // Free draws don't break a chain; deck draws before the first capture
+    // never started one.)
+    const unbroken = allCleared && comboRef.current >= config.fieldCards
+
+    // A won field stops the clock the instant it's won — the freeze holds
+    // through the clear moment; a timed-out or dead field unfreezes as before.
+    setTimerFrozen(allCleared)
 
     // End-of-field bonuses in one settle. Refs, not closures: deckIndexRef
     // stays correct after draw-only sequences and scoreRef after banner banks.
@@ -514,16 +542,33 @@ const Game = ({
     const perfectBonus = allCleared
       ? getPerfectClearBonus(level, gloryActiveRef.current)
       : 0
-    const bonus = timeBonus + deckBonus + perfectBonus
+    const unbrokenBonus = unbroken
+      ? getUnbrokenBonus(level, gloryActiveRef.current)
+      : 0
+    const bonus = timeBonus + deckBonus + perfectBonus + unbrokenBonus
     if (bonus > 0) setScore((s) => s + bonus)
 
-    if (allCleared) {
+    if (unbroken) {
       setPerfectFields((p) => p + 1)
+      setUnbrokenFields((u) => u + 1)
+      setBurst({ key: Date.now(), color: palette.goldBright, big: true })
+      showMilestone(
+        "UNBROKEN!",
+        palette.goldBright,
+        { fam: "mci", name: "link-variant" },
+        `ONE CHAIN · +${(perfectBonus + unbrokenBonus).toLocaleString()}`,
+        1350,
+      )
+      SoundService.playUnbroken()
+    } else if (allCleared) {
+      setPerfectFields((p) => p + 1)
+      setBurst({ key: Date.now(), color: "#7BED9F", big: false })
       showMilestone(
         "PERFECT CLEAR!",
         "#7BED9F",
         { fam: "mci", name: "star-four-points" },
         `+${perfectBonus.toLocaleString()}`,
+        900,
       )
     }
 
@@ -533,8 +578,8 @@ const Game = ({
     fieldStartScoreRef.current = fieldEnd
     runPaceRef.current[level - 1] = fieldEnd
 
-    SoundService.playLevelComplete()
-    // Sync score to arena room
+    if (!unbroken) SoundService.playLevelComplete()
+    // Sync score to arena room — immediately, never delayed by the hold.
     if (arenaMode && roomCode && uid) {
       updatePlayerScore(
         roomCode,
@@ -546,11 +591,25 @@ const Game = ({
       )
     }
 
-    setArenaCountdown(null)
-    setGloryActive(false)
-    gloryActiveRef.current = false
-    setBountyIndices(new Set())
-    setBetweenLevels(true)
+    // The clear-hold: a won field's moment (banner + burst + frozen clock)
+    // plays ON the board before The Breath takes over. Previously the
+    // milestone and the screen swap fired in the same synchronous block, so
+    // the perfect-clear banner never actually rendered a frame. Deck, free
+    // draw and card presses are guarded by levelCompleteRef during the hold.
+    const finish = () => {
+      setShowQuitConfirm(false)
+      setArenaCountdown(null)
+      setGloryActive(false)
+      gloryActiveRef.current = false
+      setBountyIndices(new Set())
+      setBetweenLevels(true)
+    }
+    const holdMs = unbroken ? 1500 : allCleared ? 950 : 0
+    if (holdMs > 0) {
+      clearHoldTimer.current = setTimeout(finish, holdMs)
+    } else {
+      finish()
+    }
   }, [cards, config.fieldCards])
 
   const initLevel = useCallback(() => {
@@ -562,6 +621,7 @@ const Game = ({
     setReady(false)
     levelCompleteRef.current = false
     if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current)
+    if (clearHoldTimer.current) clearTimeout(clearHoldTimer.current)
     const deck = dailyMode
       ? generateDailyDeck(getTodayString(), level)
       : arenaMode && roomCode
@@ -620,6 +680,8 @@ const Game = ({
     () => () => {
       if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current)
       if (freezeTimer.current) clearTimeout(freezeTimer.current)
+      if (clearHoldTimer.current) clearTimeout(clearHoldTimer.current)
+      if (milestoneHideTimer.current) clearTimeout(milestoneHideTimer.current)
     },
     [],
   )
@@ -675,6 +737,7 @@ const Game = ({
   }
 
   const handleCardPress = useCallback((index: number) => {
+    if (levelCompleteRef.current) return
     const cards = cardsRef.current
     const currentIndex = currentIndexRef.current
     const secondCard = secondCardRef.current
@@ -724,8 +787,13 @@ const Game = ({
         banner.color,
         banner.icon,
         `+${bank.toLocaleString()} BANKED`,
+        nc >= 20 ? 850 : 550,
       )
       freezeTimerForCombo(BANNER_FREEZE_SECONDS)
+      // RAMPAGE and above detonate the board — the top half of the ladder
+      // should be felt across the whole table, not just read in a corner.
+      if (nc >= 20)
+        setBurst({ key: Date.now(), color: banner.color, big: nc >= 28 })
     }
     SoundService.playMatch(nc)
     showPointsAnimation(pts + bountyBonus)
@@ -758,6 +826,7 @@ const Game = ({
   }
 
   const handleDeckPress = useCallback(() => {
+    if (levelCompleteRef.current) return
     const cards = cardsRef.current
     const deckIndex = deckIndexRef.current
 
@@ -802,6 +871,8 @@ const Game = ({
     setBestCombo(0)
     setBannersPlanted(0)
     setPerfectFields(0)
+    setUnbrokenFields(0)
+    setBurst(null)
     setFieldSpoils(0)
     setTotalCleared(0)
     setTotalFieldCards(0)
@@ -846,6 +917,7 @@ const Game = ({
   const [wantsRematch, setWantsRematch] = useState(false)
 
   const handleFreeDraw = useCallback(() => {
+    if (levelCompleteRef.current) return
     const cards = cardsRef.current
     const deckIndex = deckIndexRef.current
 
@@ -1042,6 +1114,7 @@ const Game = ({
         bestCombo={bestCombo}
         bannersPlanted={bannersPlanted}
         perfectFields={perfectFields}
+        unbrokenFields={unbrokenFields}
         totalCleared={totalCleared}
         totalFieldCards={totalFieldCards}
         dailyMode={dailyMode}
@@ -1349,6 +1422,14 @@ const Game = ({
               </View>
             </View>
           </View>
+          {burst && (
+            <BoardBurst
+              key={burst.key}
+              color={burst.color}
+              big={burst.big}
+              onDone={() => setBurst(null)}
+            />
+          )}
           {showPoints && (
             <Reanimated.View style={[styles.pointsPopup, pointsPopupStyle]}>
               <Text

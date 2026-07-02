@@ -71,6 +71,7 @@ export const GameOverScreen = ({
   bestCombo,
   bannersPlanted = 0,
   perfectFields = 0,
+  unbrokenFields = 0,
   totalCleared,
   totalFieldCards,
   dailyMode,
@@ -95,6 +96,7 @@ export const GameOverScreen = ({
   bestCombo: number
   bannersPlanted?: number
   perfectFields?: number
+  unbrokenFields?: number
   totalCleared: number
   totalFieldCards: number
   dailyMode: boolean
@@ -482,6 +484,18 @@ export const GameOverScreen = ({
                         : color.gold
                     }
                   />
+                  {unbrokenFields > 0 && (
+                    <>
+                      <LedgerSep />
+                      <LedgerRow
+                        icon="link-variant"
+                        label="Unbroken Fields"
+                        value={`${unbrokenFields}`}
+                        index={2}
+                        valueColor={color.goldBright}
+                      />
+                    </>
+                  )}
                   <LedgerSep />
                   <LedgerRow
                     icon="fire"

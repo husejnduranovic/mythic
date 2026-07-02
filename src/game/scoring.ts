@@ -74,3 +74,12 @@ export const getDeckBonus = (deckRemaining: number, glory: boolean): number =>
 // Bonus for clearing the entire field.
 export const getPerfectClearBonus = (level: number, glory: boolean): number =>
   Math.round(50000 * getLayoutMultiplier(level) * gloryFactor(glory))
+
+// Unbroken Conquest — the field consumed by a single unbroken chain (final
+// combo === the field's card count at the moment of the clear; free draws
+// don't break a chain, so a bridged chain still counts). The apex skill act:
+// pays another perfect-clear bonus on top of the perfect clear itself, so an
+// unbroken field totals 100,000 × fieldMult × glory. Rare by construction —
+// it needs a chain as long as the whole field.
+export const getUnbrokenBonus = (level: number, glory: boolean): number =>
+  getPerfectClearBonus(level, glory)
