@@ -82,6 +82,7 @@ import {
 } from "../game/scoring"
 import { Battlefield } from "./game/Battlefield"
 import { BoardBurst } from "./game/BoardBurst"
+import { CoachMark } from "./game/CoachMarks"
 import { Battlements, WallTexture } from "./game/Wall"
 import { LayoutEntrance } from "./game/LayoutEntrance"
 import { Icon } from "../ui/Icon"
@@ -207,6 +208,12 @@ const Game = ({
   const [preBattle, setPreBattle] = useState(true)
   const [gloryCharges, setGloryCharges] = useState(1)
   const [gloryActive, setGloryActive] = useState(false)
+
+  // First-battle coach marks (R2): 0 off · 1 armed (waiting for the board) ·
+  // 2 mark-match showing · 3 waiting for the first chain · 4 mark-chain ·
+  // 5 mark-draw · then off. Armed only on the first-ever free battle.
+  const [coachStep, setCoachStep] = useState(0)
+  const coachVisible = coachStep === 2 || coachStep === 4 || coachStep === 5
 
   const gloryActiveRef = useRef(false)
 
@@ -417,6 +424,36 @@ const Game = ({
       }
     }
   }, [gameOver])
+
+  // Arm the coach on the first-ever free battle only (daily/arena stay clean).
+  useEffect(() => {
+    if (dailyMode || arenaMode) return
+    AsyncStorage.getItem(StorageKeys.seenCoachMarks).then((v) => {
+      if (!v) setCoachStep(1)
+    })
+  }, [])
+
+  // Mark 1 — the match rule, the moment the first board opens.
+  useEffect(() => {
+    if (coachStep === 1 && ready && !preBattle && !loading) setCoachStep(2)
+  }, [coachStep, ready, preBattle, loading])
+
+  // Mark 2 — the chain, the first time one exists to point at.
+  useEffect(() => {
+    if (coachStep === 3 && combo >= 2) setCoachStep(4)
+  }, [coachStep, combo])
+
+  const dismissCoach = () => {
+    setCoachStep((s) => {
+      if (s === 2) {
+        // The core rule was seen — never nag again, even if they quit here.
+        AsyncStorage.setItem(StorageKeys.seenCoachMarks, "1").catch(() => {})
+        return 3
+      }
+      if (s === 4) return 5
+      return 0
+    })
+  }
 
   useEffect(() => {
     AsyncStorage.getItem(StorageKeys.bestComboEver).then((val) => {
@@ -1403,7 +1440,9 @@ const Game = ({
                       : config.time
                   }
                   onTimeUp={advanceLevel}
-                  paused={paused || betweenLevels || showQuitConfirm}
+                  paused={
+                    paused || betweenLevels || showQuitConfirm || coachVisible
+                  }
                   frozen={timerFrozen}
                   onTick={(t) => {
                     timeLeftRef.current = t
@@ -1576,6 +1615,14 @@ const Game = ({
               </Text>
             </View>
           </Reanimated.View>
+          {coachVisible && (
+            <CoachMark
+              variant={
+                coachStep === 2 ? "match" : coachStep === 4 ? "chain" : "draw"
+              }
+              onDismiss={dismissCoach}
+            />
+          )}
           {showQuitConfirm && (
             <QuitConfirmModal
               dailyMode={dailyMode}

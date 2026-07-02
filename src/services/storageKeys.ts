@@ -16,4 +16,6 @@ export const StorageKeys = {
   warTable: "@mythic_war_table",
   bountyStyle: "@mythic_bounty_style",
   armoryMigratedV2: "@mythic_armory_migrated_v2",
+  seenCoachMarks: "@mythic_seen_coachmarks",
+  firstVictorySeen: "@mythic_first_victory_seen",
 } as const
