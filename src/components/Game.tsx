@@ -126,6 +126,11 @@ const Game = ({
   const [combo, setCombo] = useState(0)
   const [bestCombo, setBestCombo] = useState(0)
   const [bannersPlanted, setBannersPlanted] = useState(0)
+  const [perfectFields, setPerfectFields] = useState(0)
+  // Spoils taken on the field just fought — feeds the between-levels count-up.
+  const [fieldSpoils, setFieldSpoils] = useState(0)
+  // The ghost: per-field cumulative score of the player's best completed run.
+  const [ghostPace, setGhostPace] = useState<number[] | null>(null)
   const [totalCleared, setTotalCleared] = useState(0)
   const [totalFieldCards, setTotalFieldCards] = useState(0)
   const [betweenLevels, setBetweenLevels] = useState(false)
@@ -186,10 +191,14 @@ const Game = ({
   const currentIndexRef = useRef(0)
   const secondCardRef = useRef<number | null>(null)
   const comboRef = useRef(0)
+  const scoreRef = useRef(0)
   const bountyIndicesRef = useRef<Set<number>>(new Set())
   const levelRef = useRef(1)
   const deckIndexRef = useRef(0)
-  const freeDrawAvailableRef = useRef(true)
+  const freeDrawsRef = useRef(0)
+  // Run pace: cumulative score at the end of each field (index = level - 1).
+  const runPaceRef = useRef<number[]>([])
+  const fieldStartScoreRef = useRef(0)
 
   const [bountyIndices, setBountyIndices] = useState<Set<number>>(new Set())
 
@@ -266,10 +275,11 @@ const Game = ({
     currentIndexRef.current = currentIndex
     secondCardRef.current = secondCard
     comboRef.current = combo
+    scoreRef.current = score
     bountyIndicesRef.current = bountyIndices
     levelRef.current = level
     deckIndexRef.current = deckIndex
-    freeDrawAvailableRef.current = freeDrawAvailable
+    freeDrawsRef.current = freeDraws
   })
 
   useEffect(() => {
@@ -355,12 +365,33 @@ const Game = ({
       if (bestCombo > bestComboEver) {
         AsyncStorage.setItem(StorageKeys.bestComboEver, bestCombo.toString())
       }
+      // The ghost: if this completed run beat the best run's final total,
+      // its per-field pace becomes the shadow every future run races.
+      const pace = runPaceRef.current
+      const ghostFinal = ghostPace?.[ghostPace.length - 1] ?? 0
+      if (pace.length > 0 && score > ghostFinal) {
+        setGhostPace([...pace])
+        AsyncStorage.setItem(
+          StorageKeys.bestRunPace,
+          JSON.stringify(pace),
+        ).catch(() => {})
+      }
     }
   }, [gameOver])
 
   useEffect(() => {
     AsyncStorage.getItem(StorageKeys.bestComboEver).then((val) => {
       if (val) setBestComboEver(parseInt(val))
+    })
+    // The ghost — the per-field pace of the best completed run on this device.
+    AsyncStorage.getItem(StorageKeys.bestRunPace).then((val) => {
+      if (!val) return
+      try {
+        const pace = JSON.parse(val)
+        if (Array.isArray(pace) && pace.length > 0) setGhostPace(pace)
+      } catch {
+        // corrupt ghost — ignore, a new PB rewrites it
+      }
     })
   }, [])
 
@@ -396,26 +427,8 @@ const Game = ({
         withTiming(1.4, { duration: 80 }),
         withTiming(1, { duration: 80 }),
       )
-
-      // Banner planted (scoring v2): the milestone banks a permanent bonus and
-      // freezes the clock — one ladder for bank, freeze, banner and sound.
-      const m = COMBO_MILESTONES[combo]
-      if (m) {
-        const bank = getBannerBank(
-          combo,
-          levelRef.current,
-          gloryActiveRef.current,
-        )
-        setScore((s) => s + bank)
-        setBannersPlanted((b) => b + 1)
-        showMilestone(
-          m.text,
-          m.color,
-          m.icon,
-          `+${bank.toLocaleString()} BANKED`,
-        )
-        freezeTimerForCombo(BANNER_FREEZE_SECONDS)
-      }
+      // Banner banking lives in handleCardPress (atomic with the match's
+      // setScore) — this effect only carries the visual combo feedback.
     }
   }, [combo])
 
@@ -471,7 +484,9 @@ const Game = ({
     BOUNTY_STYLE_CONFIG[theme.bountyStyle || "classic"] ||
     BOUNTY_STYLE_CONFIG.classic
 
-  const [freeDrawAvailable, setFreeDrawAvailable] = useState(true)
+  // Free Draws bank across fields (cap 2): each field grants one; an unused
+  // draw carries — earned insurance against a cold deck (GAMEPLAY §2.5 G8).
+  const [freeDraws, setFreeDraws] = useState(0)
 
   const advanceLevel = useCallback(() => {
     if (levelCompleteRef.current) return
@@ -485,20 +500,25 @@ const Game = ({
     setTotalCleared((p) => p + cl)
     setTotalFieldCards((p) => p + config.fieldCards)
 
-    // Time bonus — 50 points per second remaining
-    const timeBonus = getTimeBonus(timeLeftRef.current, gloryActiveRef.current)
-    if (timeBonus > 0) setScore((s) => s + timeBonus)
-
-    const deckRemaining = cards.length - deckIndex
-    const deckBonus = getDeckBonus(deckRemaining, gloryActiveRef.current)
-    if (deckBonus > 0) setScore((s) => s + deckBonus)
-
     const allCleared = cards
       .slice(0, config.fieldCards)
       .every((c) => !c.visible)
+
+    // End-of-field bonuses in one settle. Refs, not closures: deckIndexRef
+    // stays correct after draw-only sequences and scoreRef after banner banks.
+    const timeBonus = getTimeBonus(timeLeftRef.current, gloryActiveRef.current)
+    const deckBonus = getDeckBonus(
+      cards.length - deckIndexRef.current,
+      gloryActiveRef.current,
+    )
+    const perfectBonus = allCleared
+      ? getPerfectClearBonus(level, gloryActiveRef.current)
+      : 0
+    const bonus = timeBonus + deckBonus + perfectBonus
+    if (bonus > 0) setScore((s) => s + bonus)
+
     if (allCleared) {
-      const perfectBonus = getPerfectClearBonus(level, gloryActiveRef.current)
-      setScore((s) => s + perfectBonus)
+      setPerfectFields((p) => p + 1)
       showMilestone(
         "PERFECT CLEAR!",
         "#7BED9F",
@@ -507,13 +527,19 @@ const Game = ({
       )
     }
 
+    // Field ledger: spoils taken this field + the run's pace for the ghost.
+    const fieldEnd = scoreRef.current + bonus
+    setFieldSpoils(fieldEnd - fieldStartScoreRef.current)
+    fieldStartScoreRef.current = fieldEnd
+    runPaceRef.current[level - 1] = fieldEnd
+
     SoundService.playLevelComplete()
     // Sync score to arena room
     if (arenaMode && roomCode && uid) {
       updatePlayerScore(
         roomCode,
         uid,
-        score,
+        fieldEnd,
         bestCombo,
         level,
         level >= TOTAL_LEVELS,
@@ -530,7 +556,9 @@ const Game = ({
   const initLevel = useCallback(() => {
     if (alreadyPlayed) return
     setLoading(true)
-    setFreeDrawAvailable(true)
+    // Each field grants one Free Draw; an unused one banks (cap 2). Run-reset
+    // paths zero the count first, so field 1 always starts at exactly 1.
+    setFreeDraws((f) => Math.min(f + 1, 2))
     setReady(false)
     levelCompleteRef.current = false
     if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current)
@@ -675,6 +703,12 @@ const Game = ({
     const bountyBonus = isBounty
       ? getBountyBonus(nc, level, gloryActiveRef.current)
       : 0
+    // Banner planted (scoring v2): banked atomically with the match's setScore
+    // so field totals can never read a score missing a pending bank.
+    const banner = COMBO_MILESTONES[nc]
+    const bank = banner
+      ? getBannerBank(nc, level, gloryActiveRef.current)
+      : 0
 
     if (isBounty)
       showMilestone(
@@ -683,6 +717,16 @@ const Game = ({
         { fam: "mci", name: "sack" },
         `×3 · +${(pts + bountyBonus).toLocaleString()}`,
       )
+    if (banner) {
+      setBannersPlanted((b) => b + 1)
+      showMilestone(
+        banner.text,
+        banner.color,
+        banner.icon,
+        `+${bank.toLocaleString()} BANKED`,
+      )
+      freezeTimerForCombo(BANNER_FREEZE_SECONDS)
+    }
     SoundService.playMatch(nc)
     showPointsAnimation(pts + bountyBonus)
 
@@ -693,7 +737,7 @@ const Game = ({
       return u
     })
     setCombo(nc)
-    setScore((s) => s + pts + bountyBonus)
+    setScore((s) => s + pts + bountyBonus + bank)
 
     if (mc) {
       if (nc >= SECOND_CARD_COMBO && secondCard === null) {
@@ -748,28 +792,41 @@ const Game = ({
     setBetweenLevels(false)
     level >= TOTAL_LEVELS ? setGameOver(true) : setLevel((l) => l + 1)
   }
+
+  // Everything a fresh run must zero — shared by play-again, the paused
+  // restart and the arena rematch (the latter two previously leaked stale
+  // bestCombo / glory charges / totals into the new run).
+  const resetRunState = () => {
+    setScore(0)
+    setFreeDraws(0)
+    setBestCombo(0)
+    setBannersPlanted(0)
+    setPerfectFields(0)
+    setFieldSpoils(0)
+    setTotalCleared(0)
+    setTotalFieldCards(0)
+    setGloryCharges(1)
+    setGloryActive(false)
+    gloryActiveRef.current = false
+    setBountyIndices(new Set())
+    setIsPersonalBest(false)
+    setPreviousBest(0)
+    personalBestComboShownRef.current = false
+    runPaceRef.current = []
+    fieldStartScoreRef.current = 0
+  }
+
   const handlePlayAgain = () => {
     if (dailyMode) {
       onHome?.()
       return
     }
-    setScore(0)
-    setFreeDrawAvailable(true)
-    setBestCombo(0)
-    setBannersPlanted(0)
-    setTotalCleared(0)
-    setTotalFieldCards(0)
+    resetRunState()
     setLevel(1)
     setGameOver(false)
     setScoreSaved(false)
     setRound((r) => r + 1)
     setPreBattle(true)
-    setGloryCharges(1)
-    setGloryActive(false)
-    setBountyIndices(new Set())
-    setIsPersonalBest(false)
-    setPreviousBest(0)
-    personalBestComboShownRef.current = false
   }
   const handleBackPress = () => {
     setShowQuitConfirm(true)
@@ -791,14 +848,13 @@ const Game = ({
   const handleFreeDraw = useCallback(() => {
     const cards = cardsRef.current
     const deckIndex = deckIndexRef.current
-    const freeDrawAvailable = freeDrawAvailableRef.current
 
-    if (!freeDrawAvailable || deckIndex >= cards.length) return
+    if (freeDrawsRef.current <= 0 || deckIndex >= cards.length) return
     if (autoAdvanceTimer.current) {
       clearTimeout(autoAdvanceTimer.current)
       autoAdvanceTimer.current = null
     }
-    setFreeDrawAvailable(false)
+    setFreeDraws((f) => f - 1)
     SoundService.playDeckDraw()
     Animated.sequence([
       Animated.timing(deckScale, {
@@ -864,11 +920,7 @@ const Game = ({
       const state = snap.val()
       if (state === "playing" && wantsRematch) {
         // Reset all local state and restart
-        setScore(0)
-        setBestCombo(0)
-        setBannersPlanted(0)
-        setTotalCleared(0)
-        setTotalFieldCards(0)
+        resetRunState()
         setLevel(1)
         setGameOver(false)
         setScoreSaved(false)
@@ -1046,7 +1098,7 @@ const Game = ({
         onResume={() => setPaused(false)}
         onRestart={() => {
           setPaused(false)
-          setScore(0)
+          resetRunState()
           setLevel(1)
           setRound((r) => r + 1)
         }}
@@ -1119,7 +1171,7 @@ const Game = ({
                     cardBackColor={dailyMode ? "#3D2E0A" : theme.cardBackColor}
                   />
                 </Animated.View>
-                {freeDrawAvailable &&
+                {freeDraws > 0 &&
                   remaining > 0 &&
                   !betweenLevels &&
                   !gameOver && (
@@ -1155,6 +1207,13 @@ const Game = ({
                           />
                         </View>
                       </View>
+                      {freeDraws > 1 && (
+                        <View style={styles.freeDrawBadge}>
+                          <Text style={styles.freeDrawBadgeText}>
+                            {freeDraws}
+                          </Text>
+                        </View>
+                      )}
                     </TouchableOpacity>
                   )}
                 <View style={styles.treasury}>
@@ -1765,6 +1824,27 @@ const styles = StyleSheet.create({
     bottom: 3,
     right: 4,
     transform: [{ rotate: "180deg" }],
+  },
+  // Banked-draw pip — appears when an unused Free Draw carried over (cap 2).
+  freeDrawBadge: {
+    position: "absolute",
+    bottom: -4,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: palette.goldDeep,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 3,
+    borderWidth: 1.5,
+    borderColor: "#0B1410",
+    elevation: 4,
+  },
+  freeDrawBadgeText: {
+    fontSize: 10,
+    fontWeight: "900",
+    color: "#1a1a1a",
   },
 })
 

@@ -8,6 +8,7 @@ export const StorageKeys = {
   localScores: "@mythic_peaks_scores",
   gamesPlayed: "@mythic_games_played",
   bestComboEver: "@mythic_best_combo_ever",
+  bestRunPace: "@mythic_best_run_pace",
   cardBack: "@mythic_card_back",
   battlefield: "@mythic_battlefield",
   // "@mythic_wild_style" retired 2026-07-01 with the wild-style inventory —
