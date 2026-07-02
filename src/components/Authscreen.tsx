@@ -205,6 +205,15 @@ const AuthScreen = ({ onAuthenticated }: AuthScreenProps) => {
       <Text style={styles.title}>MYTHIC PEAKS</Text>
       <Text style={styles.tagline}>A Card Game of Beasts & Glory</Text>
       <View style={styles.divider} />
+      {/* The stakes, before the first battle (MARKET.md A-5) — Home's prize
+          pill grammar, shown to every fresh install at the door. */}
+      <View style={styles.prizePill}>
+        <Icon name="trophy-variant" size={14} color="rgba(255,215,0,0.85)" />
+        <Text style={styles.prizePillText}>€100 MONTHLY PRIZE</Text>
+        <View style={styles.prizePillLive}>
+          <Text style={styles.prizePillLiveText}>LIVE</Text>
+        </View>
+      </View>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <GoldButton
         label="CONTINUE WITH GOOGLE"
@@ -270,6 +279,39 @@ const styles = StyleSheet.create({
     color: color.goldFaded,
     fontSize: 12,
     fontWeight: "600",
+    letterSpacing: 2,
+  },
+  // The stakes pill — mirrors Home's prize tag so the promise is consistent
+  // from the door to the hall.
+  prizePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    backgroundColor: "rgba(255,215,0,0.05)",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: "rgba(255,215,0,0.15)",
+  },
+  prizePillText: {
+    color: "rgba(255,215,0,0.75)",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 2,
+  },
+  prizePillLive: {
+    backgroundColor: "rgba(123,237,159,0.15)",
+    borderRadius: 3,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderWidth: 1,
+    borderColor: "rgba(123,237,159,0.3)",
+  },
+  prizePillLiveText: {
+    color: color.sage,
+    fontSize: 6,
+    fontWeight: "900",
     letterSpacing: 2,
   },
   divider: {
