@@ -240,6 +240,21 @@ const Game = ({
     opacity: treasuryFlash.value,
   }))
 
+  // The catch lands at the dais: every capture/draw thunks the incoming
+  // current card onto the table (dip → overshoot → settle). One shared value
+  // on the dais card wrapper — the field never re-renders for it.
+  const daisPunch = useSharedValue(1)
+  const daisPunchStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: daisPunch.value }],
+  }))
+  const punchDais = () => {
+    daisPunch.value = 0.9
+    daisPunch.value = withSequence(
+      withTiming(1.06, { duration: 90 }),
+      withTiming(1, { duration: 110 }),
+    )
+  }
+
   const pointsPopupStyle = useAnimatedStyle(() => ({
     opacity: pointsOpacity.value,
     transform: [{ translateY: pointsMove.value }],
@@ -797,6 +812,7 @@ const Game = ({
     }
     SoundService.playMatch(nc)
     showPointsAnimation(pts + bountyBonus)
+    punchDais()
 
     vanquishTierRef.current = nc >= 24 ? 3 : nc >= 16 ? 2 : nc >= 8 ? 1 : 0
     setCards((prev) => {
@@ -849,12 +865,28 @@ const Game = ({
       }),
     ]).start()
 
+    // The grave marker: a chain worth at least one banner dies with a stamp,
+    // not in silence — the loss is legible and the banked banners' insurance
+    // reads at the exact moment it matters. (combo ≥ 5 ⟹ the 5-banner was
+    // planted this chain, so "banners hold" is always true here.)
+    const brokenCombo = comboRef.current
+    if (brokenCombo >= 5) {
+      showMilestone(
+        "CHAIN BROKEN",
+        palette.steel,
+        { fam: "mci", name: "link-variant-off" },
+        `x${brokenCombo} FELL · BANNERS HOLD`,
+        520,
+      )
+    }
+
     setCurrentIndex(deckIndex)
     setDeckIndex((i) => i + 1)
     setCombo(0)
     setTimerFrozen(false)
     if (freezeTimer.current) clearTimeout(freezeTimer.current)
     setSecondCard(null)
+    punchDais()
   }, [])
 
   const handleNextLevel = () => {
@@ -943,6 +975,7 @@ const Game = ({
     setCurrentIndex(deckIndex)
     setDeckIndex((i) => i + 1)
     setSecondCard(null)
+    punchDais()
     showMilestone("FREE DRAW!", palette.gold, { fam: "mci", name: "restore" })
   }, []) // ← stable
 
@@ -1319,20 +1352,22 @@ const Game = ({
                     style={[styles.daisGlow, { opacity: daisBreath }]}
                   />
                   <View style={styles.daisFrame} pointerEvents="none" />
-                  <Card
-                    card={cards[currentIndex]}
-                    isOpen
-                    disabled
-                    cardBackColor={theme.cardBackColor}
-                  />
-                  {secondCard !== null && (
+                  <Reanimated.View style={[styles.daisCards, daisPunchStyle]}>
                     <Card
-                      card={cards[secondCard]}
+                      card={cards[currentIndex]}
                       isOpen
                       disabled
                       cardBackColor={theme.cardBackColor}
                     />
-                  )}
+                    {secondCard !== null && (
+                      <Card
+                        card={cards[secondCard]}
+                        isOpen
+                        disabled
+                        cardBackColor={theme.cardBackColor}
+                      />
+                    )}
+                  </Reanimated.View>
                 </View>
               </View>
               <View style={styles.rightBox}>
@@ -1639,6 +1674,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     marginTop: -7,
   },
+  daisCards: { flexDirection: "row", gap: 4, alignItems: "center" },
   daisGlow: {
     position: "absolute",
     top: 0,

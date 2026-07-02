@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react"
 import { Animated, StyleSheet, View } from "react-native"
 import { MaterialCommunityIcons } from "@expo/vector-icons"
+import { SoundService } from "../services/SoundService"
 import { color, font } from "../ui/theme"
 
 const AnimatedIcon = Animated.createAnimatedComponent(MaterialCommunityIcons)
@@ -42,15 +43,16 @@ const Timer = ({
       onTimeUp()
       return
     }
-    const tick = setTimeout(
-      () =>
-        setTimeLeft((t) => {
-          const next = t - 1
-          if (onTick) onTick(next)
-          return next
-        }),
-      1000,
-    )
+    const tick = setTimeout(() => {
+      // One warning pulse as the fuse enters its final 10 seconds — the
+      // urgency should be felt in the hand, not only read in the corner.
+      if (timeLeft - 1 === 10) SoundService.playTimeWarning()
+      setTimeLeft((t) => {
+        const next = t - 1
+        if (onTick) onTick(next)
+        return next
+      })
+    }, 1000)
     return () => clearTimeout(tick)
   }, [timeLeft, paused, frozen])
 
