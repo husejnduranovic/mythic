@@ -199,6 +199,7 @@ function App() {
     game: () => (
       <Game
         onHome={() => setScreen("home")}
+        onGoArmory={() => setScreen("armory")}
         uid={user.uid}
         heroName={user.heroName}
       />
@@ -206,6 +207,7 @@ function App() {
     daily: () => (
       <Game
         onHome={() => setScreen("home")}
+        onGoArmory={() => setScreen("armory")}
         dailyMode
         uid={user.uid}
         heroName={user.heroName}

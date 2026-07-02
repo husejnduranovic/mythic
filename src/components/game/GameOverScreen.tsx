@@ -14,8 +14,10 @@ import {
   Animated,
   Easing,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
+  TouchableOpacity,
   useWindowDimensions,
   View,
 } from "react-native"
@@ -267,6 +269,18 @@ export const GameOverScreen = ({
       }).start()
     }
   }, [rankResolved])
+
+  // ── Share the moment (§10 A-1) — the run's best claim leads the message ──
+  const handleShare = () => {
+    const link =
+      "https://play.google.com/store/apps/details?id=com.husejn.mythicpeaks"
+    const message = isAllTimeRecord
+      ? `I hold the ALL-TIME RECORD in Mythic Peaks — ${score.toLocaleString()} spoils. Take the throne if you dare. ⚔ ${link}`
+      : isFlawless
+        ? `FLAWLESS CONQUEST — every battlefield cleared perfectly. ${score.toLocaleString()} spoils in Mythic Peaks. ⚔ ${link}`
+        : `I plundered ${score.toLocaleString()} spoils in Mythic Peaks — beat me if you can. ⚔ ${link}`
+    Share.share({ message }).catch(() => {})
+  }
 
   // ── "One more battle" goal (§6.5, lite — uses data already on screen) ──
   const pbDelta = previousBest > 0 ? score - previousBest : 0
@@ -577,6 +591,15 @@ export const GameOverScreen = ({
                   {!dailyMode && <ReturnToCastle onPress={onHome} />}
                 </>
               )}
+              <TouchableOpacity
+                style={g.shareBtn}
+                onPress={handleShare}
+                activeOpacity={0.7}
+                hitSlop={6}
+              >
+                <Icon name="share-variant" size={11} color={color.goldFaded} />
+                <Text style={g.shareTxt}>SHARE THE SPOILS</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -736,6 +759,19 @@ const g = StyleSheet.create({
 
   // Actions
   actions: { alignItems: "center", gap: 6, marginTop: 8 },
+  shareBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+  },
+  shareTxt: {
+    color: color.goldFaded,
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 2,
+  },
 
   // Arena rankings
   boardTitle: {

@@ -83,6 +83,7 @@ import {
 import { Battlefield } from "./game/Battlefield"
 import { BoardBurst } from "./game/BoardBurst"
 import { CoachMark } from "./game/CoachMarks"
+import { FirstVictoryOverlay } from "./game/FirstVictoryOverlay"
 import { Battlements, WallTexture } from "./game/Wall"
 import { LayoutEntrance } from "./game/LayoutEntrance"
 import { Icon } from "../ui/Icon"
@@ -96,6 +97,8 @@ interface GameProps {
   heroName?: string
   arenaMode?: boolean
   roomCode?: string
+  // First Victory (R5): routes the one-time claim CTA into the Armory.
+  onGoArmory?: () => void
 }
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window")
@@ -110,6 +113,7 @@ const Game = ({
   heroName,
   arenaMode,
   roomCode,
+  onGoArmory,
 }: GameProps) => {
   const [theme, setTheme] = useState<ThemeConfig>({
     cardBack: "classic",
@@ -214,6 +218,9 @@ const Game = ({
   // 5 mark-draw · then off. Armed only on the first-ever free battle.
   const [coachStep, setCoachStep] = useState(0)
   const coachVisible = coachStep === 2 || coachStep === 4 || coachStep === 5
+
+  // First Victory (R5): the first-ever completed battle celebrates once.
+  const [showFirstVictory, setShowFirstVictory] = useState(false)
 
   const gloryActiveRef = useRef(false)
 
@@ -407,6 +414,18 @@ const Game = ({
       if (score > 0) {
         saveScore(score, bestCombo)
         incrementGamesPlayed()
+        // First Victory — once per device, any solo mode; arena's game-over
+        // is the rankings moment and keeps it.
+        if (!arenaMode) {
+          AsyncStorage.getItem(StorageKeys.firstVictorySeen).then((seen) => {
+            if (!seen) {
+              AsyncStorage.setItem(StorageKeys.firstVictorySeen, "1").catch(
+                () => {},
+              )
+              setShowFirstVictory(true)
+            }
+          })
+        }
       }
       if (bestCombo > bestComboEver) {
         AsyncStorage.setItem(StorageKeys.bestComboEver, bestCombo.toString())
@@ -1199,6 +1218,7 @@ const Game = ({
 
   if (gameOver) {
     return (
+      <>
       <GameOverScreen
         theme={theme}
         background={battlefieldMemo}
@@ -1225,6 +1245,17 @@ const Game = ({
         onHome={onHome}
         onDismissCelebration={() => setShowCelebration(false)}
       />
+      {showFirstVictory && (
+        <FirstVictoryOverlay
+          onClaim={() => {
+            setShowFirstVictory(false)
+            if (onGoArmory) onGoArmory()
+            else onHome?.()
+          }}
+          onDismiss={() => setShowFirstVictory(false)}
+        />
+      )}
+      </>
     )
   }
 
