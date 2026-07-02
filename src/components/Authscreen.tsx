@@ -192,10 +192,8 @@ const AuthScreen = ({ onAuthenticated }: AuthScreenProps) => {
         <GoldButton
           label="ENTER THE ARENA"
           icon="sword-cross"
-          onPress={() => {
-            if (heroName.trim().length >= 2) handleSetHeroName()
-          }}
-          style={heroName.trim().length < 2 ? styles.btnDisabled : undefined}
+          onPress={handleSetHeroName}
+          disabled={heroName.trim().length < 2}
         />
       </View>
     )
@@ -311,7 +309,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
   },
   error: { color: color.crimson, fontSize: 12, fontWeight: "700" },
-  btnDisabled: { opacity: 0.4 },
 })
 
 export default AuthScreen

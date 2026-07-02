@@ -625,7 +625,6 @@ export const styles = StyleSheet.create({
   // Actions — primary uses the shared GoldButton (engraved pinstripe, Cinzel
   // label) so the lobby's start matches Home's and Lounge's CTA craft.
   lobbyPrimary: { width: "100%" },
-  lobbyPrimaryDisabled: { opacity: 0.4, shadowOpacity: 0, elevation: 0 },
 
   waitingBox: {
     flexDirection: "row",

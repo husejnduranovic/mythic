@@ -494,7 +494,7 @@ const LoungeScreen = ({ onBack, uid, heroName, onPlay }: LoungeScreenProps) => {
             label="JOIN TOURNAMENT"
             icon="pillar"
             onPress={handleJoin}
-            style={joinInput.length < 3 ? z.joinDisabled : undefined}
+            disabled={joinInput.length < 3}
           />
         </View>
 
@@ -812,7 +812,6 @@ const z = StyleSheet.create({
     textAlign: "center",
     width: 250,
   },
-  joinDisabled: { opacity: 0.4 },
 })
 
 export default LoungeScreen

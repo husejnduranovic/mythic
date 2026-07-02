@@ -90,11 +90,9 @@ const ArenaLobby = ({
                 <GoldButton
                   label={players.length < 2 ? "Need 2+ warriors" : "Start Battle"}
                   icon="sword-cross"
-                  onPress={players.length < 2 ? () => {} : onStart}
-                  style={[
-                    styles.lobbyPrimary,
-                    players.length < 2 && styles.lobbyPrimaryDisabled,
-                  ]}
+                  onPress={onStart}
+                  disabled={players.length < 2}
+                  style={styles.lobbyPrimary}
                 />
               ) : (
                 <View style={styles.waitingBox}>
