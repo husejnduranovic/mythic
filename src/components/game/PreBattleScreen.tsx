@@ -66,6 +66,7 @@ export const PreBattleScreen = ({
   dailyMode,
   gloryCharges,
   gloryActive,
+  ghostFinal = null,
   onActivateGlory,
   onEnter,
   onHome,
@@ -75,6 +76,8 @@ export const PreBattleScreen = ({
   dailyMode: boolean
   gloryCharges: number
   gloryActive: boolean
+  // The ghost's final total — the best completed run this device has seen.
+  ghostFinal?: number | null
   onActivateGlory: () => void
   onEnter: () => void
   onHome: () => void
@@ -271,6 +274,22 @@ export const PreBattleScreen = ({
               </View>
             )}
 
+            {/* The shadow rides out with you — the run to beat, named before
+                the first card is dealt, not only discovered mid-campaign. */}
+            {!dailyMode && ghostFinal != null && ghostFinal > 0 && (
+              <View style={p.shadowBox}>
+                <View style={p.shadowRow}>
+                  <Icon name="ghost" size={12} color={color.steel} />
+                  <Text style={p.shadowTxt}>
+                    THE SHADOW · {ghostFinal.toLocaleString()}
+                  </Text>
+                </View>
+                <Text style={p.shadowSub}>
+                  your best campaign marches beside you — outpace it
+                </Text>
+              </View>
+            )}
+
             {!dailyMode && gloryCharges > 0 && (
               <TouchableOpacity
                 style={[p.gloryBtn, gloryActive && p.gloryBtnActive]}
@@ -451,6 +470,22 @@ const p = StyleSheet.create({
     color: "rgba(232,197,71,0.35)",
     fontFamily: font.heading,
     fontSize: 14,
+  },
+
+  shadowBox: { alignItems: "center", gap: 2, marginTop: -4 },
+  shadowRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  shadowTxt: {
+    color: color.steel,
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+  },
+  shadowSub: {
+    color: "rgba(143,163,176,0.55)",
+    fontSize: 8,
+    fontWeight: "700",
+    fontStyle: "italic",
+    letterSpacing: 0.5,
   },
 
   gloryBtn: {

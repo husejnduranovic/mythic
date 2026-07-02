@@ -1183,6 +1183,7 @@ const Game = ({
         dailyMode={dailyMode}
         gloryCharges={gloryCharges}
         gloryActive={gloryActive}
+        ghostFinal={ghostPace ? ghostPace[ghostPace.length - 1] : null}
         onActivateGlory={activateGloryHunt}
         onEnter={() => {
           setPreBattle(false)
