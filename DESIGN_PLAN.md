@@ -6,6 +6,8 @@ Written 2026-06-12 from a full audit of the codebase (branch `refactor/v1.4-phas
 
 > ## ▶ Fable sessions — 2026-07-01 → 02 (supersede the 2026-06-16 pause)
 >
+> **Day 2, third pass (2026-07-02) — the layout audit + market + menu-energy pass** (owner playtest: "I like it very much… beautiful" — then push further). Layouts: Cross of Clans and The Stronghold cut by a machine audit (`scripts/verify-layouts.js` — dead-tap/burst/reveal-profile metrics agree with the playtest); **The Siege** (L2 ring + keep), **The Hourglass** (L3 squeeze-and-bloom) and **The Mythic Peaks** (new L7 4.0× finale — the classic board, the namesake) shipped, all machine-verified symmetric + clearable, all playtest-gated (GAMEPLAY.md §3). **MARKET.md** written (root): honest acquisition guide. Menu-energy slices logged in the table below.
+>
 > **Day 2, second pass (2026-07-02) — the moments pass** (rows 36–41 + `GAMEPLAY.md` §1.5.4–10). Brief: "make the game something people talk about." Shipped, one slice per commit (tsc-gated):
 > - **UNBROKEN** — the apex accolade (field consumed by one chain, combo === fieldCards): doubles the perfect-clear bonus (the session's one scoring change), triple-ring gold detonation, layered fanfare, exhale header + game-over row. **The clear-hold** recovers a lost moment: PERFECT CLEAR previously never rendered a frame (banner + screen-swap in one synchronous block); won fields now hold the board 950/1500ms, clock stopped, inputs guarded.
 > - **The board reacts**: `BoardBurst` detonations on banners ≥20; tiered milestone holds; **dais punch** on every capture/draw; steel **CHAIN BROKEN** grave marker (x{n} FELL · BANNERS HOLD); 10s fuse warning haptic (orphaned `playTimeWarning` wired).

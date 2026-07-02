@@ -20,7 +20,7 @@ Medieval fantasy tri-peaks solitaire. React Native mobile app, live on Google Pl
 
 ## Core gameplay concepts (scoring v2, 2026-07-01 — spec in GAMEPLAY.md §1.5)
 
-- 6 board layouts (Battlements, Cross of Clans, The Stronghold, Snake Eyes, The Citadel, Dragon's Spine) with per-level multipliers 1.0x–3.5x
+- 7 board layouts (Battlements, The Siege, The Hourglass, Snake Eyes, The Citadel, Dragon's Spine, The Mythic Peaks) with per-level multipliers 1.0x–4.0x; blocking graphs must be SYMMETRIC (owner constraint) and machine-verified clearable via `scripts/verify-layouts.js`
 - Combo system: chain multiplier capped at 100x (combo 31+); **banners** at 5/8/12/16/20/24/28/32 bank `milestone × 1,000 × fieldMult × glory` permanently and freeze the timer 3s — one ladder drives bank/freeze/sound/HUD tier
 - Free Draw (doesn't reset combo): one granted per field, unused draws bank to the next field (cap 2); deck draw resets combo
 - Bounty cards: 3x match points at the current combo tier (routing decision); placement seeded on shared decks (Daily/Arena)
@@ -61,7 +61,7 @@ Medieval fantasy tri-peaks solitaire. React Native mobile app, live on Google Pl
 
 ## Current state
 
-v1.3.x in production; **v1.4 in progress on `refactor/v1.4-phase3`** — Phase 3 redesign (design system in `src/ui/`, all screens recomposed; log in DESIGN_PLAN.md) + scoring v2 / The Citadel layout / Armory skill gates + the moments pass (UNBROKEN, clear-hold, first-session arc, Ember Ward — GAMEPLAY.md §1.5). v1.4 release checklist: owner playtest of The Citadel + Dragon's Spine base, `allTimeScores` wipe decision. Earlier: SDK 52→54, Reanimated v3→v4, 16 KB compliance, Arena disconnect handling.
+v1.3.x in production; **v1.4 in progress on `refactor/v1.4-phase3`** — Phase 3 redesign (design system in `src/ui/`, all screens recomposed; log in DESIGN_PLAN.md) + scoring v2 / The Citadel layout / Armory skill gates + the moments pass (UNBROKEN, clear-hold, first-session arc, Ember Ward — GAMEPLAY.md §1.5). v1.4 release checklist: owner playtest of the new/changed boards (The Siege, The Hourglass, The Citadel, The Mythic Peaks, Dragon's Spine base), `allTimeScores` wipe decision. Earlier: SDK 52→54, Reanimated v3→v4, 16 KB compliance, Arena disconnect handling.
 
 ## Working rules
 

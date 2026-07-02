@@ -6,6 +6,12 @@ Ordered smallest-risk-first. Each Phase 1 step is a separate commit; the app mus
 
 ## ▶ Fable sessions — 2026-07-01 → 02 (supersede the 2026-06-16 pause)
 
+**Day 2, third pass (2026-07-02) — the layout audit** (owner playtest verdict: game approved, levels 2/3 boring), one slice per commit (tsc-gated; spec in GAMEPLAY.md §3):
+- **`scripts/verify-layouts.js`** — every board's blocking graph encoded + machine-checked (clearable, mirror-isomorphic, Monte-Carlo feel metrics). Audit confirmed the playtest: Cross of Clans 75% dead taps / 0.8-card opening; Stronghold decays from move 1 + duplicates the Battlements archetype.
+- **The Siege** (`LayoutSiege.tsx`, layout 11, level 2) — castle-from-above ring + 6-card keep, double-symmetric, reveals RISE at the end (last-5: 3.4). `Layout9` shelved.
+- **The Hourglass** (`LayoutHourglass.tsx`, layout 12, level 3) — reservoir → taper → the Last Grain → widening bloom; lowest dead-tap share, deepest board. `Layout7` shelved.
+- **The Mythic Peaks** (`LayoutPeaks.tsx`, layout 13, **new level 7, 4.0×**) — the classic tri-peaks board as the namesake finale; run is now 7 fields 1.0–4.0×. `TOTAL_LEVELS` ripples automatically; Guide copy interpolates; ghost paces self-heal. `Card.tsx` exports `CARD_W/CARD_H` for exact half-card geometry. **All four playtest-gated; score inflation subsumed by the pending wipe.**
+
 **Day 2, second pass (2026-07-02) — the moments pass** (brief: "make it something people talk about"), one slice per commit (tsc-gated; log in DESIGN_PLAN rows 36–41 + GAMEPLAY.md §1.5.4–10):
 - **UNBROKEN + the clear-hold** (`BoardBurst.tsx`): the apex accolade (field consumed by one chain — doubles the perfect-clear bonus, the session's ONE scoring change) + the recovered perfect-clear moment (banner/screen-swap fired in one synchronous block — the banner never drew a frame; won fields now hold the board with the clock stopped).
 - **Capture weight**: dais punch on every capture/draw; steel CHAIN BROKEN grave marker; 10s fuse haptic (orphaned `playTimeWarning` wired).

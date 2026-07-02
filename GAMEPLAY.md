@@ -153,13 +153,25 @@ Seeded deck per `getTodayString()`, all 6 levels, one attempt/day, own leaderboa
 | Level | Mult | Config layout | File | Name (in file) | Cards | Open | Max depth | Base row |
 |---|---|---|---|---|---|---|---|---|
 | 1 | 1.0× | 1 | `Layout1.tsx` | Battlements | 29 | **12** | 4 (bridge) | 5 open |
-| 2 | 1.5× | 9 | `Layout9.tsx` | Cross of Clans | 32 | **12** | 3 | none |
-| 3 | 2.0× | 7 | `Layout7.tsx` | The Stronghold | 30 | **10** | 4 (pyramid) | 4 open |
+| 2 | 1.5× | 11 | `LayoutSiege.tsx` | **The Siege** *(2026-07-02 audit, playtest-gated)* | 32 | **12** | 6 (keep) | **none** |
+| 3 | 2.0× | 12 | `LayoutHourglass.tsx` | **The Hourglass** *(2026-07-02 audit, playtest-gated)* | 30 | **8** | 7 (bloom) | **none** |
 | 4 | 2.5× | 8 | `Layout8.tsx` | Snake Eyes | 32 | **9** | 5 (spine) | 4 open |
 | 5 | 3.0× | 10 | `LayoutCitadel.tsx` | **The Citadel** *(2026-07-02, playtest-gated)* | 32 | **10** | 4 (breach) | **none** |
 | 6 | 3.5× | 5 | `Layout5.tsx` | Dragon's Spine | 28 | **11** *(was 14 — base interlocked 2026-07-01)* | 3 | 7 slots, 4 open |
+| 7 | 4.0× | 13 | `LayoutPeaks.tsx` | **The Mythic Peaks** *(2026-07-02, playtest-gated)* | 28 | **10** | 4 (summits) | 10 open (fused web) |
 
-Shelved (not in rotation): `Layout2.tsx` (unnamed piles — replaced by the Warfront at level 5), `Layout3.tsx` "Fortress" (36), `Layout4c.tsx` "Reverse Tripeaks" (36), `Layout6.tsx` "Colosseum" (32).
+Shelved (not in rotation): `Layout9.tsx` "Cross of Clans" + `Layout7.tsx` "The Stronghold" (cut by the 2026-07-02 audit, below), `Layout2.tsx` (unnamed piles), `Layout3.tsx` "Fortress" (36), `Layout4c.tsx` "Reverse Tripeaks" (36), `Layout6.tsx` "Colosseum" (32).
+
+> **2026-07-02 — the layout audit** (owner playtest verdict: levels 2 and 3 boring — "fewer cards opening, less uniqueness, less strategic variety"). `scripts/verify-layouts.js` now encodes every board's blocking graph and machine-checks clearability, mirror-isomorphism and Monte-Carlo feel metrics (dead-tap share, burst rate, first/last-5 reveal profile). The audit agreed with the playtest and found the numbers: **Cross of Clans** was 75% dead taps with a 0.8-card first-five (four identical clusters, zero shared covers, the "which cluster" choice cosmetic); **The Stronghold** decayed — reveal rate highest at move 1, narrowing pyramid, and it duplicated the Battlements archetype two levels earlier. Both replaced; both files shelved.
+>
+> The replacements (+ the new finale), all verified clearable + mirror-isomorphic, all playtest-gated:
+> - **The Siege (L2, 1.5×, 32c, 12 open)** — a castle from above: outer wall ring (guards + pockets), inner wall bricked beneath (each stone under two — one tap advances up to four cards), posterns, and a 6-card keep that falls pop-pop-pop (N/S gatehouses → both halls → both hearts). Double-symmetric (L-R and N-S). The only board whose reveals **rise** at the end (last-5: 3.4 vs 1.4–1.8 set-wide). Decisions: where to breach, which direction around the ring, keeping the chain alive for the keep.
+> - **The Hourglass (L3, 2.0×, 30c, 8 open)** — sand flows down: 8-wide open reservoir → brick taper → **the Last Grain** (one card holds the whole bottom half) → widening bloom (2→3→4→5) where no tap is dead. Narrative arc: abundance → squeeze → pop → five-wide finish. Lowest dead-tap share (48%), best burst rate (21.8%), deepest board (7). Teaches Free Draw (bridge the neck); natural UNBROKEN stage.
+> - **The Mythic Peaks (L7, 4.0×, 28c, 10 open)** — the classic tri-peaks board, the namesake, as the new finale: ten contiguous opens (widest chain freedom — the 4.0× banner hunt), radiating web (every clear advances two above), three summit pops. The run now ends by summiting the Mythic Peaks.
+>
+> **Run is now 7 fields, 1.0×–4.0×.** `TOTAL_LEVELS` drives road deal / march / Flawless / arena sync; Guide copy interpolates. Scores inflate ~30% per run vs the 6-field v2 baseline — subsumed by the pending `allTimeScores` wipe (docs stay `scoringV: 2`; the match/banner formulas are unchanged). Old 6-field ghost paces self-heal.
+>
+> Post-audit strategic identities, one line each: L1 teaches · L2 ring-routing + late keep · L3 ration-the-squeeze · L4 depth/scarcity · L5 late bloom + fuel · L6 scattered sprint · L7 open-web greed. The §3.2 archetype-duplication and "every opening feels the same" findings are resolved: three of seven boards are base-less, and no two share a cascade signature.
 
 > **2026-07-02 — The Citadel (level 5) replaces the Warfront (never shipped).** Owner constraint: **symmetric shapes only** — the asymmetric Warfront broke the set's visual consistency. The redesign keeps the Warfront's signature — **the Breach**, an escalating 2→3→4→5 fan that *widens* as you climb (the inverse of every pyramid in the set; the board's payoffs arrive at the END of the field, exactly when v2 banners pay most) — and rebuilds the flanks as two **identical mirrored bastions** (supply chain = tempo, 3-over-2 tower = mid cascade, open picket = free tap). 32 cards, **10 opens**, still no base row. Blocking graph machine-verified: fully clearable **and mirror-isomorphic** (the symmetry holds at the rules level). Cascade events: Breach 1.5/1.33/1.25, towers 1.5 — in the §3.3 band; supply chains deliberately flat as fuel. **Owner feel-gate before release.**
 
