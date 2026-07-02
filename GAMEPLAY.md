@@ -136,12 +136,12 @@ Seeded deck per `getTodayString()`, all 6 levels, one attempt/day, own leaderboa
 | 2 | 1.5× | 9 | `Layout9.tsx` | Cross of Clans | 32 | **12** | 3 | none |
 | 3 | 2.0× | 7 | `Layout7.tsx` | The Stronghold | 30 | **10** | 4 (pyramid) | 4 open |
 | 4 | 2.5× | 8 | `Layout8.tsx` | Snake Eyes | 32 | **9** | 5 (spine) | 4 open |
-| 5 | 3.0× | 10 | `LayoutWarfront.tsx` | **The Warfront** *(2026-07-01, playtest-gated)* | 32 | **9** | 4 (breach) | **none** |
+| 5 | 3.0× | 10 | `LayoutCitadel.tsx` | **The Citadel** *(2026-07-02, playtest-gated)* | 32 | **10** | 4 (breach) | **none** |
 | 6 | 3.5× | 5 | `Layout5.tsx` | Dragon's Spine | 28 | **11** *(was 14 — base interlocked 2026-07-01)* | 3 | 7 slots, 4 open |
 
 Shelved (not in rotation): `Layout2.tsx` (unnamed piles — replaced by the Warfront at level 5), `Layout3.tsx` "Fortress" (36), `Layout4c.tsx` "Reverse Tripeaks" (36), `Layout6.tsx` "Colosseum" (32).
 
-> **2026-07-01 — The Warfront (new, level 5).** The set's first asymmetric, no-base-row board, answering §3.2's two convergence levers directly (symmetry halves the decision space; base rows homogenize openings). Three unequal structures: a guarded **Siege Tower** (keystone 1→2→2), the **Breach** — an escalating 2→3→4→5 fan, the inverse of the Stronghold pyramid and the set's biggest cascade — and a shallow **Supply Line** (1:1 fuel you ration between pushes). 9 opens (Snake Eyes' count, right for 3.0×). Cascade-event ratios sit in the §3.3 band for 23/32 cards; the supply is deliberately flat as chain fuel. Blocking graph machine-verified fully-clearable. **Owner feel-gate before release** — same judgment that picked the active six.
+> **2026-07-02 — The Citadel (level 5) replaces the Warfront (never shipped).** Owner constraint: **symmetric shapes only** — the asymmetric Warfront broke the set's visual consistency. The redesign keeps the Warfront's signature — **the Breach**, an escalating 2→3→4→5 fan that *widens* as you climb (the inverse of every pyramid in the set; the board's payoffs arrive at the END of the field, exactly when v2 banners pay most) — and rebuilds the flanks as two **identical mirrored bastions** (supply chain = tempo, 3-over-2 tower = mid cascade, open picket = free tap). 32 cards, **10 opens**, still no base row. Blocking graph machine-verified: fully clearable **and mirror-isomorphic** (the symmetry holds at the rules level). Cascade events: Breach 1.5/1.33/1.25, towers 1.5 — in the §3.3 band; supply chains deliberately flat as fuel. **Owner feel-gate before release.**
 
 ### 3.1 The six active layouts
 

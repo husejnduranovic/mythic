@@ -17,9 +17,10 @@ export const LEVEL_CONFIG: Record<
   2: { fieldCards: 32, deckStart: 32, time: 85, layout: 9, name: "Cross of Clans" },
   3: { fieldCards: 30, deckStart: 30, time: 80, layout: 7, name: "The Stronghold" },
   4: { fieldCards: 32, deckStart: 32, time: 80, layout: 8, name: "Snake Eyes" },
-  // Layout 10 "The Warfront" replaced the unnamed piles+wall (layout 2,
-  // shelved) — asymmetric, no base row; owner playtest gate applies.
-  5: { fieldCards: 32, deckStart: 32, time: 85, layout: 10, name: "The Warfront" },
+  // Layout 10 "The Citadel" (mirror-symmetric successor to the unshipped
+  // asymmetric Warfront) sits where the unnamed piles+wall (layout 2, shelved)
+  // used to — no base row; owner playtest gate applies.
+  5: { fieldCards: 32, deckStart: 32, time: 85, layout: 10, name: "The Citadel" },
   6: { fieldCards: 28, deckStart: 28, time: 75, layout: 5, name: "Dragon's Spine" },
 }
 
