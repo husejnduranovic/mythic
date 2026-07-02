@@ -20,6 +20,7 @@ import Card from "./Card"
 import Layout1 from "./Layout1"
 import LayoutCitadel from "./LayoutCitadel"
 import LayoutSiege from "./LayoutSiege"
+import LayoutHourglass from "./LayoutHourglass"
 import Timer from "./Timer"
 import { saveScore } from "../services/LocalScoreService"
 import {
@@ -1156,6 +1157,8 @@ const Game = ({
     }
 
     switch (config.layout) {
+      case 12:
+        return <LayoutHourglass key={layoutKey} {...p} />
       case 11:
         return <LayoutSiege key={layoutKey} {...p} />
       case 10:
