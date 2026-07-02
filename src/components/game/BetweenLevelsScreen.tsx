@@ -434,7 +434,7 @@ const c = StyleSheet.create({
   },
 })
 
-// ── The march — six small field chips ────────────────────────────────────────
+// ── The march — one small chip per field ─────────────────────────────────────
 const MarchDot = ({ idx, level }: { idx: number; level: number }) => {
   const done = idx <= level
   const isNext = idx === level + 1 && level < TOTAL_LEVELS
@@ -769,7 +769,7 @@ export const BetweenLevelsScreen = ({
                 )}
                 {!ahead && ghostDelta !== null && !isFinal && (
                   <Text style={b.ghostNote}>
-                    the fields ahead pay up to 3.5× — the run is alive
+                    the fields ahead pay up to 4× — the run is alive
                   </Text>
                 )}
                 {freeDraws > 0 && !isFinal && (

@@ -27,6 +27,10 @@ export const LEVEL_CONFIG: Record<
   // used to — no base row; owner playtest gate applies.
   5: { fieldCards: 32, deckStart: 32, time: 85, layout: 10, name: "The Citadel" },
   6: { fieldCards: 28, deckStart: 28, time: 75, layout: 5, name: "Dragon's Spine" },
+  // Layout 13 "The Mythic Peaks" — the classic tri-peaks board, the game's
+  // namesake, as the new finale (2026-07-02). Ten contiguous opens = the
+  // widest chain freedom in the set, where the 4.0× banner hunt lives.
+  7: { fieldCards: 28, deckStart: 28, time: 75, layout: 13, name: "The Mythic Peaks" },
 }
 
 export const TOTAL_LEVELS = Object.keys(LEVEL_CONFIG).length

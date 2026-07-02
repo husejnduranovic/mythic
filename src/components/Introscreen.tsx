@@ -15,6 +15,8 @@ import { Icon, IconName } from "../ui/Icon"
 import { GoldButton } from "../ui/GoldButton"
 import { color, font } from "../ui/theme"
 import { withAlpha } from "../ui/honor"
+import { TOTAL_LEVELS } from "../game/config"
+import { getLayoutMultiplier } from "../game/scoring"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Intro / How-to-play (Guide). First-run shows the brand splash then the
@@ -96,9 +98,9 @@ const TUTORIAL_SLIDES: {
   },
   {
     icon: "image-filter-hdr",
-    title: "6 Battlefields",
-    desc: "Each run has 6 battlefields, played in order.\nLater battlefields are worth more points per card.\n\nClear every card on a field for a big bonus.",
-    example: "Field 1 = 1×  →  Field 6 = 3.5× points",
+    title: `${TOTAL_LEVELS} Battlefields`,
+    desc: `Each run has ${TOTAL_LEVELS} battlefields, played in order.\nLater battlefields are worth more points per card.\n\nClear every card on a field for a big bonus.`,
+    example: `Field 1 = 1×  →  Field ${TOTAL_LEVELS} = ${getLayoutMultiplier(TOTAL_LEVELS)}× points`,
   },
   {
     icon: "lightning-bolt",
@@ -340,7 +342,7 @@ const IntroScreen = ({
           </Animated.Text>
           <Animated.View style={[z.divider, { opacity: taglineOpacity }]} />
           <Animated.Text style={[z.tagline, { opacity: taglineOpacity }]}>
-            6 Battlefields · 4 Beast Clans · Infinite Glory
+            {TOTAL_LEVELS} Battlefields · 4 Beast Clans · Infinite Glory
           </Animated.Text>
 
           <Animated.Text style={[z.tapText, { opacity: tapOpacity }]}>
