@@ -103,10 +103,13 @@ export const getTodayString = (): string => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
 }
 
+// Local date parts, matching getTodayString — the old toISOString() form was
+// UTC, so players east of UTC playing just after local midnight compared
+// against the wrong "yesterday" and had streaks wrongly reset.
 export const getYesterdayString = (): string => {
   const d = new Date()
   d.setDate(d.getDate() - 1)
-  return d.toISOString().split("T")[0]
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
 }
 
 // Moved to src/game/match.ts — re-exported here for compatibility.

@@ -1,6 +1,6 @@
 import firestore from "@react-native-firebase/firestore"
 import AsyncStorage from "@react-native-async-storage/async-storage"
-import { getTodayString, getYesterdayString } from "./CardService"
+import { getTodayString } from "./CardService"
 import { Collections, dailyScoreId, loungeScoreId } from "./collections"
 import { StorageKeys } from "./storageKeys"
 import { logError } from "./logError"
@@ -119,20 +119,34 @@ export const updateUserProfile = async (
     const doc = await ref.get()
     const data = doc.data() || {}
 
-    // Streak logic
-    const today = getTodayString() // reuse your existing helper
+    // Streak logic — exact day-diff on the local-day strings ("YYYY-MM-DD"
+    // parses as a UTC midnight, so the difference is an integer count of
+    // days; the old string-equality check against a UTC "yesterday" reset
+    // streaks for players east of UTC playing just after local midnight).
+    const today = getTodayString()
     const lastPlayed = data.lastPlayedDate || null
 
     let currentStreak = data.currentStreak || 0
     let bestStreak = data.bestStreak || 0
+    let wardUsedAt = data.emberWardUsedAt || null
 
-    if (lastPlayed === today) {
+    const daysBetween = (from: string, to: string): number =>
+      Math.round((Date.parse(to) - Date.parse(from)) / 86400000)
+    const dayDiff = lastPlayed ? daysBetween(lastPlayed, today) : null
+    const wardReady = !wardUsedAt || daysBetween(wardUsedAt, today) >= 7
+
+    if (dayDiff === 0) {
       // Already played today — don't change streak
-    } else if (lastPlayed === getYesterdayString()) {
+    } else if (dayDiff === 1) {
       // Consecutive day — increment
       currentStreak = currentStreak + 1
+    } else if (dayDiff === 2 && currentStreak > 0 && wardReady) {
+      // Ember Ward (DESIGN_PLAN §6 R4): one missed day per week is forgiven —
+      // the ember survived the night. Multi-day gaps still reset.
+      currentStreak = currentStreak + 1
+      wardUsedAt = today
     } else {
-      // Missed a day or first game ever — reset
+      // Missed too long, first game ever, or malformed date — reset
       currentStreak = 1
     }
 
@@ -149,6 +163,7 @@ export const updateUserProfile = async (
         lastPlayedDate: today,
         currentStreak,
         bestStreak,
+        ...(wardUsedAt ? { emberWardUsedAt: wardUsedAt } : {}),
       },
       { merge: true },
     )

@@ -37,6 +37,7 @@ interface HomeScreenProps {
   onlineCount: number
   currentStreak: number
   bestStreak?: number
+  emberWarded?: boolean
   onHowToPlay?: () => void
 }
 
@@ -182,6 +183,7 @@ const HomeScreen = ({
   loungeCode,
   onlineCount,
   currentStreak,
+  emberWarded,
   onHowToPlay,
 }: HomeScreenProps) => {
   const titleOpacity = useRef(new Animated.Value(0)).current
@@ -417,6 +419,14 @@ const HomeScreen = ({
             <Icon name="fire" size={13} color={color.ember} />
             <Text style={styles.streakBadgeCount}>{currentStreak}</Text>
             <Text style={styles.streakBadgeLabel}>DAY STREAK</Text>
+            {/* Ember Ward spent — the ember survived the night */}
+            {emberWarded && (
+              <Icon
+                name="shield-half-full"
+                size={11}
+                color="rgba(255,140,0,0.75)"
+              />
+            )}
           </TouchableOpacity>
         )}
 

@@ -70,7 +70,7 @@ function App() {
   const fontsReady = fontsLoaded || !!fontError
 
   const onlineCount = usePresence(user?.uid)
-  const { currentStreak, bestStreak } = useUserStats(user?.uid)
+  const { currentStreak, bestStreak, emberWarded } = useUserStats(user?.uid)
 
   useEffect(() => {
     NavigationBar.setVisibilityAsync("hidden")
@@ -193,6 +193,7 @@ function App() {
         onlineCount={onlineCount}
         currentStreak={currentStreak}
         bestStreak={bestStreak}
+        emberWarded={emberWarded}
         onHowToPlay={() => setShowRules(true)}
       />
     ),
