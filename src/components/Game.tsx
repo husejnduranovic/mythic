@@ -174,6 +174,10 @@ const Game = ({
     name: "sword-cross",
   })
   const [milestoneColor, setMilestoneColor] = useState("#ffffff")
+  // Combo at the moment of the show — the footer/sizing must not read live
+  // combo state (a CHAIN BROKEN stamp would render "x0 COMBO" after the
+  // same-press reset).
+  const [milestoneCombo, setMilestoneCombo] = useState(0)
 
   const milestoneOpacity = useSharedValue(0)
   const milestoneScale = useSharedValue(0.9)
@@ -415,15 +419,20 @@ const Game = ({
         saveScore(score, bestCombo)
         incrementGamesPlayed()
         // First Victory — once per device, any solo mode; arena's game-over
-        // is the rankings moment and keeps it.
+        // is the rankings moment and keeps it. The games-played check keeps
+        // the overlay away from veterans updating into this build (their
+        // local count is already high); the flag still writes so nobody is
+        // ever re-checked.
         if (!arenaMode) {
-          AsyncStorage.getItem(StorageKeys.firstVictorySeen).then((seen) => {
-            if (!seen) {
-              AsyncStorage.setItem(StorageKeys.firstVictorySeen, "1").catch(
-                () => {},
-              )
-              setShowFirstVictory(true)
-            }
+          Promise.all([
+            AsyncStorage.getItem(StorageKeys.firstVictorySeen),
+            AsyncStorage.getItem(StorageKeys.gamesPlayed),
+          ]).then(([seen, played]) => {
+            if (seen) return
+            AsyncStorage.setItem(StorageKeys.firstVictorySeen, "1").catch(
+              () => {},
+            )
+            if (parseInt(played || "0", 10) <= 1) setShowFirstVictory(true)
           })
         }
       }
@@ -503,10 +512,14 @@ const Game = ({
         personalBestComboShownRef.current = true
         setBestComboEver(combo)
         AsyncStorage.setItem(StorageKeys.bestComboEver, combo.toString())
-        showMilestone(`NEW BEST COMBO x${combo}!`, palette.goldBright, {
-          fam: "mci",
-          name: "crown",
-        })
+        showMilestone(
+          `NEW BEST COMBO x${combo}!`,
+          palette.goldBright,
+          { fam: "mci", name: "crown" },
+          "",
+          700,
+          combo,
+        )
       }
       if (combo >= 12) {
         comboGlowOpacity.setValue(0.8)
@@ -550,12 +563,14 @@ const Game = ({
     icon: SigilSpec,
     sub = "",
     holdMs = 480,
+    comboAt = 0,
   ) => {
     if (milestoneHideTimer.current) clearTimeout(milestoneHideTimer.current)
     setMilestoneText(text)
     setMilestoneSub(sub)
     setMilestoneColor(color)
     setMilestoneIcon(icon)
+    setMilestoneCombo(comboAt)
     milestoneOpacity.value = withTiming(1, { duration: 90 })
     milestoneScale.value = withSequence(
       withTiming(1.05, { duration: 140 }),
@@ -640,6 +655,7 @@ const Game = ({
         { fam: "mci", name: "link-variant" },
         `ONE CHAIN · +${(perfectBonus + unbrokenBonus).toLocaleString()}`,
         1350,
+        comboRef.current,
       )
       SoundService.playUnbroken()
     } else if (allCleared) {
@@ -651,6 +667,7 @@ const Game = ({
         { fam: "mci", name: "star-four-points" },
         `+${perfectBonus.toLocaleString()}`,
         900,
+        comboRef.current,
       )
     }
 
@@ -870,6 +887,8 @@ const Game = ({
         palette.goldBright,
         { fam: "mci", name: "sack" },
         `×3 · +${(pts + bountyBonus).toLocaleString()}`,
+        480,
+        nc,
       )
     if (banner) {
       setBannersPlanted((b) => b + 1)
@@ -879,6 +898,7 @@ const Game = ({
         banner.icon,
         `+${bank.toLocaleString()} BANKED`,
         nc >= 20 ? 850 : 550,
+        nc,
       )
       freezeTimerForCombo(BANNER_FREEZE_SECONDS)
       // RAMPAGE and above detonate the board — the top half of the ladder
@@ -1608,7 +1628,7 @@ const Game = ({
           >
             <Sigil
               sigil={milestoneIcon}
-              size={combo >= 16 ? 30 : 24}
+              size={milestoneCombo >= 16 ? 30 : 24}
               color={milestoneColor}
             />
             <View style={styles.milestoneTextWrap}>
@@ -1618,11 +1638,11 @@ const Game = ({
                   {
                     color: milestoneColor,
                     fontSize:
-                      combo >= 24
+                      milestoneCombo >= 24
                         ? 28
-                        : combo >= 16
+                        : milestoneCombo >= 16
                           ? 24
-                          : combo >= 12
+                          : milestoneCombo >= 12
                             ? 20
                             : 18,
                   },
@@ -1637,14 +1657,16 @@ const Game = ({
                   {milestoneSub}
                 </Text>
               ) : null}
-              <Text
-                style={[
-                  styles.milestoneMultiplier,
-                  { color: milestoneColor + "80" },
-                ]}
-              >
-                x{combo} COMBO
-              </Text>
+              {milestoneCombo >= 2 && (
+                <Text
+                  style={[
+                    styles.milestoneMultiplier,
+                    { color: milestoneColor + "80" },
+                  ]}
+                >
+                  x{milestoneCombo} COMBO
+                </Text>
+              )}
             </View>
           </Reanimated.View>
           {coachVisible && (
