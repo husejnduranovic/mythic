@@ -26,7 +26,7 @@ import {
 } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { LEVEL_CONFIG, TOTAL_LEVELS } from "../../game/config"
-import { Icon } from "../../ui/Icon"
+import { Icon, IconName } from "../../ui/Icon"
 import { GoldButton } from "../../ui/GoldButton"
 import { color, font } from "../../ui/theme"
 import { CARD_FIELD, TIER, withAlpha } from "../../ui/honor"
@@ -356,6 +356,84 @@ const f = StyleSheet.create({
   },
 })
 
+// ── The exhale itemized — one spoils-source chip, dealt in on its beat ───────
+const LedgerChip = ({
+  icon,
+  label,
+  value,
+  tint,
+  delay,
+}: {
+  icon: IconName
+  label: string
+  value: number
+  tint: string
+  delay: number
+}) => {
+  const a = useRef(new Animated.Value(0)).current
+  useEffect(() => {
+    Animated.timing(a, {
+      toValue: 1,
+      duration: 240,
+      delay,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start()
+  }, [])
+  return (
+    <Animated.View
+      style={[
+        c.chip,
+        {
+          opacity: a,
+          transform: [
+            {
+              translateY: a.interpolate({
+                inputRange: [0, 1],
+                outputRange: [6, 0],
+              }),
+            },
+          ],
+        },
+      ]}
+    >
+      <Icon name={icon} size={9} color={tint} />
+      <Text style={[c.chipVal, { color: tint }]}>
+        +{value.toLocaleString()}
+      </Text>
+      <Text style={c.chipLabel}>{label}</Text>
+    </Animated.View>
+  )
+}
+
+const c = StyleSheet.create({
+  chipRow: {
+    flexDirection: "row",
+    gap: 6,
+    marginTop: 6,
+    justifyContent: "center",
+    flexWrap: "wrap",
+  },
+  chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(4,8,5,0.5)",
+    borderWidth: 1,
+    borderColor: color.goldLine,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  chipVal: { fontSize: 9, fontWeight: "900", letterSpacing: 0.3 },
+  chipLabel: {
+    fontSize: 7,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+    color: "rgba(255,255,255,0.4)",
+  },
+})
+
 // ── The march — six small field chips ────────────────────────────────────────
 const MarchDot = ({ idx, level }: { idx: number; level: number }) => {
   const done = idx <= level
@@ -410,6 +488,8 @@ export const BetweenLevelsScreen = ({
   level,
   score,
   fieldSpoils = 0,
+  fieldLedger = null,
+  unbroken = false,
   ghostAt = null,
   freeDraws = 0,
   gloryActive,
@@ -428,6 +508,14 @@ export const BetweenLevelsScreen = ({
   level: number
   score: number
   fieldSpoils?: number
+  fieldLedger?: {
+    combat: number
+    time: number
+    deck: number
+    perfect: number
+    unbroken: number
+  } | null
+  unbroken?: boolean
   ghostAt?: number | null
   freeDraws?: number
   gloryActive: boolean
@@ -473,7 +561,53 @@ export const BetweenLevelsScreen = ({
   }, [])
 
   const isFinal = level >= TOTAL_LEVELS
-  const trim = cleared ? color.gold : TIER.steel
+  const isUnbroken = cleared && unbroken
+  const trim = isUnbroken
+    ? color.goldBright
+    : cleared
+      ? color.gold
+      : TIER.steel
+
+  // The exhale itemized — skip zero sources, deal chips in on 110ms beats.
+  const ledgerChips: {
+    icon: IconName
+    label: string
+    value: number
+    tint: string
+  }[] = fieldLedger
+    ? [
+        {
+          icon: "sword-cross" as IconName,
+          label: "COMBAT",
+          value: fieldLedger.combat,
+          tint: color.gold,
+        },
+        {
+          icon: "timer-sand" as IconName,
+          label: "TIME",
+          value: fieldLedger.time,
+          tint: TIER.steel,
+        },
+        {
+          icon: "cards" as IconName,
+          label: "DECK",
+          value: fieldLedger.deck,
+          tint: TIER.steel,
+        },
+        {
+          icon: "star-four-points" as IconName,
+          label: "PERFECT",
+          value: fieldLedger.perfect,
+          tint: color.sage,
+        },
+        {
+          icon: "link-variant" as IconName,
+          label: "UNBROKEN",
+          value: fieldLedger.unbroken,
+          tint: color.goldBright,
+        },
+      ].filter((chip) => chip.value > 0)
+    : []
 
   const padL = Math.max(16, insets.left)
   const padR = Math.max(16, insets.right)
@@ -525,12 +659,22 @@ export const BetweenLevelsScreen = ({
         >
           <View style={b.outcomeRow}>
             <Icon
-              name={cleared ? "check-decagram" : "shield-half-full"}
+              name={
+                isUnbroken
+                  ? "link-variant"
+                  : cleared
+                    ? "check-decagram"
+                    : "shield-half-full"
+              }
               size={17}
               color={trim}
             />
             <Text style={[b.outcomeTxt, { color: trim }]}>
-              {cleared ? "FIELD CLEARED" : "THE FIELD HOLDS"}
+              {isUnbroken
+                ? "UNBROKEN CONQUEST"
+                : cleared
+                  ? "FIELD CLEARED"
+                  : "THE FIELD HOLDS"}
             </Text>
           </View>
           <Text style={b.takenTxt}>
@@ -543,6 +687,20 @@ export const BetweenLevelsScreen = ({
               : ""}
             CAMPAIGN TOTAL {score.toLocaleString()}
           </Text>
+          {ledgerChips.length > 0 && (
+            <View style={c.chipRow}>
+              {ledgerChips.map((chip, i) => (
+                <LedgerChip
+                  key={chip.label}
+                  icon={chip.icon}
+                  label={chip.label}
+                  value={chip.value}
+                  tint={chip.tint}
+                  delay={340 + i * 110}
+                />
+              ))}
+            </View>
+          )}
         </Animated.View>
 
         {/* ── Beat 2: the reveal ── */}

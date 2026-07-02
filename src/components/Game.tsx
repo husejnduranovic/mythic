@@ -139,6 +139,17 @@ const Game = ({
   } | null>(null)
   // Spoils taken on the field just fought — feeds the between-levels count-up.
   const [fieldSpoils, setFieldSpoils] = useState(0)
+  // The exhale itemized: where this field's spoils actually came from. The
+  // player's discipline (fast clear → time, unspent deck → deck, perfection,
+  // the unbroken chain) becomes visible money between fields.
+  const [fieldLedger, setFieldLedger] = useState<{
+    combat: number
+    time: number
+    deck: number
+    perfect: number
+    unbroken: number
+  } | null>(null)
+  const [fieldUnbroken, setFieldUnbroken] = useState(false)
   // The ghost: per-field cumulative score of the player's best completed run.
   const [ghostPace, setGhostPace] = useState<number[] | null>(null)
   const [totalCleared, setTotalCleared] = useState(0)
@@ -589,7 +600,16 @@ const Game = ({
 
     // Field ledger: spoils taken this field + the run's pace for the ghost.
     const fieldEnd = scoreRef.current + bonus
-    setFieldSpoils(fieldEnd - fieldStartScoreRef.current)
+    const spoilsTaken = fieldEnd - fieldStartScoreRef.current
+    setFieldSpoils(spoilsTaken)
+    setFieldLedger({
+      combat: spoilsTaken - bonus,
+      time: timeBonus,
+      deck: deckBonus,
+      perfect: perfectBonus,
+      unbroken: unbrokenBonus,
+    })
+    setFieldUnbroken(unbroken)
     fieldStartScoreRef.current = fieldEnd
     runPaceRef.current[level - 1] = fieldEnd
 
@@ -906,6 +926,8 @@ const Game = ({
     setUnbrokenFields(0)
     setBurst(null)
     setFieldSpoils(0)
+    setFieldLedger(null)
+    setFieldUnbroken(false)
     setTotalCleared(0)
     setTotalFieldCards(0)
     setGloryCharges(1)
@@ -1184,6 +1206,8 @@ const Game = ({
         level={level}
         score={score}
         fieldSpoils={fieldSpoils}
+        fieldLedger={fieldLedger}
+        unbroken={fieldUnbroken}
         ghostAt={ghostPace?.[level - 1] ?? null}
         freeDraws={freeDraws}
         gloryActive={gloryActive}
