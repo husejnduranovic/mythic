@@ -1088,6 +1088,10 @@ const Armory = ({ onBack }: ArmoryProps) => {
   const dealBack = useRef(new Animated.Value(0)).current
   const dealBounty = useRef(new Animated.Value(0)).current
   const shelfDeal = useRef(new Animated.Value(0)).current
+  // The forge moment — equipping strikes the stage: a gold flash spikes and
+  // decays, a FORGED stamp punches in and fades. Event-driven, idle at 0.
+  const forgeFlash = useRef(new Animated.Value(0)).current
+  const forgeStamp = useRef(new Animated.Value(0)).current
 
   const { width: winW, height: winH } = useWindowDimensions()
   const insets = useSafeAreaInsets()
@@ -1177,14 +1181,51 @@ const Armory = ({ onBack }: ArmoryProps) => {
     }).start()
   }
 
+  // The strike: forge sound + hammer haptic, the stage flashes gold, the
+  // FORGED stamp punches in (back-eased) and fades while the gear re-deals.
+  const forgeMoment = () => {
+    SoundService.playForge()
+    forgeFlash.setValue(0)
+    Animated.sequence([
+      Animated.timing(forgeFlash, {
+        toValue: 1,
+        duration: 70,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(forgeFlash, {
+        toValue: 0,
+        duration: 420,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start()
+    forgeStamp.setValue(0)
+    Animated.sequence([
+      Animated.spring(forgeStamp, {
+        toValue: 1,
+        speed: 26,
+        bounciness: 14,
+        useNativeDriver: true,
+      }),
+      Animated.delay(520),
+      Animated.timing(forgeStamp, {
+        toValue: 0,
+        duration: 240,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]).start()
+  }
+
   const selectItem = async (id: string) => {
-    SoundService.playDeckDraw()
     try {
       switch (tab) {
         case "cards":
           if (id !== selectedBack) {
             setSelectedBack(id)
             redeal(dealBack)
+            forgeMoment()
           }
           await AsyncStorage.setItem(STORAGE_KEYS.selectedBack, id)
           break
@@ -1199,6 +1240,7 @@ const Armory = ({ onBack }: ArmoryProps) => {
               useNativeDriver: true,
             }).start()
             setSelectedField(id)
+            forgeMoment()
           }
           await AsyncStorage.setItem(STORAGE_KEYS.selectedField, id)
           break
@@ -1206,6 +1248,7 @@ const Armory = ({ onBack }: ArmoryProps) => {
           if (id !== selectedBounty) {
             setSelectedBounty(id)
             redeal(dealBounty)
+            forgeMoment()
           }
           await AsyncStorage.setItem(STORAGE_KEYS.selectedBounty, id)
           break
@@ -1213,6 +1256,7 @@ const Armory = ({ onBack }: ArmoryProps) => {
           if (id !== selectedTable) {
             setSelectedTable(id)
             redeal(shelfDeal)
+            forgeMoment()
           }
           await AsyncStorage.setItem(STORAGE_KEYS.selectedTable, id)
           break
@@ -1458,6 +1502,41 @@ const Armory = ({ onBack }: ArmoryProps) => {
                   </Text>
                 </View>
               </Animated.View>
+
+              {/* the forge strike — flash + stamp, idle at opacity 0 */}
+              <Animated.View
+                pointerEvents="none"
+                style={[
+                  inset(0),
+                  z.forgeFlashOverlay,
+                  {
+                    opacity: forgeFlash.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, 0.32],
+                    }),
+                  },
+                ]}
+              />
+              <Animated.View
+                pointerEvents="none"
+                style={[
+                  z.forgeStamp,
+                  {
+                    opacity: forgeStamp,
+                    transform: [
+                      {
+                        scale: forgeStamp.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [1.6, 1],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              >
+                <Icon name="anvil" size={13} color={color.gold} />
+                <Text style={z.forgeStampText}>FORGED</Text>
+              </Animated.View>
             </View>
 
             {/* next-unlock ladder for the active rack */}
@@ -1644,6 +1723,31 @@ const z = StyleSheet.create({
     fontSize: 8,
     fontWeight: "800",
     letterSpacing: 2.5,
+  },
+  // The forge strike
+  forgeFlashOverlay: {
+    backgroundColor: "#F0D26E",
+    borderRadius: 14,
+  },
+  forgeStamp: {
+    position: "absolute",
+    alignSelf: "center",
+    top: "38%",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(8,16,9,0.88)",
+    borderWidth: 1.5,
+    borderColor: "rgba(232,197,71,0.7)",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  forgeStampText: {
+    fontFamily: font.heading,
+    color: color.gold,
+    fontSize: 12,
+    letterSpacing: 3,
   },
   duoRow: {
     position: "absolute",

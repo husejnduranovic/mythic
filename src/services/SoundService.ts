@@ -158,6 +158,17 @@ export const SoundService = {
     }
   },
 
+  // The Armory's forge strike — equipping a piece: the first banner sting as
+  // the hammer ring plus a heavy impact. No new asset; the pairing is new.
+  async playForge() {
+    try {
+      this.play(combo5Sound)
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)
+    } catch (err) {
+      logError("Sound", err)
+    }
+  },
+
   async playWild() {
     try {
       this.play(wildSound)
