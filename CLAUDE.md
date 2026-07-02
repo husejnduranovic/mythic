@@ -20,12 +20,13 @@ Medieval fantasy tri-peaks solitaire. React Native mobile app, live on Google Pl
 
 ## Core gameplay concepts (scoring v2, 2026-07-01 — spec in GAMEPLAY.md §1.5)
 
-- 6 board layouts (Battlements, Cross of Clans, The Stronghold, Snake Eyes, The Warfront, Dragon's Spine) with per-level multipliers 1.0x–3.5x
+- 6 board layouts (Battlements, Cross of Clans, The Stronghold, Snake Eyes, The Citadel, Dragon's Spine) with per-level multipliers 1.0x–3.5x
 - Combo system: chain multiplier capped at 100x (combo 31+); **banners** at 5/8/12/16/20/24/28/32 bank `milestone × 1,000 × fieldMult × glory` permanently and freeze the timer 3s — one ladder drives bank/freeze/sound/HUD tier
 - Free Draw (doesn't reset combo): one granted per field, unused draws bank to the next field (cap 2); deck draw resets combo
 - Bounty cards: 3x match points at the current combo tier (routing decision); placement seeded on shared decks (Daily/Arena)
 - Glory Hunt (opt-in: 2x points, 50% time, once per game); perfect clear 50,000 × fieldMult × glory; **Flawless Conquest** accolade for all-perfect runs
-- **The ghost**: best run's per-field pace stored locally (`@mythic_best_run_pace`); between-levels shows ahead/behind your best at that point
+- **Unbroken Conquest** (2026-07-02): field cleared with final combo === its card count (one unbroken chain) pays a second perfect-clear bonus (100k × fieldMult × glory total) — apex on-board moment (gold detonation, layered fanfare, earned-only ledger row); won fields hold the board ~1s while the clear moment plays (the clear-hold)
+- **The ghost**: best run's per-field pace stored locally (`@mythic_best_run_pace`); between-levels shows ahead/behind your best at that point; pre-battle names THE SHADOW (best total) before the run starts
 - Personal-best banner mid-run; two-active-card rule (second card retained from combo 2)
 - Removed mechanics (v1.4): wild cards, carry combo, combo insurance — code and Armory inventory deleted
 - Score docs carry `scoringV: 2`; v2 scores are ~5–20x lower than v1 — `allTimeScores` wipe recommended at 1.4 release
@@ -40,7 +41,8 @@ Medieval fantasy tri-peaks solitaire. React Native mobile app, live on Google Pl
 - Daily Quest (seeded, one attempt/day, own leaderboard)
 - Hall of Glory: all-time / daily / weekly leaderboards (Firestore)
 - Armory: 28 pieces across 4 racks (backs / battlefields / bounty / tables); gates: battles played, streaks, best combo (×12/×20/×28), 1M-spoils battle
-- Streak system with milestone unlocks (7/21/42/60 days)
+- Streak system with milestone unlocks (7/21/42/60 days); **Ember Ward** — one missed day per rolling week forgiven (`emberWardUsedAt` on `users/{uid}`); streak compare is an exact local-day diff (UTC-yesterday reset bug fixed 2026-07-02)
+- First-session arc: coach marks on the first free battle (`@mythic_seen_coachmarks`), First Victory overlay → Armory (`@mythic_first_victory_seen`, veteran-gated), share button on game-over
 - Hookah Lounge tournaments: venue codes (e.g. "VIENNA"), venue-specific weekly leaderboards
 - Version gating via Remote Config (`minimum_app_version`)
 
@@ -59,7 +61,7 @@ Medieval fantasy tri-peaks solitaire. React Native mobile app, live on Google Pl
 
 ## Current state
 
-v1.3.x in production; **v1.4 in progress on `refactor/v1.4-phase3`** — Phase 3 redesign (design system in `src/ui/`, all screens recomposed; log in DESIGN_PLAN.md) + scoring v2 / Warfront layout / Armory skill gates (GAMEPLAY.md). v1.4 release checklist: owner playtest of Warfront + Dragon's Spine base, `allTimeScores` wipe decision. Earlier: SDK 52→54, Reanimated v3→v4, 16 KB compliance, Arena disconnect handling.
+v1.3.x in production; **v1.4 in progress on `refactor/v1.4-phase3`** — Phase 3 redesign (design system in `src/ui/`, all screens recomposed; log in DESIGN_PLAN.md) + scoring v2 / The Citadel layout / Armory skill gates + the moments pass (UNBROKEN, clear-hold, first-session arc, Ember Ward — GAMEPLAY.md §1.5). v1.4 release checklist: owner playtest of The Citadel + Dragon's Spine base, `allTimeScores` wipe decision. Earlier: SDK 52→54, Reanimated v3→v4, 16 KB compliance, Arena disconnect handling.
 
 ## Working rules
 

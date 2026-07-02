@@ -6,6 +6,14 @@ Ordered smallest-risk-first. Each Phase 1 step is a separate commit; the app mus
 
 ## ▶ Fable sessions — 2026-07-01 → 02 (supersede the 2026-06-16 pause)
 
+**Day 2, second pass (2026-07-02) — the moments pass** (brief: "make it something people talk about"), one slice per commit (tsc-gated; log in DESIGN_PLAN rows 36–41 + GAMEPLAY.md §1.5.4–10):
+- **UNBROKEN + the clear-hold** (`BoardBurst.tsx`): the apex accolade (field consumed by one chain — doubles the perfect-clear bonus, the session's ONE scoring change) + the recovered perfect-clear moment (banner/screen-swap fired in one synchronous block — the banner never drew a frame; won fields now hold the board with the clock stopped).
+- **Capture weight**: dais punch on every capture/draw; steel CHAIN BROKEN grave marker; 10s fuse haptic (orphaned `playTimeWarning` wired).
+- **The exhale itemized**: Breath deals COMBAT/TIME/DECK/PERFECT/UNBROKEN chips (display-only).
+- **First-session arc**: R2 coach marks (`CoachMarks.tsx`), R5 First Victory (`FirstVictoryOverlay.tsx`, → Armory via `onGoArmory`, veteran-gated), A-1 share on game-over.
+- **Return hooks**: THE SHADOW at pre-battle; **Ember Ward** streak shield + **streak bug fix** (`getYesterdayString` was UTC vs local `getTodayString` — east-of-UTC streak resets just after midnight; now exact local-day diff).
+- Fix slice: milestone `comboAt` capture (CHAIN BROKEN read live x0), First Victory games-played gate.
+
 **Day 2 (2026-07-02) — the rethink pass**, one slice per commit (tsc-gated):
 - **The Citadel** (`LayoutCitadel.tsx`, layout 10) replaced the asymmetric Warfront — owner constraint: symmetric shapes only. Breach kept, flanks = identical mirrored bastions; graph verified clearable + mirror-isomorphic. Playtest gate stands.
 - **Battlefield felt rewrite**: accent light pool + per-field crests + forged brackets; fixed the theme-id mismatch that made all 8 fields render identical decor.
