@@ -61,7 +61,7 @@ Medieval fantasy tri-peaks solitaire. React Native mobile app, live on Google Pl
 
 ## Current state
 
-v1.3.x in production; **v1.4 in progress on `refactor/v1.4-phase3`** — Phase 3 redesign (design system in `src/ui/`, all screens recomposed; log in DESIGN_PLAN.md) + scoring v2 / The Citadel layout / Armory skill gates + the moments pass (UNBROKEN, clear-hold, first-session arc, Ember Ward — GAMEPLAY.md §1.5). v1.4 release checklist: owner playtest of the new/changed boards (The Siege, The Hourglass, The Citadel, The Mythic Peaks, Dragon's Spine base), `allTimeScores` wipe decision. Earlier: SDK 52→54, Reanimated v3→v4, 16 KB compliance, Arena disconnect handling.
+v1.3.x in production; **v1.4 in progress on `refactor/v1.4-phase3`** — Phase 3 redesign (design system in `src/ui/`, all screens recomposed; log in DESIGN_PLAN.md) + scoring v2 / Armory skill gates + the moments pass (UNBROKEN, clear-hold, first-session arc, Ember Ward — GAMEPLAY.md §1.5) + the layout audit (7-board set incl. The Siege / The Hourglass / The Mythic Peaks finale — GAMEPLAY.md §3) + the menu-energy pass (Home light/weight, Armory forge moment, ScreenEnter, GoldButton punch/disabled). Marketing playbook in **MARKET.md** (lounge channel first; listing refresh + wipe at release). v1.4 release checklist: owner playtest of the new/changed boards (The Siege, The Hourglass, The Citadel, The Mythic Peaks, Dragon's Spine base), `allTimeScores` wipe decision. Earlier: SDK 52→54, Reanimated v3→v4, 16 KB compliance, Arena disconnect handling.
 
 ## Working rules
 
