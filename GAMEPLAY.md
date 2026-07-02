@@ -46,6 +46,16 @@ The redesign that answers §1.1's convergence finding. Implemented in `src/game/
 
 v2 runs score **~5–20× lower** than v1 (single runs drop from tens of millions to ~1–5M). Existing `allTimeScores` entries become unbeatable ghosts. **Recommendation: wipe `allTimeScores` (and treat pre-v2 `bestScore` fields as historical) when 1.4 ships** — with ~6 active players this is cheap now and impossible later. Every score document now carries **`scoringV: 2`**, so if the wipe is skipped the leaderboards can filter by version instead.
 
+### Run systems (added 2026-07-02) — the comeback, the shadow, the apex
+
+Three systems answering what v2 didn't: why finish a bad run, and what makes a great one feel witnessed. **None touch the scoring math** — the wipe decision stays clean.
+
+1. **Free Draw banking.** Each field grants one Free Draw; an unused one carries to the next field (cap 2, count pip on the bar card). Draw variance smooths across the run and early discipline becomes late insurance. Deterministic given play — no fairness impact on shared decks.
+2. **The ghost.** Every completed run records its cumulative score at each field's end (`runPaceRef` → `@mythic_best_run_pace` when it beats the stored final). Between-levels shows **ahead/behind your best run at this exact point** — the comeback is visible when behind (with the "fields ahead pay up to 3.5×" framing), and a legendary run announces itself mid-run, exactly where the Glory decision lives. Local-only; racing your own shadow is the return hook.
+3. **Flawless Conquest.** All fields cleared perfectly → a named goldBright accolade on game-over (outranked only by ALL-TIME RECORD) + a Perfect Fields x/6 ledger row. The apex run stops being just a big number.
+
+**Evaluated and deferred: Glory charges earned at high combos** (G8's third leg) — a real idea, but extra 2× windows inflate score ceilings, and one economy change per release is enough while the `allTimeScores` wipe decision is pending.
+
 ### Aligned ladders (one source of truth)
 
 | Combo | Mult | Banner bank (×fieldMult) | Freeze | Title | Sound |
@@ -183,7 +193,7 @@ Ordered by leverage on the stated goal ("variation so players pursue different s
 | G5 | **De-homogenize level openings** | The "first 10 seconds feel the same" lever (§3.2) | Med | ✅ **shipped** — Dragon's Spine interlocked base (playtest-gated) |
 | G6 | **Add one asymmetric / irregular layout** | Symmetry halves decision space (§3.2) | Med | ✅ **shipped** — The Warfront (playtest-gated) |
 | G7 | **A scoring axis that rewards spread/clear over pure chaining** | Strategy convergence root cause (§1.1) | High | ✅ **shipped** via the v2 cap + banners (perfect-clear/time now material) |
-| G8 | Free Draw carry-over (§2.5); Glory charge earned at combo 15 (§2.6); combo-bank (§2.1) | Deepen existing verbs | Med | 🟡 combo-bank shipped as **banners**; Free-Draw carry-over + Glory charges still open (Phase 4) |
+| G8 | Free Draw carry-over (§2.5); Glory charge earned at combo 15 (§2.6); combo-bank (§2.1) | Deepen existing verbs | Med | 🟡 combo-bank shipped as **banners**; **Free-Draw banking ✅ shipped 2026-07-02** (cap 2, §1.5 run systems); Glory charges evaluated & deferred (score-ceiling inflation while the wipe decision is open) |
 
 **Feel-gate to record for §8 (DESIGN_PLAN):** cascade ratio in the 1.2–1.8 band (§3.3); avoid a third L1/L3-archetype layout; prefer non-symmetric or base-less structures to widen the opening decision.
 

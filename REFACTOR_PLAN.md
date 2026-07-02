@@ -4,9 +4,16 @@ Ordered smallest-risk-first. Each Phase 1 step is a separate commit; the app mus
 
 ---
 
-## ▶ Fable session — 2026-07-01 (supersedes the 2026-06-16 pause)
+## ▶ Fable sessions — 2026-07-01 → 02 (supersede the 2026-06-16 pause)
 
-The held Fable-level pass ran on branch `refactor/v1.4-phase3`. Shipped, one slice per commit (tsc-gated):
+**Day 2 (2026-07-02) — the rethink pass**, one slice per commit (tsc-gated):
+- **The Citadel** (`LayoutCitadel.tsx`, layout 10) replaced the asymmetric Warfront — owner constraint: symmetric shapes only. Breach kept, flanks = identical mirrored bastions; graph verified clearable + mirror-isomorphic. Playtest gate stands.
+- **Battlefield felt rewrite**: accent light pool + per-field crests + forged brackets; fixed the theme-id mismatch that made all 8 fields render identical decor.
+- **Run systems** (`Game.tsx`): Free Draw banking (cap 2, bar pip), the ghost (`@mythic_best_run_pace`, per-field pace of the best run), perfectFields/fieldSpoils tracking. Fixes in the same pass: shared `resetRunState()` (paused-restart/rematch leaked stale bestCombo/glory/totals), banner banking made atomic with the match's setScore, advanceLevel deck/score reads via refs, arena level-sync sends field-end totals.
+- **Between-levels rebuilt — "The Breath"**: exhale (spoils count-up) → flip-reveal of the next field → ghost line/march/glory/CTA. Two-column report deleted.
+- **Flawless Conquest** on game-over + Perfect Fields ledger row.
+
+**Day 1 (2026-07-01)** — shipped, one slice per commit (tsc-gated):
 
 - **Housekeeping** `a3c266d`: prior-session tree committed — Scoreboard Daily-tab fallback (keep podium mounted across tab switches) + v1.3.9/38 bump. Daily-tab fix needs on-device confirm.
 - **Game board war table** (DESIGN_PLAN 27) + **card feel/vanquish tiers** (28, incl. Layout7 invisible-bounty fix + dead `pending` machinery sweep).

@@ -22,9 +22,10 @@ Medieval fantasy tri-peaks solitaire. React Native mobile app, live on Google Pl
 
 - 6 board layouts (Battlements, Cross of Clans, The Stronghold, Snake Eyes, The Warfront, Dragon's Spine) with per-level multipliers 1.0x–3.5x
 - Combo system: chain multiplier capped at 100x (combo 31+); **banners** at 5/8/12/16/20/24/28/32 bank `milestone × 1,000 × fieldMult × glory` permanently and freeze the timer 3s — one ladder drives bank/freeze/sound/HUD tier
-- Free Draw (one per layout, doesn't reset combo); deck draw resets combo
+- Free Draw (doesn't reset combo): one granted per field, unused draws bank to the next field (cap 2); deck draw resets combo
 - Bounty cards: 3x match points at the current combo tier (routing decision); placement seeded on shared decks (Daily/Arena)
-- Glory Hunt (opt-in: 2x points, 50% time, once per game); perfect clear 50,000 × fieldMult × glory
+- Glory Hunt (opt-in: 2x points, 50% time, once per game); perfect clear 50,000 × fieldMult × glory; **Flawless Conquest** accolade for all-perfect runs
+- **The ghost**: best run's per-field pace stored locally (`@mythic_best_run_pace`); between-levels shows ahead/behind your best at that point
 - Personal-best banner mid-run; two-active-card rule (second card retained from combo 2)
 - Removed mechanics (v1.4): wild cards, carry combo, combo insurance — code and Armory inventory deleted
 - Score docs carry `scoringV: 2`; v2 scores are ~5–20x lower than v1 — `allTimeScores` wipe recommended at 1.4 release
