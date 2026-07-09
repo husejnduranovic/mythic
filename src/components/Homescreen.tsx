@@ -10,6 +10,7 @@ import {
 } from "react-native"
 import { color, font } from "../ui/theme"
 import { Icon } from "../ui/Icon"
+import { Sigil } from "../ui/sigils"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Home — "Crest Gate & War Table" (DESIGN_PLAN §4.1)
@@ -373,10 +374,20 @@ const HomeScreen = ({
 
   return (
     <View style={styles.container}>
-      {/* Background atmosphere — layered table-light pool under the crest
-          fan (the battlefield's light grammar: hot core fading to dark edges;
-          all three layers breathe on the one existing glowPulse loop). */}
+      {/* Background atmosphere — the war room (2026-07-09). The room was a
+          flat dark void behind the composed columns; it now has the felt's
+          full grammar at room scale: forest-canopy washes (the icon's
+          painterly-forest read, stacked ≤0.08-alpha steps so no band edges
+          show), the table-light pool, a giant heraldic crest watermarked
+          behind the war table, and the darkness (corner shades + vignettes).
+          Everything static except the pool + crest, which breathe on the ONE
+          existing glowPulse loop — zero new idle animations. */}
       <View style={styles.bgLayer} pointerEvents="none">
+        <View style={styles.canopyDeep} />
+        <View style={styles.canopyMid} />
+        <View style={styles.canopyNear} />
+        <View style={styles.groundSoft} />
+        <View style={styles.groundDeep} />
         <Animated.View
           style={[
             styles.poolHalo,
@@ -410,12 +421,39 @@ const HomeScreen = ({
             },
           ]}
         />
+        {/* The realm's crest — watermarked behind the war table */}
+        <Animated.View
+          style={[
+            styles.bgCrest,
+            {
+              opacity: glowPulse.interpolate({
+                inputRange: [0.3, 0.5],
+                outputRange: [0.65, 1],
+              }),
+            },
+          ]}
+        >
+          <View style={styles.bgCrestRing} />
+          <View style={styles.bgCrestRingInner} />
+          <Sigil
+            sigil={{ fam: "fa5", name: "dragon" }}
+            size={150}
+            color="rgba(232,197,71,0.05)"
+          />
+        </Animated.View>
         <Text style={[styles.bgRune, { top: "8%", left: "4%" }]}>ᚠ</Text>
         <Text style={[styles.bgRune, { top: "12%", right: "55%" }]}>ᚦ</Text>
         <Text style={[styles.bgRune, { bottom: "15%", left: "8%" }]}>ᚱ</Text>
         <Text style={[styles.bgRune, { bottom: "20%", right: "50%" }]}>ᛟ</Text>
         <Text style={[styles.bgRune, { top: "45%", left: "3%" }]}>ᚲ</Text>
         <View style={styles.bgHLine} />
+        {/* The darkness — the felt's corner-shade + vignette grammar */}
+        <View style={[styles.cornerShade, { top: -64, left: -64 }]} />
+        <View style={[styles.cornerShade, { top: -64, right: -64 }]} />
+        <View style={[styles.cornerShade, { bottom: -64, left: -64 }]} />
+        <View style={[styles.cornerShade, { bottom: -64, right: -64 }]} />
+        <View style={styles.vigTop} />
+        <View style={styles.vigBottom} />
       </View>
 
       {/* LEFT — the crest gate */}
@@ -750,6 +788,103 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+  },
+  // Forest canopy — three top-down washes in the icon's deep green, alpha
+  // stepped ≤0.15 per edge so no band line reads; the room darkens upward
+  // like the painterly forest instead of cutting off at flat bgBase.
+  canopyDeep: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: "12%",
+    backgroundColor: "rgba(22,48,31,0.18)",
+  },
+  canopyMid: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: "24%",
+    backgroundColor: "rgba(22,48,31,0.12)",
+  },
+  canopyNear: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: "38%",
+    backgroundColor: "rgba(22,48,31,0.07)",
+  },
+  // Forest floor — the composition stands on darkness, not a void.
+  groundSoft: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: "20%",
+    backgroundColor: "rgba(4,8,5,0.16)",
+  },
+  groundDeep: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: "10%",
+    backgroundColor: "rgba(4,8,5,0.30)",
+  },
+  // The realm's crest — the dragon (the game's marquee beast) in a double
+  // medallion ring, watermarked behind the war-table column.
+  bgCrest: {
+    position: "absolute",
+    right: "5%",
+    top: 0,
+    bottom: 0,
+    width: 220,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  bgCrestRing: {
+    position: "absolute",
+    width: 208,
+    height: 208,
+    borderRadius: 104,
+    borderWidth: 1.5,
+    borderColor: "rgba(232,197,71,0.05)",
+  },
+  bgCrestRingInner: {
+    position: "absolute",
+    width: 184,
+    height: 184,
+    borderRadius: 92,
+    borderWidth: 0.5,
+    borderColor: "rgba(232,197,71,0.035)",
+  },
+  // The darkness — rotated-square corner shades + horizon vignettes (the
+  // battlefield grammar at room scale).
+  cornerShade: {
+    position: "absolute",
+    width: 170,
+    height: 170,
+    backgroundColor: "rgba(4,8,5,0.30)",
+    transform: [{ rotate: "45deg" }],
+    borderRadius: 26,
+  },
+  vigTop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 22,
+    backgroundColor: "rgba(8,12,8,0.26)",
+  },
+  vigBottom: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 30,
+    backgroundColor: "rgba(8,12,8,0.32)",
   },
   // Table-light pool — three stacked layers, hot core to soft halo (the
   // in-game battlefield light grammar; replaces the old single hard blob).
