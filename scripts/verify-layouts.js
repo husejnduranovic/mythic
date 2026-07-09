@@ -224,23 +224,35 @@ const LAYOUTS = [
     },
   },
   {
-    name: "The Mythic Peaks (PROPOSED — new finale, L7)",
+    name: "The Mythic Peaks (L7, active — 2026-07-09 rework: the apex finale)",
     file: "LayoutPeaks.tsx",
     n: 28,
-    proposed: true,
     blockedBy: {
-      // three summits
-      0: [3, 4], 1: [5, 6], 2: [7, 8],
-      // shoulders
-      3: [9, 10], 4: [10, 11], 5: [12, 13], 6: [13, 14], 7: [15, 16], 8: [16, 17],
-      // slopes — the classic fused row: every foothill clear feeds two slopes
-      9: [18, 19], 10: [19, 20], 11: [20, 21], 12: [21, 22], 13: [22, 23],
-      14: [23, 24], 15: [24, 25], 16: [25, 26], 17: [26, 27],
-      // foothills 18..27 all OPEN — the widest opening in the game
+      // THE APEX — one card above the center summit, blocked by ALL THREE
+      // summits: the run's final ascent ends on top of the namesake. The old
+      // flat classic board (depth 4, burst 12.9%, maxBurst 2) read as an
+      // anticlimax in the owner playtest — this rework gives the finale a
+      // fourth act.
+      0: [1, 2, 3],
+      // summits — west, center, east
+      1: [4, 5], 2: [6, 7], 3: [8, 9],
+      // shoulders — the west/east peaks are binary trees; the CENTER pair is
+      // a keystone bridging the valley: both center shoulders hang on the two
+      // valley-edge slopes (13,14) and pop TOGETHER when the valley cracks
+      4: [10, 11], 5: [12, 13], 6: [13, 14], 7: [13, 14], 8: [14, 15], 9: [16, 17],
+      // slopes — bricked over the base, with the CENTER SEAM SKIPPED (the
+      // valley): the range splits west/east and only the center peak spans
+      // it. The outermost slopes (10,17) and the valley-edge slopes (13,14)
+      // fall with ONE base card — corner breaches at the range's ends and at
+      // the pass, so the opening reveals from move 1; base corners 18/27 and
+      // the valley pair 22/23 pool as free chain fuel.
+      10: [19], 11: [19, 20], 12: [20, 21], 13: [21],
+      14: [24], 15: [24, 25], 16: [25, 26], 17: [26],
+      // base 18..27 all OPEN — the widest opening in the game stays
     },
     mirror: {
-      0: 2, 3: 8, 4: 7, 5: 6,
-      9: 17, 10: 16, 11: 15, 12: 14,
+      1: 3, 4: 9, 5: 8, 6: 7,
+      10: 17, 11: 16, 12: 15, 13: 14,
       18: 27, 19: 26, 20: 25, 21: 24, 22: 23,
     },
   },

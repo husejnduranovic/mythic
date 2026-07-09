@@ -15,35 +15,45 @@ const isOpen = (cards: ICard[], ...blockers: number[]) =>
 /**
  * Layout 13 — "The Mythic Peaks" (28 cards) — level 7 (4.0×), the finale
  *
- * The classic tri-peaks board itself — the game's namesake, saved for last.
- * The campaign ends by summiting the Mythic Peaks.
+ * The namesake range, reworked 2026-07-09: the first cut was the flat classic
+ * tri-peaks board (depth 4, the set's lowest burst rate, no late drama) and
+ * the owner playtest read it as an anticlimax. The rework raises the range —
+ * a fourth act above the summits.
  *
- *      [0]         [1]         [2]        the three summits
- *    [3][4]      [5][6]      [7][8]       shoulders
- *   [9][10][11][12][13][14][15][16][17]   slopes — the fused row
- *  [18][19][20][21][22][23][24][25][26][27]  foothills — 10 OPEN
+ *                  [0]                     THE APEX — over the center summit,
+ *        [1]       [2]       [3]           blocked by ALL THREE summits: the
+ *      [4]   [5] [6] [7] [8]   [9]         run's last climb is the namesake
+ *   [10][11][12][13]   [14][15][16][17]    slopes — split by THE VALLEY
+ *  [18][19][20][21][22][23][24][25][26][27]   base — 10 OPEN, the widest
  *
  * Blocking (machine-verified clearable + mirror-isomorphic):
- *   summits:    0←3,4  1←5,6  2←7,8
- *   shoulders:  3←9,10  4←10,11  5←12,13  6←13,14  7←15,16  8←16,17
- *   slopes:     9←18,19  10←19,20  11←20,21  12←21,22  13←22,23
- *               14←23,24  15←24,25  16←25,26  17←26,27
+ *   apex:      0←1,2,3 — summit all three peaks, then crown the run
+ *   summits:   1←4,5   2←6,7   3←8,9
+ *   shoulders: west/east peaks are binary trees (4←10,11  5←12,13  8←14,15
+ *              9←16,17); the CENTER pair 6,7 BOTH hang on the valley-edge
+ *              slopes 13,14 — when the valley cracks, both pop at once
+ *   slopes:    bricked over the base with the center seam SKIPPED (the
+ *              valley). Corner breaches at the range ends and the pass:
+ *              10←19  13←21  14←24  17←26 fall with ONE base card; the
+ *              center bricks stay double (11←19,20  12←20,21  15←24,25
+ *              16←25,26). Base corners 18/27 + valley pair 22/23 = free fuel.
  *
- * No structure in the set works like this: ten contiguous open cards — the
- * widest chain freedom in the game, exactly what the 4.0× banner hunt wants —
- * and a true radiating web: every foothill clear advances TWO slopes, every
- * slope TWO shoulders. Three summit pops are the three-front climax; the
- * run's last card is a summit.
+ * Ten contiguous opens (the widest chain freedom in the game — the 4.0×
+ * banner hunt), first-5 2.6 AND last-5 2.6: the only board that opens lively
+ * and STILL climaxes latest. Depth 5, maxBurst 3.
  *
- * Strategy: pure aggression pays here like nowhere else. With ten entries a
- * long chain is always live — the finale is greed management: ride the chain
- * toward 100×, route it through the bounties, and time the summits so the
- * board ends on a banner.
+ * Strategy: pure aggression pays here like nowhere else — but the finale now
+ * has a shape: breach the ends and the pass, crack the valley for the double
+ * shoulder pop, take the summits three-front, and end the campaign standing
+ * on the apex. Time it so the last card lands on a banner.
  */
 
-// Classic tri-peaks geometry in half-card units: summits sit two cards apart,
-// shoulder pairs one card apart, each row bricked exactly over the next.
-const U = Math.round(CARD_W / 2)
+// All geometry in card units. A card's rendered footprint is CARD_W+4
+// (2px margins) and rows add a 2px gap, so adjacent centers sit one PITCH
+// apart; a spacer of span(cols) puts its neighbors cols·PITCH apart.
+const V = Math.round(CARD_H * 0.46)
+const PITCH = CARD_W + 6
+const span = (cols: number) => Math.round(cols * PITCH) - (CARD_W + 8)
 
 const LayoutPeaks = React.memo(
   ({ cards, onClick, bountyIndices = new Set() }: ILayoutPeaksProps) => {
@@ -62,46 +72,53 @@ const LayoutPeaks = React.memo(
     return (
       <View style={styles.container}>
         <View style={styles.range}>
-          {/* deepest first — summits, then down the mountain */}
+          {/* deepest first — the apex, then down the mountain */}
           <View style={[styles.absRow, { top: 0 }]}>
+            <View style={styles.row}>{C(0, isOpen(cards, 1, 2, 3))}</View>
+          </View>
+
+          {/* summits */}
+          <View style={[styles.absRow, { top: V }]}>
             <View style={styles.row}>
-              {C(0, isOpen(cards, 3, 4))}
-              <View style={{ width: 4 * U }} />
-              {C(1, isOpen(cards, 5, 6))}
-              <View style={{ width: 4 * U }} />
-              {C(2, isOpen(cards, 7, 8))}
+              {C(1, isOpen(cards, 4, 5))}
+              <View style={{ width: span(2.5) }} />
+              {C(2, isOpen(cards, 6, 7))}
+              <View style={{ width: span(2.5) }} />
+              {C(3, isOpen(cards, 8, 9))}
             </View>
           </View>
 
-          <View style={[styles.absRow, { top: 34 }]}>
+          {/* shoulders — the center pair bridges the valley */}
+          <View style={[styles.absRow, { top: V * 2 }]}>
             <View style={styles.row}>
-              {C(3, isOpen(cards, 9, 10))}
               {C(4, isOpen(cards, 10, 11))}
-              <View style={{ width: 2 * U }} />
+              <View style={{ width: span(2) }} />
               {C(5, isOpen(cards, 12, 13))}
               {C(6, isOpen(cards, 13, 14))}
-              <View style={{ width: 2 * U }} />
-              {C(7, isOpen(cards, 15, 16))}
-              {C(8, isOpen(cards, 16, 17))}
+              {C(7, isOpen(cards, 13, 14))}
+              {C(8, isOpen(cards, 14, 15))}
+              <View style={{ width: span(2) }} />
+              {C(9, isOpen(cards, 16, 17))}
             </View>
           </View>
 
-          <View style={[styles.absRow, { top: 68 }]}>
+          {/* slopes — west face, THE VALLEY, east face */}
+          <View style={[styles.absRow, { top: V * 3 }]}>
             <View style={styles.row}>
-              {C(9, isOpen(cards, 18, 19))}
-              {C(10, isOpen(cards, 19, 20))}
-              {C(11, isOpen(cards, 20, 21))}
-              {C(12, isOpen(cards, 21, 22))}
-              {C(13, isOpen(cards, 22, 23))}
-              {C(14, isOpen(cards, 23, 24))}
+              {C(10, isOpen(cards, 19))}
+              {C(11, isOpen(cards, 19, 20))}
+              {C(12, isOpen(cards, 20, 21))}
+              {C(13, isOpen(cards, 21))}
+              <View style={{ width: span(2) }} />
+              {C(14, isOpen(cards, 24))}
               {C(15, isOpen(cards, 24, 25))}
               {C(16, isOpen(cards, 25, 26))}
-              {C(17, isOpen(cards, 26, 27))}
+              {C(17, isOpen(cards, 26))}
             </View>
           </View>
 
-          {/* foothills — the widest opening in the game */}
-          <View style={[styles.absRow, { top: 102 }]}>
+          {/* base — the widest opening in the game */}
+          <View style={[styles.absRow, { top: V * 4 }]}>
             <View style={styles.row}>
               {C(18, true)}
               {C(19, true)}
@@ -130,7 +147,7 @@ const styles = StyleSheet.create({
   },
   range: {
     width: "100%",
-    height: 102 + CARD_H,
+    height: V * 4 + CARD_H,
   },
   absRow: {
     position: "absolute",
