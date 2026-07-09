@@ -167,28 +167,32 @@ const LAYOUTS = [
 
   // ── PROPOSED (2026-07-02 layout redesign) ────────────────────────────────
   {
-    name: "The Siege (PROPOSED — replaces Cross of Clans, L2)",
+    name: "The Siege (L2, active — 2026-07-09 rework: corner breaches + courtyard keep)",
     file: "LayoutSiege.tsx",
     n: 32,
-    proposed: true,
     blockedBy: {
       // outer wall — top arc pockets (guards 0,2,4 open)
       1: [0, 2], 3: [2, 4],
       // outer wall — bottom arc pockets (guards 11,13,15 open)
       12: [11, 13], 14: [13, 15],
       // sides 5,6,7 (right) and 8,9,10 (left) all open
-      // inner wall — each stone under two outer-wall stones (radiating covers)
-      16: [0, 1], 17: [1, 2], 18: [2, 3], 19: [3, 4],
-      20: [6], 21: [9], // posterns — quick side doors once the side wall falls
-      22: [11, 12], 23: [12, 13], 24: [13, 14], 25: [14, 15],
-      // the keep — north/south gates, then twin-keystone pops
-      26: [17, 18], 27: [23, 24],
-      28: [26, 27], 29: [26, 27],
+      // inner wall — CORNER BREACHES: the wall-end stones fall with their
+      // corner guard alone (one tap = one reveal from move 1 — the 2026-07-09
+      // easier-opening fix; the old all-double walls gave a 1.5 first-5, the
+      // slowest opening in the set); center stones stay under two.
+      16: [0], 17: [1, 2], 18: [2, 3], 19: [4],
+      20: [6], 21: [9], // posterns — quick side doors once the flank center falls
+      22: [11], 23: [12, 13], 24: [13, 14], 25: [15],
+      // the keep — ONE row in the courtyard: west/east gates open when BOTH
+      // wall-ends on that side fall (commit to a flank), each gate frees its
+      // hall, both halls free the twin hearts (pop-pop finish)
+      26: [16, 22], 27: [19, 25],
+      28: [26], 29: [27],
       30: [28, 29], 31: [28, 29],
     },
     mirror: {
       0: 4, 1: 3, 5: 8, 6: 9, 7: 10, 11: 15, 12: 14,
-      16: 19, 17: 18, 20: 21, 22: 25, 23: 24, 28: 29, 30: 31,
+      16: 19, 17: 18, 20: 21, 22: 25, 23: 24, 26: 27, 28: 29, 30: 31,
     },
   },
   {

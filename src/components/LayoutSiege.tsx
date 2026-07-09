@@ -15,45 +15,49 @@ const isOpen = (cards: ICard[], ...blockers: number[]) =>
 /**
  * Layout 11 — "The Siege" (32 cards) — level 2 (1.5×)
  *
- * A castle seen from above. Replaces Cross of Clans, which failed the layout
- * audit (75% dead taps, an opening that reveals 0.8 cards in five moves, four
- * identical clusters with zero shared covers — scripts/verify-layouts.js).
+ * A castle seen from above. 2026-07-09 rework (owner playtest): the old keep
+ * was stacked between the walls and rendered as buried slivers — the twin
+ * hearts, the level's climax, were nearly invisible — and the all-double
+ * walls gave the slowest opening in the set (first-5: 1.5).
  *
- *                 [0][1][2][3][4]           outer wall — north arc
- *          [21] [16][17][18][19] [20]       inner wall + posterns
- *       [8]          [26]            [5]    the north gatehouse
- *       [9]     [28][30][31][29]     [6]    halls + the twin hearts
- *       [10]         [27]            [7]    the south gatehouse
- *              [22][23][24][25]             inner wall — south arc
- *                 [11][12][13][14][15]      outer wall — south arc
+ *                  [0][1][2][3][4]            outer wall — north arc
+ *               [16]  [17][18]  [19]          inner wall (corner stones out)
+ *   [8]                                [5]
+ *   [9] [21]  [26][28][30][31][29][27]  [20] [6]   the courtyard: posterns,
+ *   [10]      gate hall heart heart hall gate     [7]    gates, halls, HEARTS
+ *               [22]  [23][24]  [25]          inner wall — south arc
+ *                  [11][12][13][14][15]       outer wall — south arc
  *
- * Blocking (machine-verified clearable + mirror-isomorphic — the graph is
- * double-symmetric, left-right AND north-south):
+ * Blocking (machine-verified clearable + mirror-isomorphic, L-R and N-S):
  *   outer arcs:  guards 0,2,4 / 11,13,15 OPEN; pockets 1←0,2  3←2,4
- *                12←11,13  14←13,15 — two adjacent guards free the pocket
+ *                12←11,13  14←13,15
  *   flanks:      5,6,7 / 8,9,10 all OPEN
- *   inner wall:  16←0,1  17←1,2  18←2,3  19←3,4 (each stone under TWO outer
- *                stones — one tap advances up to four different cards)
- *                22←11,12  23←12,13  24←13,14  25←14,15
+ *   inner wall:  CORNER BREACHES — the wall-end stones fall with their corner
+ *                guard alone (16←0  19←4  22←11  25←15: one tap reveals from
+ *                move 1); center stones under two (17←1,2  18←2,3  23←12,13
+ *                24←13,14)
  *   posterns:    20←6  21←9 — side doors, open when the flank's center falls
- *   the keep:    gates 26←17,18  27←23,24, then twin-keystone pops:
- *                halls 28,29 ← both gates (the second gate opens BOTH halls)
- *                hearts 30,31 ← both halls (the second hall opens BOTH hearts)
+ *   the keep:    one row standing clear in the courtyard. West gate 26←16,22
+ *                (BOTH west wall-ends — commit to a flank), east gate 27←19,25;
+ *                each gate frees its hall (28←26  29←27); both halls free the
+ *                twin hearts (30,31←28,29 — the pop-pop finish)
  *
- * 12 open at start — ties Battlements for the most generous opening — and the
- * only board in the set whose reveals RISE toward the end (last-5 taps reveal
- * 3.4 cards vs 1.4–1.8 everywhere else): walls fall stone by stone, then the
- * keep collapses pop-pop-pop.
+ * 12 open at start; first-5 now 2.9 (was 1.5 — the "boring opening" fix) with
+ * dead taps down 58%→49%, and the late game still climaxes (last-5 2.5 vs the
+ * set's 1.4–1.8). As the walls fall their cards stop rendering, so the keep —
+ * half-buried behind masonry at the start — stands fully revealed in the
+ * courtyard by the time it is playable: the reveal IS the siege.
  *
- * Strategy: choose WHERE to breach (pockets reward planned adjacency), which
- * DIRECTION around the ring, and time the chain to still be alive when the
- * keep cracks — the hearts are where the late banners live.
+ * Strategy: choose WHERE to breach (corners are fast, centers pay in
+ * cascade), commit to a flank for its gate, and keep the chain alive for the
+ * keep run — gate → hall → the twin hearts is where the late banners live.
  */
 
-// Ring geometry. Vertically mirrored around y=78; deeper cards render first
-// so every blocker visually covers what it blocks.
-const RING_W = Math.round(CARD_W * 9.4)
-const U = Math.round(CARD_W / 2)
+// All geometry in card units so every device keeps the shape.
+const V = Math.round(CARD_H * 0.46) // vertical band step
+const U = Math.round(CARD_W / 2) // half-card spacer
+const RING_W = Math.round(CARD_W * 12.6)
+const EQUATOR = Math.round(V * 2.5)
 
 const LayoutSiege = React.memo(
   ({ cards, onClick, bountyIndices = new Set() }: ILayoutSiegeProps) => {
@@ -72,45 +76,45 @@ const LayoutSiege = React.memo(
     return (
       <View style={styles.container}>
         <View style={styles.ring}>
-          {/* the keep — deepest first: hearts+halls, then the gatehouses */}
-          <View style={[styles.absRow, { top: 78 }]}>
-            <View style={styles.row}>
-              {C(28, isOpen(cards, 26, 27))}
-              {C(30, isOpen(cards, 28, 29))}
-              {C(31, isOpen(cards, 28, 29))}
-              {C(29, isOpen(cards, 26, 27))}
-            </View>
-          </View>
-          <View style={[styles.absRow, { top: 50 }]}>
-            <View style={styles.row}>{C(26, isOpen(cards, 17, 18))}</View>
-          </View>
-          <View style={[styles.absRow, { top: 106 }]}>
-            <View style={styles.row}>{C(27, isOpen(cards, 23, 24))}</View>
-          </View>
-
-          {/* inner wall — north arc + posterns, south arc */}
-          <View style={[styles.absRow, { top: 30 }]}>
+          {/* the courtyard — deepest first: posterns, gates, halls, hearts */}
+          <View style={[styles.absRow, { top: EQUATOR }]}>
             <View style={styles.row}>
               {C(21, isOpen(cards, 9))}
               <View style={{ width: U }} />
-              {C(16, isOpen(cards, 0, 1))}
-              {C(17, isOpen(cards, 1, 2))}
-              {C(18, isOpen(cards, 2, 3))}
-              {C(19, isOpen(cards, 3, 4))}
+              {C(26, isOpen(cards, 16, 22))}
+              {C(28, isOpen(cards, 26))}
+              {C(30, isOpen(cards, 28, 29))}
+              {C(31, isOpen(cards, 28, 29))}
+              {C(29, isOpen(cards, 27))}
+              {C(27, isOpen(cards, 19, 25))}
               <View style={{ width: U }} />
               {C(20, isOpen(cards, 6))}
             </View>
           </View>
-          <View style={[styles.absRow, { top: 126 }]}>
+
+          {/* inner wall — corner stones under their guards, centers bricked */}
+          <View style={[styles.absRow, { top: V }]}>
             <View style={styles.row}>
-              {C(22, isOpen(cards, 11, 12))}
+              {C(16, isOpen(cards, 0))}
+              <View style={{ width: U }} />
+              {C(17, isOpen(cards, 1, 2))}
+              {C(18, isOpen(cards, 2, 3))}
+              <View style={{ width: U }} />
+              {C(19, isOpen(cards, 4))}
+            </View>
+          </View>
+          <View style={[styles.absRow, { top: V * 4 }]}>
+            <View style={styles.row}>
+              {C(22, isOpen(cards, 11))}
+              <View style={{ width: U }} />
               {C(23, isOpen(cards, 12, 13))}
               {C(24, isOpen(cards, 13, 14))}
-              {C(25, isOpen(cards, 14, 15))}
+              <View style={{ width: U }} />
+              {C(25, isOpen(cards, 15))}
             </View>
           </View>
 
-          {/* outer wall — arcs on top of the inner wall */}
+          {/* outer wall — arcs on top of the inner courses */}
           <View style={[styles.absRow, { top: 0 }]}>
             <View style={styles.row}>
               {C(0, true)}
@@ -120,7 +124,7 @@ const LayoutSiege = React.memo(
               {C(4, true)}
             </View>
           </View>
-          <View style={[styles.absRow, { top: 156 }]}>
+          <View style={[styles.absRow, { top: V * 5 }]}>
             <View style={styles.row}>
               {C(11, true)}
               {C(12, isOpen(cards, 11, 13))}
@@ -131,19 +135,19 @@ const LayoutSiege = React.memo(
           </View>
 
           {/* flanks — the ring bulges at the equator */}
-          <View style={[styles.absRow, { top: 44 }]}>
+          <View style={[styles.absRow, { top: EQUATOR - V }]}>
             <View style={styles.edges}>
               {C(8, true)}
               {C(5, true)}
             </View>
           </View>
-          <View style={[styles.absRow, { top: 78 }]}>
+          <View style={[styles.absRow, { top: EQUATOR }]}>
             <View style={styles.edges}>
               {C(9, true)}
               {C(6, true)}
             </View>
           </View>
-          <View style={[styles.absRow, { top: 112 }]}>
+          <View style={[styles.absRow, { top: EQUATOR + V }]}>
             <View style={styles.edges}>
               {C(10, true)}
               {C(7, true)}
@@ -164,7 +168,7 @@ const styles = StyleSheet.create({
   },
   ring: {
     width: RING_W,
-    height: 156 + CARD_H,
+    height: V * 5 + CARD_H,
   },
   absRow: {
     position: "absolute",
