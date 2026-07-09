@@ -13,7 +13,12 @@ const isOpen = (cards: ICard[], ...blockers: number[]) =>
   blockers.every((i) => !cards[i]?.visible)
 
 /**
- * Layout 12 — "The Hourglass" (30 cards) — level 3 (2.0×)
+ * Layout 12 — "The Hourglass" (30 cards) — SHELVED 2026-07-09
+ *
+ * Replaced by The Floodgates (LayoutFloodgates.tsx, same layout id) after the
+ * owner playtest: the Last Grain — one card gating the entire bottom half —
+ * stalled whole runs when the deck refused that one rank. Kept for reference
+ * alongside the other shelved boards.
  *
  * Sand flows down. Replaces The Stronghold, which failed the layout audit:
  * its best moment was move 1 — the inverted pyramid NARROWS as you clear, so

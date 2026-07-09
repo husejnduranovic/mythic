@@ -17,10 +17,11 @@ export const LEVEL_CONFIG: Record<
   // Layout 11 "The Siege" replaced Cross of Clans (layout 9, shelved) after
   // the 2026-07-02 layout audit — 75% dead taps, four identical clusters.
   2: { fieldCards: 32, deckStart: 32, time: 85, layout: 11, name: "The Siege" },
-  // Layout 12 "The Hourglass" replaced The Stronghold (layout 7, shelved) —
-  // same audit: the inverted pyramid decayed (best moment was move 1) and the
-  // archetype duplicated Battlements.
-  3: { fieldCards: 30, deckStart: 30, time: 80, layout: 12, name: "The Hourglass" },
+  // Layout 12 "The Floodgates" (2026-07-09) replaced The Hourglass (shelved) —
+  // owner playtest: the Last Grain (one card gating the entire bottom half)
+  // stalled runs when the deck refused that rank. Three gates split the choke;
+  // the flow-down identity stays.
+  3: { fieldCards: 30, deckStart: 30, time: 80, layout: 12, name: "The Floodgates" },
   4: { fieldCards: 32, deckStart: 32, time: 80, layout: 8, name: "Snake Eyes" },
   // Layout 10 "The Citadel" (mirror-symmetric successor to the unshipped
   // asymmetric Warfront) sits where the unnamed piles+wall (layout 2, shelved)

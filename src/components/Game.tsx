@@ -20,7 +20,7 @@ import Card from "./Card"
 import Layout1 from "./Layout1"
 import LayoutCitadel from "./LayoutCitadel"
 import LayoutSiege from "./LayoutSiege"
-import LayoutHourglass from "./LayoutHourglass"
+import LayoutFloodgates from "./LayoutFloodgates"
 import LayoutPeaks from "./LayoutPeaks"
 import Timer from "./Timer"
 import { saveScore } from "../services/LocalScoreService"
@@ -1161,7 +1161,7 @@ const Game = ({
       case 13:
         return <LayoutPeaks key={layoutKey} {...p} />
       case 12:
-        return <LayoutHourglass key={layoutKey} {...p} />
+        return <LayoutFloodgates key={layoutKey} {...p} />
       case 11:
         return <LayoutSiege key={layoutKey} {...p} />
       case 10:

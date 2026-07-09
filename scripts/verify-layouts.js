@@ -63,7 +63,7 @@ const LAYOUTS = [
     },
   },
   {
-    name: "Cross of Clans (L2, active — FLAGGED)",
+    name: "Cross of Clans (SHELVED 2026-07-02 — was L2)",
     file: "Layout9.tsx",
     n: 32,
     blockedBy: (() => {
@@ -94,7 +94,7 @@ const LAYOUTS = [
     })(),
   },
   {
-    name: "The Stronghold (L3, active — FLAGGED)",
+    name: "The Stronghold (SHELVED 2026-07-02 — was L3)",
     file: "Layout7.tsx",
     n: 30,
     blockedBy: {
@@ -196,26 +196,31 @@ const LAYOUTS = [
     },
   },
   {
-    name: "The Hourglass (PROPOSED — replaces The Stronghold, L3)",
-    file: "LayoutHourglass.tsx",
+    name: "The Floodgates (L3, active — 2026-07-09, replaces The Hourglass)",
+    file: "LayoutFloodgates.tsx",
     n: 30,
-    proposed: true,
     blockedBy: {
-      // reservoir row (0..7) OPEN — sand at the top
-      // taper row — brick under the reservoir
-      8: [0, 1], 9: [1, 2], 10: [2, 3], 11: [3, 4], 12: [4, 5], 13: [5, 6], 14: [6, 7],
-      // THE LAST GRAIN — one card holds the whole bottom half
-      15: [10, 11, 12],
-      // the bloom — widening fan, every clear reveals (no dead taps below)
-      16: [15], 17: [15],
-      18: [16], 19: [16, 17], 20: [17],
-      21: [18], 22: [18, 19], 23: [19, 20], 24: [20],
-      25: [21], 26: [21, 22], 27: [22, 23], 28: [23, 24], 29: [24],
+      // reservoir row (0..7) OPEN — the water held high
+      // taper row — brick under the reservoir; the END stones fall with one
+      // inner neighbor alone (corner breaches — first-move reveals), leaving
+      // the reservoir corners 0/7 as free late fuel
+      8: [1], 9: [1, 2], 10: [2, 3], 11: [3, 4], 12: [4, 5], 13: [5, 6], 14: [6],
+      // THREE GATES, not one grain — the Hourglass's single choke (one card
+      // holding 14) stalled whole runs in play. The center sluice is cheap
+      // (one stone), the side gates heavy (two) — routing, not a wall.
+      15: [9, 10], 16: [11], 17: [12, 13],
+      // each gate releases its own fall...
+      18: [15], 19: [15], 20: [16], 21: [16], 22: [17], 23: [17],
+      // ...and the falls merge into one base sheet
+      24: [18, 19], 25: [19, 20], 26: [20, 21], 27: [21, 22], 28: [22, 23],
+      // the plunge pool — the deepest card in the game sits under the merge
+      29: [26],
     },
     mirror: {
       0: 7, 1: 6, 2: 5, 3: 4,
       8: 14, 9: 13, 10: 12,
-      16: 17, 18: 20, 21: 24, 22: 23, 25: 29, 26: 28,
+      15: 17, 18: 23, 19: 22, 20: 21,
+      24: 28, 25: 27,
     },
   },
   {
