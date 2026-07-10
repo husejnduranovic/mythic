@@ -55,6 +55,8 @@ export const BACK_STYLES: Record<string, { accent: string; sigil: SigilSpec }> =
   "#2A1C00": { accent: "#E8B84B", sigil: { fam: "fa5", name: "crow" } }, // eagle_pennant
   "#1E0A3C": { accent: "#C87DFF", sigil: { fam: "mci", name: "crown" } }, // royal_banner
   "#1A0500": { accent: "#FF6600", sigil: { fam: "mci", name: "fire" } }, // flame_sworn
+  "#08201E": { accent: "#58C8B0", sigil: { fam: "mci", name: "unicorn" } }, // unicorn_vigil
+  "#12101A": { accent: "#F0E6C0", sigil: { fam: "mci", name: "summit" } }, // summit_sovereign
   "#3D2E0A": { accent: "#C9A86A", sigil: { fam: "mci", name: "script-text" } }, // daily quest deck (Game.tsx dailyMode)
 }
 

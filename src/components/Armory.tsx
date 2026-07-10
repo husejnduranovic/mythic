@@ -77,6 +77,8 @@ export const WAR_TABLE_CONFIG: Record<
   marble: { color: "#1E1E1E", accent: "#D8D8D8" },
   royal_gold: { color: "#1C1600", accent: "#CCA800" },
   obsidian: { color: "#0A0A0C", accent: "#5566AA" },
+  dragonbone: { color: "#2B2418", accent: "#DCCB9E" },
+  mythril: { color: "#0E1A1E", accent: "#9FE0D8" },
 }
 
 interface ArmoryItem {
@@ -167,6 +169,26 @@ const CARD_BACKS: ArmoryItem[] = [
     streakReq: 7,
     unlockLabel: "7 day streak",
   },
+  {
+    id: "unicorn_vigil",
+    name: "Unicorn Vigil",
+    icon: "🦄",
+    color: "#08201E",
+    accent: "#58C8B0",
+    unlockReq: 0,
+    streakReq: 42,
+    unlockLabel: "42 day streak",
+  },
+  {
+    id: "summit_sovereign",
+    name: "Summit Sovereign",
+    icon: "⛰",
+    color: "#12101A",
+    accent: "#F0E6C0",
+    unlockReq: 0,
+    comboReq: 32,
+    unlockLabel: "×32 combo",
+  },
 ]
 
 const BATTLEFIELDS: ArmoryItem[] = [
@@ -240,6 +262,25 @@ const BATTLEFIELDS: ArmoryItem[] = [
     streakReq: 21,
     unlockLabel: "21 day streak",
   },
+  {
+    id: "moonlit_vale",
+    name: "Moonlit Vale",
+    icon: "🌙",
+    color: "#0D1730",
+    accent: "#BFCFE8",
+    unlockReq: 75,
+    unlockLabel: "75 battles",
+  },
+  {
+    id: "sorcerers_spire",
+    name: "Sorcerer's Spire",
+    icon: "🔮",
+    color: "#170D28",
+    accent: "#A385E8",
+    unlockReq: 0,
+    comboReq: 24,
+    unlockLabel: "×24 combo",
+  },
 ]
 
 const WAR_TABLES: ArmoryItem[] = [
@@ -295,6 +336,24 @@ const WAR_TABLES: ArmoryItem[] = [
     unlockReq: 0,
     comboReq: 28,
     unlockLabel: "×28 combo",
+  },
+  {
+    id: "dragonbone",
+    name: "Dragonbone",
+    icon: "🦴",
+    color: "#2B2418",
+    accent: "#DCCB9E",
+    unlockReq: 100,
+    unlockLabel: "100 battles",
+  },
+  {
+    id: "mythril",
+    name: "Mythril",
+    icon: "✨",
+    color: "#0E1A1E",
+    accent: "#9FE0D8",
+    unlockReq: 150,
+    unlockLabel: "150 battles",
   },
 ]
 
@@ -353,6 +412,25 @@ const BOUNTY_STYLES: ArmoryItem[] = [
     streakReq: 60,
     unlockLabel: "60 day streak",
   },
+  {
+    id: "amethyst",
+    name: "Amethyst",
+    icon: "💜",
+    color: "#140828",
+    accent: "#B27DFF",
+    unlockReq: 40,
+    unlockLabel: "40 battles",
+  },
+  {
+    id: "kings_ransom",
+    name: "King's Ransom",
+    icon: "👝",
+    color: "#241004",
+    accent: "#EE9930",
+    unlockReq: 0,
+    scoreReq: 2000000,
+    unlockLabel: "2M spoils in a battle",
+  },
 ]
 
 // `sigil` is the monochrome treasure glyph both the in-game card and the rack
@@ -410,6 +488,21 @@ export const BOUNTY_STYLE_CONFIG: Record<
     frontBg: "#FFFAEE",
     textColor: "#AA7700",
     sigil: { fam: "mci", name: "crown" },
+  },
+  amethyst: {
+    backColor: "#190A30",
+    accent: "#B27DFF",
+    frontBg: "#F8F0FF",
+    textColor: "#7733BB",
+    sigil: { fam: "mci", name: "diamond-stone" },
+  },
+  kings_ransom: {
+    // 2M spoils in a battle
+    backColor: "#301804",
+    accent: "#EE9930",
+    frontBg: "#FFF4E0",
+    textColor: "#9A5800",
+    sigil: { fam: "mci", name: "treasure-chest" },
   },
 }
 

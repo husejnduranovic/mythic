@@ -33,6 +33,8 @@ const FIELD_THEMES: Record<string, { accent: string; sigil: SigilSpec }> = {
   volcanic_rise: { accent: "#FF4400", sigil: { fam: "mci", name: "fire" } },
   royal_hall: { accent: "#DDAA33", sigil: { fam: "mci", name: "crown" } },
   ember_court: { accent: "#FF5500", sigil: { fam: "mci", name: "campfire" } },
+  moonlit_vale: { accent: "#BFCFE8", sigil: { fam: "mci", name: "moon-waning-crescent" } },
+  sorcerers_spire: { accent: "#A385E8", sigil: { fam: "mci", name: "crystal-ball" } },
 }
 
 const DEFAULT_THEME = FIELD_THEMES.forest_camp

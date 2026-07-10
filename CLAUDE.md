@@ -40,7 +40,7 @@ Medieval fantasy tri-peaks solitaire. React Native mobile app, live on Google Pl
 
 - Daily Quest (seeded, one attempt/day, own leaderboard)
 - Hall of Glory: all-time / daily / weekly leaderboards (Firestore)
-- Armory: 28 pieces across 4 racks (backs / battlefields / bounty / tables); gates: battles played, streaks, best combo (×12/×20/×28), 1M-spoils battle
+- Armory: 36 pieces across 4 racks (backs / battlefields / bounty / tables); gates: battles played (to 150), streaks (7/21/42/60), best combo (×12/×20/×24/×28/×32), spoils battle (1M/2M)
 - Streak system with milestone unlocks (7/21/42/60 days); **Ember Ward** — one missed day per rolling week forgiven (`emberWardUsedAt` on `users/{uid}`); streak compare is an exact local-day diff (UTC-yesterday reset bug fixed 2026-07-02)
 - First-session arc: coach marks on the first free battle (`@mythic_seen_coachmarks`), First Victory overlay → Armory (`@mythic_first_victory_seen`, veteran-gated), share button on game-over
 - Hookah Lounge tournaments: venue codes (e.g. "VIENNA"), venue-specific weekly leaderboards
