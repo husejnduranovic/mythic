@@ -22,6 +22,7 @@ import LayoutCitadel from "./LayoutCitadel"
 import LayoutSiege from "./LayoutSiege"
 import LayoutFloodgates from "./LayoutFloodgates"
 import LayoutPeaks from "./LayoutPeaks"
+import LayoutPortcullis from "./LayoutPortcullis"
 import Timer from "./Timer"
 import { saveScore } from "../services/LocalScoreService"
 import {
@@ -1158,6 +1159,8 @@ const Game = ({
     }
 
     switch (config.layout) {
+      case 14:
+        return <LayoutPortcullis key={layoutKey} {...p} />
       case 13:
         return <LayoutPeaks key={layoutKey} {...p} />
       case 12:

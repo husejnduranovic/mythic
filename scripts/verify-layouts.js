@@ -196,7 +196,7 @@ const LAYOUTS = [
     },
   },
   {
-    name: "The Floodgates (L3, active — 2026-07-09, replaces The Hourglass)",
+    name: "The Floodgates (SHELVED 2026-07-10 — was L3; mirrored the Peaks funnel)",
     file: "LayoutFloodgates.tsx",
     n: 30,
     blockedBy: {
@@ -254,6 +254,37 @@ const LAYOUTS = [
       1: 3, 4: 9, 5: 8, 6: 7,
       10: 17, 11: 16, 12: 15, 13: 14,
       18: 27, 19: 26, 20: 25, 21: 24, 22: 23,
+    },
+  },
+
+  // ── PROPOSED (2026-07-10 L3/L7 redesign — the two funnels replaced) ──────
+  {
+    name: "The Portcullis (L3, proposed — interlocked jaws, the gate)",
+    file: "LayoutPortcullis.tsx",
+    n: 30,
+    blockedBy: {
+      // falling fangs — three wedges hanging from the top rail; each waist
+      // pair is bricked ACROSS the meeting row (the interlock: rising tips
+      // 16/18 hold the falling waists on BOTH their sides)
+      9: [15], 10: [15, 16], 11: [16, 17], 12: [17, 18], 13: [18, 19], 14: [19],
+      // fang roots — bricked over their own waist pair (outer roots single)
+      0: [9], 1: [9, 10], 2: [10],
+      3: [11], 4: [11, 12], 5: [12],
+      6: [13], 7: [13, 14], 8: [14],
+      // rising fangs — each tip frees its pair (burst from move 1)
+      20: [16], 21: [16], 22: [18], 23: [18],
+      // the gate-lock — a bracket tears free when its rising fang is out AND
+      // the gate's heart-stone (center root 4) is pulled; the BAR cannot drop
+      // while a hinge pin (post 28/29) still holds (depth 5 — the last stand)
+      24: [20, 21, 4], 25: [22, 23, 4],
+      26: [24, 25, 28], 27: [24, 25, 29],
+      // meeting row 15..19 OPEN · hinge posts 28,29 OPEN
+    },
+    mirror: {
+      0: 8, 1: 7, 2: 6, 3: 5,
+      9: 14, 10: 13, 11: 12,
+      15: 19, 16: 18,
+      20: 23, 21: 22, 24: 25, 26: 27, 28: 29,
     },
   },
 ]

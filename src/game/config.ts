@@ -17,11 +17,12 @@ export const LEVEL_CONFIG: Record<
   // Layout 11 "The Siege" replaced Cross of Clans (layout 9, shelved) after
   // the 2026-07-02 layout audit — 75% dead taps, four identical clusters.
   2: { fieldCards: 32, deckStart: 32, time: 85, layout: 11, name: "The Siege" },
-  // Layout 12 "The Floodgates" (2026-07-09) replaced The Hourglass (shelved) —
-  // owner playtest: the Last Grain (one card gating the entire bottom half)
-  // stalled runs when the deck refused that rank. Three gates split the choke;
-  // the flow-down identity stays.
-  3: { fieldCards: 30, deckStart: 30, time: 80, layout: 12, name: "The Floodgates" },
+  // Layout 14 "The Portcullis" (2026-07-10) replaced The Floodgates (shelved) —
+  // owner verdict: Floodgates and the Peaks finale were the same funnel
+  // silhouette, mirrored. Interlocked jaws: falling and rising fangs meet on
+  // one open mid-board row; the bar drops last. Burst 26.7% / maxBurst 4
+  // (set records) — the campaign beat after The Siege: break the gate.
+  3: { fieldCards: 30, deckStart: 30, time: 80, layout: 14, name: "The Portcullis" },
   4: { fieldCards: 32, deckStart: 32, time: 80, layout: 8, name: "Snake Eyes" },
   // Layout 10 "The Citadel" (mirror-symmetric successor to the unshipped
   // asymmetric Warfront) sits where the unnamed piles+wall (layout 2, shelved)
