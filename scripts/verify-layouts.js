@@ -224,7 +224,7 @@ const LAYOUTS = [
     },
   },
   {
-    name: "The Mythic Peaks (L7, active — 2026-07-09 rework: the apex finale)",
+    name: "The Mythic Peaks (SHELVED 2026-07-10 — was L7; funnel, near-mirror of Floodgates)",
     file: "LayoutPeaks.tsx",
     n: 28,
     blockedBy: {
@@ -285,6 +285,37 @@ const LAYOUTS = [
       9: 14, 10: 13, 11: 12,
       15: 19, 16: 18,
       20: 23, 21: 22, 24: 25, 26: 27, 28: 29,
+    },
+  },
+  {
+    name: "The Eyrie (L7, proposed — the war eagle on the summit, the finale)",
+    file: "LayoutEyrie.tsx",
+    n: 29,
+    blockedBy: {
+      // pinions — each wingtip rises off its two outermost mids
+      0: [3, 4], 2: [10, 11],
+      // THE APEX — the eagle crowned: BOTH pinions and the head must stand
+      // before the last card of the campaign (depth 5, fuses all 3 structures)
+      1: [0, 2, 7],
+      // mids — 4 per wing, bricked over 3 coverts (band widens 3→4 outward;
+      // outermost mid single-blocked = breach at the leading edge)
+      3: [12], 4: [12, 13], 5: [13, 14], 6: [14],
+      8: [17], 9: [18, 17], 10: [19, 18], 11: [19],
+      // the head — over the perch pair
+      7: [15, 16],
+      // coverts — 3 per wing, rooted under the body's outer trio
+      12: [20], 13: [20, 21], 14: [21, 22],
+      17: [25, 24], 18: [26, 25], 19: [26],
+      // the perch — the eggs, under the body's center trio
+      15: [22, 23], 16: [23, 24],
+      // body 20..26 OPEN (7 wide) · talons 27,28 OPEN (free crag pockets at
+      // the bottom corners — fuel to bridge a dying chain)
+    },
+    mirror: {
+      0: 2,
+      3: 11, 4: 10, 5: 9, 6: 8,
+      12: 19, 13: 18, 14: 17, 15: 16,
+      20: 26, 21: 25, 22: 24, 27: 28,
     },
   },
 ]

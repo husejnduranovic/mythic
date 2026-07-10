@@ -20,7 +20,7 @@ Medieval fantasy tri-peaks solitaire. React Native mobile app, live on Google Pl
 
 ## Core gameplay concepts (scoring v2, 2026-07-01 — spec in GAMEPLAY.md §1.5)
 
-- 7 board layouts (Battlements, The Siege, The Hourglass, Snake Eyes, The Citadel, Dragon's Spine, The Mythic Peaks) with per-level multipliers 1.0x–4.0x; blocking graphs must be SYMMETRIC (owner constraint) and machine-verified clearable via `scripts/verify-layouts.js`
+- 7 board layouts (Battlements, The Siege, The Portcullis, Snake Eyes, The Citadel, Dragon's Spine, The Eyrie) with per-level multipliers 1.0x–4.0x; blocking graphs must be SYMMETRIC (owner constraint) and machine-verified clearable via `scripts/verify-layouts.js`
 - Combo system: chain multiplier capped at 100x (combo 31+); **banners** at 5/8/12/16/20/24/28/32 bank `milestone × 1,000 × fieldMult × glory` permanently and freeze the timer 3s — one ladder drives bank/freeze/sound/HUD tier
 - Free Draw (doesn't reset combo): one granted per field, unused draws bank to the next field (cap 2); deck draw resets combo
 - Bounty cards: 3x match points at the current combo tier (routing decision); placement seeded on shared decks (Daily/Arena)
@@ -61,7 +61,7 @@ Medieval fantasy tri-peaks solitaire. React Native mobile app, live on Google Pl
 
 ## Current state
 
-v1.3.x in production; **v1.4 in progress on `refactor/v1.4-phase3`** — Phase 3 redesign (design system in `src/ui/`, all screens recomposed; log in DESIGN_PLAN.md) + scoring v2 / Armory skill gates + the moments pass (UNBROKEN, clear-hold, first-session arc, Ember Ward — GAMEPLAY.md §1.5) + the layout audit (7-board set incl. The Siege / The Hourglass / The Mythic Peaks finale — GAMEPLAY.md §3) + the menu-energy pass (Home light/weight, Armory forge moment, ScreenEnter, GoldButton punch/disabled). Marketing playbook in **MARKET.md** (lounge channel first; listing refresh + wipe at release). v1.4 release checklist: owner playtest of the new/changed boards (The Siege, The Hourglass, The Citadel, The Mythic Peaks, Dragon's Spine base), `allTimeScores` wipe decision. Earlier: SDK 52→54, Reanimated v3→v4, 16 KB compliance, Arena disconnect handling.
+v1.3.x in production; **v1.4 in progress on `refactor/v1.4-phase3`** — Phase 3 redesign (design system in `src/ui/`, all screens recomposed; log in DESIGN_PLAN.md) + scoring v2 / Armory skill gates + the moments pass (UNBROKEN, clear-hold, first-session arc, Ember Ward — GAMEPLAY.md §1.5) + the layout audit (7-board set; L3/L7 rebuilt 2026-07-10 as The Portcullis / The Eyrie after the funnel-pair verdict — GAMEPLAY.md §3) + the menu-energy pass (Home light/weight, Armory forge moment, ScreenEnter, GoldButton punch/disabled). Marketing playbook in **MARKET.md** (lounge channel first; listing refresh + wipe at release). v1.4 release checklist: owner playtest of the new/changed boards (The Siege, The Portcullis, The Citadel, The Eyrie, Dragon's Spine base), `allTimeScores` wipe decision. Earlier: SDK 52→54, Reanimated v3→v4, 16 KB compliance, Arena disconnect handling.
 
 ## Working rules
 

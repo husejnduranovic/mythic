@@ -29,10 +29,12 @@ export const LEVEL_CONFIG: Record<
   // used to — no base row; owner playtest gate applies.
   5: { fieldCards: 32, deckStart: 32, time: 85, layout: 10, name: "The Citadel" },
   6: { fieldCards: 28, deckStart: 28, time: 75, layout: 5, name: "Dragon's Spine" },
-  // Layout 13 "The Mythic Peaks" — the classic tri-peaks board, the game's
-  // namesake, as the new finale (2026-07-02). Ten contiguous opens = the
-  // widest chain freedom in the set, where the 4.0× banner hunt lives.
-  7: { fieldCards: 28, deckStart: 28, time: 75, layout: 13, name: "The Mythic Peaks" },
+  // Layout 15 "The Eyrie" (2026-07-10) replaced the tri-peaks funnel (layout
+  // 13, shelved — near-mirror of the Floodgates). The war eagle on the summit:
+  // wings cascade OUTWARD (the set's only diverging shape) to one fused apex
+  // card — both pinions AND the head hold the campaign's last card. The eyrie
+  // is the top of the Mythic Peaks; the 4.0× banner hunt rides the wings.
+  7: { fieldCards: 29, deckStart: 29, time: 75, layout: 15, name: "The Eyrie" },
 }
 
 export const TOTAL_LEVELS = Object.keys(LEVEL_CONFIG).length

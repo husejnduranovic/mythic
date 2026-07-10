@@ -23,6 +23,7 @@ import LayoutSiege from "./LayoutSiege"
 import LayoutFloodgates from "./LayoutFloodgates"
 import LayoutPeaks from "./LayoutPeaks"
 import LayoutPortcullis from "./LayoutPortcullis"
+import LayoutEyrie from "./LayoutEyrie"
 import Timer from "./Timer"
 import { saveScore } from "../services/LocalScoreService"
 import {
@@ -1159,6 +1160,8 @@ const Game = ({
     }
 
     switch (config.layout) {
+      case 15:
+        return <LayoutEyrie key={layoutKey} {...p} />
       case 14:
         return <LayoutPortcullis key={layoutKey} {...p} />
       case 13:
