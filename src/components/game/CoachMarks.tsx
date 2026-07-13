@@ -19,7 +19,7 @@ import {
 import { Icon, IconName } from "../../ui/Icon"
 import { color, font } from "../../ui/theme"
 
-export type CoachVariant = "match" | "chain" | "draw"
+export type CoachVariant = "match" | "chain" | "blade" | "draw"
 
 const COPY: Record<
   CoachVariant,
@@ -36,6 +36,14 @@ const COPY: Record<
     title: "A CHAIN!",
     body: "Every link multiplies your spoils. Plant banners at ×5, ×8, ×12… — banked forever.",
     sub: "A deck draw breaks the chain. Banners survive.",
+  },
+  // The two-active-card rule — the game's most underexplained good mechanic:
+  // from the second link on, the previous card stays live beside the new one.
+  blade: {
+    icon: "sword-cross",
+    title: "THE SECOND BLADE",
+    body: "Your last card STAYS LIVE beside the new one — either blade may take the next beast.",
+    sub: "Two blades, twice the paths. Check both before you draw.",
   },
   draw: {
     icon: "restore",
@@ -66,8 +74,8 @@ export const CoachMark = ({
 
   const copy = COPY[variant]
   const place =
-    variant === "match"
-      ? styles.placeMatch
+    variant === "match" || variant === "blade"
+      ? styles.placeMatch // both point at the dais, where the card(s) stand
       : variant === "chain"
         ? styles.placeChain
         : styles.placeDraw
