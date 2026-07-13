@@ -4,6 +4,72 @@ Ordered smallest-risk-first. Each Phase 1 step is a separate commit; the app mus
 
 ---
 
+## Critical Analysis — Fable 5 (2026-07-13)
+
+Written after a full read of every plan doc and the shipped code (Game.tsx, scoring, layouts, SoundService, all screens). Two lenses: a stranger who just installed it, and a designer who knows why people come back. **Calibration first, so the criticism lands where it should:** the minute-to-minute game is genuinely good now — scoring v2's banner push-your-luck is real design, the ghost is a best-in-class touch for a solo dev, the moments pass (UNBROKEN, clear-hold, grave marker) shipped actual juice, and the visual identity is distinctive and coherent. The problems below are almost all **around** the core loop, not in it. That's the good news. The bad news is that the problems around the loop are exactly the ones that decide whether anyone new ever reaches the good part.
+
+### 1. What makes a player quit in the first two minutes
+
+1. **The Google sign-in wall.** A stranger taps the store listing of a game with 16 installs and no reviews, and the first screen demands a Google account — no guest mode, no "try first" (`Authscreen.tsx`: Google sign-in is the only path). For an unknown hobby-scale game this is the single largest funnel hole in the product; industry-wide, forced pre-play registration costs a large share of installs, and this game has none of the brand trust that lets big titles get away with it. The €100 pill helps, but it's asking for trust before demonstrating any. *Fix direction (owner-gated, not this session): Firebase anonymous auth → play immediately → prompt Google-link at first score submit ("etch your name in the Hall"). Firebase supports linking anon → Google natively; the prize gives a perfect in-fiction reason to link.*
+2. **A ~10-minute, all-or-nothing first commitment.** A run is 7 fields and there is no shorter unit of play. Quit at field 5 and the run vanishes — `handleConfirmQuit` saves nothing, banks nothing, counts nothing. The first thing a new player learns about the game's respect for their time is that a phone call at field 4 erases eight minutes. Mobile's atomic unit is 2–3 minutes; ours is 10, indivisible.
+3. **Glory Hunt is an irreversible trap sitting on the first screen.** Pre-battle offers "Glory Hunt — 2× spoils · 50% time". Once tapped, `gloryActive` disables the button — **there is no disarm**. A curious first-run tap (and "2×" is written to be tapped) permanently halves the clock for the run's first field with no undo, no confirmation. A veteran reads the trade; a newcomer just learns the game punished curiosity.
+4. **The timer itself is a demographic bet nobody made consciously.** MARKET.md targets "TriPeaks/solitaire fan groups… older-skewing, exactly the demographic that plays daily quests forever" — the demographic that plays solitaire *to relax*. Every mode in the game is timed; there is no untimed anything. I'm not proposing to remove the timer (the entire economy — time bonus, freezes, comparable runs — stands on it), but be honest that the product's economy and its stated audience are in tension, and every "this is stressful" review will be this finding wearing different words.
+5. **A bad first run ends in silence.** Literally: no screen off the live board plays a single sound (grep: zero SoundService calls in `game/` screens). The steel BATTLE OVER card stamps in mute, the goal line shows a personal-best gap the player doesn't have yet (first run has no PB), and the strongest button on screen is Share — for a score they're embarrassed by. The win case is handled (First Victory overlay); the loss case, which is the *likelier* first outcome under a timer, gets nothing.
+
+### 2. What's missing that every successful mobile game has
+
+1. **Notifications. Any.** FCM is integrated in the binary and has never sent anything (R1 specced 2026-06-12, never built). Streaks die silently; the Ember Ward forgives a missed day the player was never told they missed. This is the cheapest retention lever in the industry and it's at zero. *(Caveat: local scheduled notifications need `expo-notifications` — a native dep, i.e. a prebuild + signing-restore cycle. Server push via Cloud Functions avoids the native dep but is owner-deployed. Either way: flagged, not built this session.)*
+2. **Accumulation between runs.** Nothing carries from run N to run N+1 except stats. No currency, no XP, no collection progress a run visibly advances. The Armory battle-gates *are* a between-run ladder — but they tick invisibly (nothing at game-over says "2 battles to Flame Sworn"; the §6.5 goal module shipped PB-gap only). A bad run currently contributes *nothing the player can see*. This is the root of the dead-run problem (§4).
+3. **Async competition.** Arena requires both players online at the same moment; at 6 actives the arena is a ghost room wearing good clothes. The share message is a dead-end brag — the receiver can't accept a challenge, race the seed, or answer back. Every self-multiplying loop this game could have runs through async duels (DESIGN_PLAN §7 A1) and it remains unbuilt. *(Real blocker to respect: Firestore rules are console-managed — a new `duels/` collection needs owner-deployed rules. Design sketch belongs in this doc; hasty half-shipped duels would be worse than none.)*
+4. **The €100 prize is invisible where it's decided.** The Hall of Glory — the actual board the money is paid on — contains no mention of the prize (grep: zero € references in Scoreboard.tsx). Game-over tells you your rank but never "…and #1 takes €50 this month." The single most differentiating fact about this product appears on the auth screen and a Home pill, then vanishes from the surfaces where it would drive behavior.
+5. **A reason tomorrow is different from today.** The Daily Quest is the same 7 boards with a different shuffle, forever. Streak + Ward is attendance, not anticipation. Nothing is ever *announced* for tomorrow. Compare the genre's best: today has a twist, tomorrow's twist is teased, and skipping a day means missing something specific, not just decrementing a counter.
+
+### 3. What's confusing, frustrating, or forgettable
+
+1. **The game's most distinctive mechanic is a secret.** The two-active-card rule (your previous card stays live from combo 2 — GAMEPLAY.md called it "the most underexplained good mechanic in the game" in June) is taught **nowhere**: not in the three coach marks (match/chain/draw — verified in CoachMarks.tsx), not in the Guide's slides. Players who don't stumble onto it are playing with half their options and a visibly weaker chain — and they'll conclude the game is luckier than it is.
+2. **~half of all taps get zero acknowledgment.** Dead taps (tapping a face-up card that matches nothing) are 49–57% of taps on the shipped boards, and `handleCardPress` returns early on them: no sound, no haptic, no shake, nothing. The most frequent single interaction in the game is indistinguishable from the app not registering the touch. Every polished card game rejects with a wiggle/thud; ours ghosts the player.
+3. **The Portcullis endgame is opaque *and* collapses (owner-confirmed).** The last four cards (brackets 24/25, bar 26/27) unlock behind the heart-stone (index 4 — rendered **four rows away** at the top rail) and the hinge posts (28/29 — three rows away at the meeting row's far edges). The blocking convention everywhere else is "covered by the adjacent row below"; here the player stares at locked cards with no visible cover, then everything opens at once and every run ends in the same forced sequence. Frustration by opacity, then anticlimax by simultaneity. (Fix designed in §Task-3 below.)
+4. **The Eyrie plays itself.** Nine opens, two independent wing cascades that never contest anything, talons that are pure free fuel, inner mids that block nothing. There is no scarce resource, no contested card, no "spend it now or hold it" anywhere on the board — on the **4.0× finale**, the field that should ask the run's hardest question. The shape is right (diverging wings, fused apex); the dependencies under it generate no dilemmas. (Fix designed in §Task-3 below.)
+5. **Three proper-noun ladders compete for the new player's model.** Rank titles (games played), banner titles (combo), field names — all gold, all Cinzel, all shouting. Veterans parse them; session-1 players see one continuous stream of medieval nouns. Not fixable cheaply, worth knowing (copy hierarchy, not systems, is the eventual fix).
+
+### 4. The weakest part of the core loop
+
+**The loop between runs, not the loop within them.** Within a run the game now has real texture. Between runs it is: play → number → (mostly-empty leaderboard) → identical run again. Specifically:
+
+- **The dead-run problem.** The moment a run falls badly behind the ghost with fields left, the optimal play is retreat + restart — retreat saves nothing, so the game's own structure teaches score-chasers to abandon runs, and the 10-minute unit makes each abandonment feel like theft. Finishing a bad run *does* tick the Armory battle-gates (`incrementGamesPlayed` fires only on game-over) — but the player is never told, so the one real incentive to finish is invisible. A bad run needs something only *finishing* it can bank, stated where the retreat decision happens.
+- **Self-competition is the only fuel, and new players have no self to compete with.** PB/ghost/best-combo are strong hooks for the converted 6 (whose 18–186 games prove it) and empty for installs #17–100: no PB worth chasing, no ghost, leaderboards showing five strangers. The first ten runs — exactly the retention window — are when the game's between-run engine is weakest.
+- **The run's decision inventory is front-loaded to zero.** The only pre-run choice is Glory (binary, once). No loadout, no route, no modifier, no wager — every run *starts* identically, so "one more run" is purely "same thing, better execution." That's a valid score-attack identity (and the leaderboard-fairness constraint is load-bearing for the prize — per-player variance is correctly off the table), but it puts all replay weight on execution mastery; the game should at least make every run's *micro-goals* differ (see field crowns, below).
+
+### 5. What would make someone tell a friend
+
+The clip moments exist and are good (UNBROKEN detonation, ×32, record count-up — built to be filmed) and "a dev pays €100/month to whoever tops his solitaire game" is a genuinely repeatable sentence. What's missing is the *artifact*: share is plain text with a store link. No challenge ("beat my exact deck", one tap for the receiver), no image card, and the receiver who does install hits the sign-in wall (§1.1) before seeing a single card flip. The referral loop leaks at both ends.
+
+### 6. What would make someone open it tomorrow instead of deleting it
+
+Today's honest answers: the streak (with Ward), the one-attempt Daily, the ghost. All real, all quiet. Missing: any notification (§2.1), any tomorrow-specific content (§2.5), any social callback ("Bekac answered your duel", "you were overtaken on the weekly board" — the second one needs no new mode, just a read and a push). The game currently relies on the player *remembering unprompted* to return to an experience that's identical to yesterday's. The 6 who do are the proof the loop can carry it; the hundreds who won't are the growth ceiling.
+
+### Verdict — what this session builds vs. proposes
+
+| # | Finding | Action this session |
+|---|---|---|
+| 1 | Dead runs bank nothing visible; per-field play has no evergreen goal | **BUILD: Field Crowns** — per-field personal bests (local, display-only): every field of every run, including dead runs, carries a crown to defend or take; surfaced in the Breath + game-over |
+| 2 | Finishing/next-run incentives invisible at game-over | **BUILD: complete the §6.5 goal module** — imminence ladder (Armory unlock ≤3 battles → rank tier → PB gap → named rival gap), one line + Battle-Again subtitle |
+| 3 | Two-active-card rule untaught | **BUILD: fourth coach mark** ("The Second Blade") when the second card first lands on the dais |
+| 4 | Prize invisible in Hall of Glory / game-over | **BUILD: prize strip** on the all-time tab + one game-over line when rank is in prize range |
+| 5 | Dead taps unacknowledged | **BUILD (Task 5): reject feedback** — light haptic + dull thud, zero per-card render cost |
+| 6 | Glory Hunt irreversible mis-tap trap | **BUILD (Task 5): disarm** — tapping GLORY HUNT ARMED un-arms it (refunds the charge) at pre-battle/between-levels only |
+| 7 | Screens outside the board are mute; capture/game-over sound identity weak | **BUILD (Task 4): full sound pass** — game-over win/loss, the Breath, tiered captures, UNBROKEN |
+| 8 | Portcullis endgame collapse + unreadable deps | **BUILD (Task 3): progressive, readable bottom lock** |
+| 9 | Eyrie strategically flat | **BUILD (Task 3): talon-toll + perch-weave dependencies** |
+| 10 | Sign-in wall | **PROPOSE**: anonymous auth → link-at-first-score (Firebase console + flow work; owner-gated) |
+| 11 | No notifications | **PROPOSE**: server-push via Cloud Functions (no native dep) — streak-at-risk + daily reminder; owner deploys |
+| 12 | No async duels / share is a dead end | **PROPOSE**: duel design sketch (seeded, 24h, rides invite-pattern writes); needs owner-deployed Firestore rules — next code phase |
+| 13 | Every day identical | **PROPOSE**: Daily Edict (seeded per-day modifier on the shared deck) — **blocked on an owner decision**: daily runs currently feed `allTimeScores` (verified in `saveGameResults`), so score-affecting edicts pollute the eternal board; decouple first or keep edicts score-neutral |
+| 14 | 10-minute indivisible unit | **PROPOSE** (Phase 4): Skirmish mode — one field, own micro-ladder; big surface, gate on owner appetite |
+| 15 | Timer-vs-demographic tension | **FLAG only** — a positioning fact to hold, not a change to make |
+
+---
+
 ## ▶ Fable sessions — 2026-07-01 → 02 (supersede the 2026-06-16 pause)
 
 **Day 2, third pass (2026-07-02) — the layout audit** (owner playtest verdict: game approved, levels 2/3 boring), one slice per commit (tsc-gated; spec in GAMEPLAY.md §3):
