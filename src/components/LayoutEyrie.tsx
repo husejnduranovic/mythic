@@ -26,27 +26,41 @@ const isOpen = (cards: ICard[], ...blockers: number[]) =>
  *   [12][13][14]   [15][16]   [17][18][19]      coverts + the perch
  * [27]  [20][21][22][23][24][25][26]  [28]      body (7 OPEN) + talons
  *
- * Blocking (machine-verified clearable + mirror-isomorphic):
+ * Blocking (machine-verified clearable + mirror-isomorphic). 2026-07-14
+ * Task-3 rework — THE GRIP AND THE WEAVE: the first cut played itself (two
+ * independent wing cascades that contested nothing, talons that were pure
+ * free fuel, inner mids that blocked nothing — no "spend it or hold it"
+ * anywhere on the 4.0× finale):
+ *   talons:  27,28 OPEN crag pockets — but each now PINS its wing's EDGE
+ *            FEATHER (the outermost mid at the top of its column: talon →
+ *            leading covert → edge mid, rising outward). The eagle must
+ *            release its grip to spread the wing: spending a talon is fuel
+ *            AND the key to that wing's pinion route; holding it is
+ *            insurance for a dying chain. The toll is the dilemma — and
+ *            both grips must open before the eagle can be crowned.
  *   coverts: rooted under the shoulder — 12←20 · 13←20,21 · 14←21,22 and
  *            mirrored 19←26 · 18←26,25 · 17←25,24
- *   mids:    bricked 4-over-3, the band WIDENS outward (1.33 — the wing
- *            sweep): 3←12 · 4←12,13 · 5←13,14 · 6←14, mirrored 11/10/9/8
+ *   mids:    bricked 4-over-3, the band WIDENS outward (the wing sweep);
+ *            the edge mid needs its covert AND the grip released:
+ *            3←12,27 · 4←12,13 · 5←13,14 · 6←14, mirrored 11←19,28 /10/9/8
  *   perch:   under the body's center trio — 15←22,23 · 16←23,24 (keystone
  *            23: clearing it last of the trio pops BOTH perch cards)
- *   head:    7←15,16 — the short center ascent
+ *   head:    7←6,8,15,16 — the head lifts once the mantling wings PART
+ *            (the inner mids flanking it on its own row) and the perch is
+ *            clear. The center ascent runs THROUGH both wings' feathers.
  *   pinions: each wingtip rises off its two outermost mids — 0←3,4 · 2←10,11
  *   APEX:    1←0,2,7 — the eagle crowned: BOTH pinions and the head must
  *            stand before the campaign's last card (depth 5; the old three
  *            summits reborn as one crowning moment)
- *   talons:  27,28 OPEN — free crag pockets, fuel for a dying chain
  *
- * Dead taps 49%, burst 17.7% (the funnel: 51% / 13.1%), 0.69 cards opened
- * per capture (was 0.64), first-5 2.7, last-5 2.2, depth 5.
+ * Dead taps 48% (set-best), burst 17.4%, first-5 2.6, last-5 2.4 — the
+ * finale climaxes (only the Siege ends livelier), depth 5.
  *
- * Strategy: the 4.0× banner hunt rides the wings — every body card feeds a
- * covert, every covert up to two mids, so the chain WIDENS as it climbs.
- * Route both wings while the perch trio is live, hold the talons as fuel,
- * and time the apex so the crown lands on a banner.
+ * Strategy: TWO ROUTES UP, both through the wings. The outer route is
+ * talon-keyed (grip → edge mids → pinion); the inner route climbs the
+ * center (perch → part the feathers → head); the apex demands all three
+ * tops. Spend a talon to commit a wing, hold one to bridge a dying chain,
+ * and time the crown onto a banner.
  */
 
 // All geometry in card units so every device keeps the shape. A card's
@@ -88,17 +102,17 @@ const LayoutEyrie = React.memo(
           {/* mids — the wings sweep out — and the head */}
           <View style={[styles.absRow, { top: V }]}>
             <View style={styles.row}>
-              {C(3, isOpen(cards, 12))}
+              {C(3, isOpen(cards, 12, 27))}
               {C(4, isOpen(cards, 12, 13))}
               {C(5, isOpen(cards, 13, 14))}
               {C(6, isOpen(cards, 14))}
               <View style={{ width: span(1.5) }} />
-              {C(7, isOpen(cards, 15, 16))}
+              {C(7, isOpen(cards, 6, 8, 15, 16))}
               <View style={{ width: span(1.5) }} />
               {C(8, isOpen(cards, 17))}
               {C(9, isOpen(cards, 17, 18))}
               {C(10, isOpen(cards, 18, 19))}
-              {C(11, isOpen(cards, 19))}
+              {C(11, isOpen(cards, 19, 28))}
             </View>
           </View>
 

@@ -296,28 +296,36 @@ const LAYOUTS = [
     },
   },
   {
-    name: "The Eyrie (L7, proposed — the war eagle on the summit, the finale)",
+    name: "The Eyrie (L7, active — 2026-07-14 Task-3 rework: the grip and the weave)",
     file: "LayoutEyrie.tsx",
     n: 29,
     blockedBy: {
+      // 2026-07-14 — the first cut played itself: two independent wing
+      // cascades, talons as pure free fuel, inner mids blocking nothing.
+      // Now: each talon PINS its wing's EDGE FEATHER (the outermost mid —
+      // spend it = fuel AND the key to that wing's pinion route; hold it =
+      // chain insurance), and the head lifts only once the mantling wings
+      // PART (the inner mids that flank it on its own row).
       // pinions — each wingtip rises off its two outermost mids
       0: [3, 4], 2: [10, 11],
       // THE APEX — the eagle crowned: BOTH pinions and the head must stand
       // before the last card of the campaign (depth 5, fuses all 3 structures)
       1: [0, 2, 7],
-      // mids — 4 per wing, bricked over 3 coverts (band widens 3→4 outward;
-      // outermost mid single-blocked = breach at the leading edge)
-      3: [12], 4: [12, 13], 5: [13, 14], 6: [14],
-      8: [17], 9: [18, 17], 10: [19, 18], 11: [19],
-      // the head — over the perch pair
-      7: [15, 16],
-      // coverts — 3 per wing, rooted under the body's outer trio
+      // mids — 4 per wing, bricked over 3 coverts (band widens 3→4 outward);
+      // the EDGE mid needs its covert AND the talon's grip released
+      3: [12, 27], 4: [12, 13], 5: [13, 14], 6: [14],
+      8: [17], 9: [18, 17], 10: [19, 18], 11: [19, 28],
+      // the head — the mantling wings must PART (inner mids 6/8, same-row
+      // flanks) and the perch must clear
+      7: [6, 8, 15, 16],
+      // coverts — rooted under the body's outer trio
       12: [20], 13: [20, 21], 14: [21, 22],
       17: [25, 24], 18: [26, 25], 19: [26],
-      // the perch — the eggs, under the body's center trio
+      // the perch — the eggs, under the body's center trio (keystone 23
+      // pops both when it falls last of the trio)
       15: [22, 23], 16: [23, 24],
-      // body 20..26 OPEN (7 wide) · talons 27,28 OPEN (free crag pockets at
-      // the bottom corners — fuel to bridge a dying chain)
+      // body 20..26 OPEN (7 wide) · talons 27,28 OPEN — the grip: fuel that
+      // also pins the wing's edge feather
     },
     mirror: {
       0: 2,
