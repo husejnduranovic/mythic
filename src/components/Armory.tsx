@@ -622,6 +622,21 @@ export const incrementGamesPlayed = async () => {
   }
 }
 
+// The nearest battle-gated piece still locked at a games count — feeds the
+// game-over goal module (§6.5). Battle gates only: streak/combo/spoils gates
+// aren't closable by "one more battle", so they never make this goal.
+export const nextBattleUnlock = (
+  gamesPlayed: number,
+): { name: string; req: number } | null => {
+  let next: ArmoryItem | null = null
+  for (const i of ALL_PIECES) {
+    if (i.streakReq || i.comboReq || i.scoreReq) continue
+    if (i.unlockReq <= gamesPlayed) continue
+    if (!next || i.unlockReq < next.unlockReq) next = i
+  }
+  return next ? { name: next.name, req: next.unlockReq } : null
+}
+
 // ── Miniature renderers ──────────────────────────────────────────────────────
 // Every rack tile and stage prop re-renders the item's true in-game look
 // (Card.tsx back grammar, Game.tsx war bar) at preview scale. Fine engraving

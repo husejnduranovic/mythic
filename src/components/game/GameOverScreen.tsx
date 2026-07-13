@@ -9,7 +9,7 @@
 // actions. Landscape-first; this screen replaces the board, so it carries no
 // 28-card cost and motion is free.
 
-import React, { useEffect, useRef, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import {
   Animated,
   Easing,
@@ -23,6 +23,8 @@ import {
 } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { TOTAL_LEVELS } from "../../game/config"
+import { pickNextGoal } from "../../game/nextGoal"
+import { prizeForSeat } from "../../game/prize"
 import ReturnToCastle from "../ReturnToCastle"
 import RecordCelebration from "../RecordCelebration"
 import PersonalBestBanner from "../PersonalBestBanner"
@@ -30,6 +32,7 @@ import { Icon, IconName } from "../../ui/Icon"
 import { GoldButton } from "../../ui/GoldButton"
 import { color, font } from "../../ui/theme"
 import {
+  getNextRank,
   HonorCard,
   LedgerRow,
   LedgerSep,
@@ -37,6 +40,7 @@ import {
   withAlpha,
 } from "../../ui/honor"
 import type { ThemeConfig } from "../Armory"
+import { nextBattleUnlock } from "../Armory"
 
 // The spoils are counted into the card, not printed on it: 26 eased steps
 // (~900ms). Runs on a static full-screen moment — no board cost.
@@ -87,6 +91,10 @@ export const GameOverScreen = ({
   isPersonalBest,
   isAllTimeRecord,
   previousBest,
+  allTimeRank = null,
+  rival = null,
+  gamesPlayed = null,
+  ghostFinal = null,
   showCelebration,
   onPlayAgain,
   onConfirmQuit,
@@ -113,6 +121,10 @@ export const GameOverScreen = ({
   isPersonalBest: boolean
   isAllTimeRecord: boolean
   previousBest: number
+  allTimeRank?: number | null
+  rival?: { name: string; score: number } | null
+  gamesPlayed?: number | null
+  ghostFinal?: number | null
   showCelebration: boolean
   onPlayAgain: () => void
   onConfirmQuit: () => void
@@ -284,13 +296,44 @@ export const GameOverScreen = ({
     Share.share({ message }).catch(() => {})
   }
 
-  // ── "One more battle" goal (§6.5, lite — uses data already on screen) ──
+  // ── "One more battle" goal (§6.5) — one goal, imminence-first ──
   const pbDelta = previousBest > 0 ? score - previousBest : 0
   const goalStruck = isPersonalBest && !isAllTimeRecord
-  const goalGap =
-    !goalStruck && !isAllTimeRecord && previousBest > 0 && score < previousBest
-      ? previousBest - score
-      : 0
+  // A record run needs no next goal — the throne is the moment. Otherwise the
+  // ladder: countable battles (Armory piece / rank tier) → closable PB gap →
+  // the named rival one seat up → the shadow. Never more than one.
+  const goal = useMemo(
+    () =>
+      arenaMode || isAllTimeRecord || goalStruck
+        ? null
+        : pickNextGoal({
+            score,
+            previousBest,
+            gamesPlayed,
+            armoryNext:
+              gamesPlayed !== null ? nextBattleUnlock(gamesPlayed) : null,
+            rankNext: gamesPlayed !== null ? getNextRank(gamesPlayed) : null,
+            rival,
+            ghostFinal,
+          }),
+    [
+      arenaMode,
+      isAllTimeRecord,
+      goalStruck,
+      score,
+      previousBest,
+      gamesPlayed,
+      rival,
+      ghostFinal,
+    ],
+  )
+  const goalIsBattles =
+    goal?.kind === "battles-armory" || goal?.kind === "battles-rank"
+
+  // The monthly prize, shown exactly where it's decided: the seat this
+  // player's best now holds on the all-time board, when it's a paying one.
+  const prizeSeat =
+    !arenaMode && allTimeRank !== null ? prizeForSeat(allTimeRank) : null
 
   const cardBody = (
     <>
@@ -480,6 +523,16 @@ export const GameOverScreen = ({
                   )}
                 </View>
 
+                {/* the prize, where it's decided (§2.4) */}
+                {prizeSeat !== null && (
+                  <View style={g.prizeRow}>
+                    <Icon name="crown" size={11} color={color.goldBright} />
+                    <Text style={g.prizeTxt}>
+                      SEAT #{allTimeRank} PAYS €{prizeSeat} AT MONTH'S END
+                    </Text>
+                  </View>
+                )}
+
                 {/* ledger */}
                 <View style={g.ledger}>
                   <LedgerRow
@@ -553,22 +606,25 @@ export const GameOverScreen = ({
                       {pbDelta > 0 ? `  ·  +${pbDelta.toLocaleString()}` : ""}
                     </Text>
                   </View>
-                ) : goalGap > 0 ? (
+                ) : goal ? (
                   <View style={g.goal}>
                     <Text style={g.goalTxt}>
-                      <Text style={g.goalNum}>{goalGap.toLocaleString()}</Text>{" "}
-                      spoils from your personal best
+                      <Text style={g.goalNum}>{goal.em}</Text>
+                      {goal.rest}
                     </Text>
-                    <View style={g.goalTrack}>
-                      <View
-                        style={[
-                          g.goalFill,
-                          {
-                            width: `${Math.min(100, (score / previousBest) * 100)}%`,
-                          },
-                        ]}
-                      />
-                    </View>
+                    {goal.pct !== null && (
+                      <View style={g.goalTrack}>
+                        <View
+                          style={[
+                            g.goalFill,
+                            { width: `${Math.round(goal.pct * 100)}%` },
+                            goalIsBattles && {
+                              backgroundColor: color.ember,
+                            },
+                          ]}
+                        />
+                      </View>
+                    )}
                   </View>
                 ) : null}
 
@@ -600,6 +656,7 @@ export const GameOverScreen = ({
                   <GoldButton
                     label={dailyMode ? "RETURN TO CASTLE" : "BATTLE AGAIN"}
                     icon={dailyMode ? "castle" : "sword-cross"}
+                    subtitle={!dailyMode && goal ? goal.sub : undefined}
                     onPress={onPlayAgain}
                   />
                   {!dailyMode && <ReturnToCastle onPress={onHome} />}
@@ -720,6 +777,27 @@ const g = StyleSheet.create({
     fontStyle: "italic",
     letterSpacing: 2,
     textAlign: "center",
+  },
+
+  prizeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    alignSelf: "center",
+    backgroundColor: withAlpha(color.goldBright, 0.07),
+    borderWidth: 1,
+    borderColor: withAlpha(color.goldBright, 0.3),
+    borderRadius: 7,
+    paddingVertical: 3,
+    paddingHorizontal: 10,
+    marginBottom: 2,
+  },
+  prizeTxt: {
+    color: color.goldBright,
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 1.5,
   },
 
   ledger: { paddingHorizontal: 2, marginVertical: 2 },

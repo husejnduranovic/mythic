@@ -61,6 +61,14 @@ export const getRank = (games: number) => {
   return rank
 }
 
+// The next tier above a games count — feeds the game-over goal module (§6.5).
+export const getNextRank = (
+  games: number,
+): { name: string; needed: number } | null => {
+  const next = RANKS.find((r) => r.min > games)
+  return next ? { name: next.name, needed: next.min - games } : null
+}
+
 // The icon's card green — the card is the lit centerpiece, not a flat panel.
 export const CARD_FIELD = "#1A3D2A"
 export const CARD_RUNES = ["ᚠ", "ᚦ", "ᚱ", "ᛟ"]

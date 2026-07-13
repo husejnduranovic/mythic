@@ -270,7 +270,14 @@ export interface SaveGameResults {
   dailyRank: number | null
   isAllTimeRecord: boolean
   isPersonalBest: boolean
+  // The standing best BEFORE this run, whether or not this run beat it
+  // (0 = no previous best). Feeds the PB-gap goal on the miss case too.
   previousBest: number
+  // The player's seat on the all-time board (per-player bests — the board the
+  // monthly prize is paid on), counted from max(this run, previous best).
+  allTimeRank: number | null
+  // The player one seat above on that board — the next real seat to take.
+  rival: { name: string; score: number } | null
 }
 
 // Is this score a new all-time record (beats the current #1)?
@@ -289,6 +296,8 @@ const checkAllTimeRecord = async (score: number): Promise<boolean> => {
 }
 
 // Does this score beat the player's previous personal best (and had one)?
+// previousBest is always the standing best before this run — the goal module
+// needs the gap on the miss case, not only on a new record.
 const checkPersonalBest = async (
   uid: string,
   score: number,
@@ -296,13 +305,47 @@ const checkPersonalBest = async (
   try {
     const doc = await firestore().collection(Collections.users).doc(uid).get()
     const prevBest = doc.exists() ? doc.data()?.bestScore || 0 : 0
-    if (score > prevBest && prevBest > 0) {
-      return { isPersonalBest: true, previousBest: prevBest }
+    return {
+      isPersonalBest: score > prevBest && prevBest > 0,
+      previousBest: prevBest,
     }
-    return { isPersonalBest: false, previousBest: 0 }
   } catch (err) {
     logError("Score.checkPersonalBest", err)
     return { isPersonalBest: false, previousBest: 0 }
+  }
+}
+
+// The player's standing on the all-time board (one doc per player — the board
+// the monthly prize pays on): their seat number, and the player one seat above.
+// One ascending query over the scores strictly above the player's best; the
+// player's own doc can never match it (own score is never > own best).
+const fetchStanding = async (
+  uid: string,
+  myBest: number,
+): Promise<{
+  allTimeRank: number | null
+  rival: { name: string; score: number } | null
+}> => {
+  try {
+    const snap = await firestore()
+      .collection(Collections.allTimeScores)
+      .where("score", ">", myBest)
+      .orderBy("score", "asc")
+      .get()
+    const above = snap.docs.filter((d) => d.id !== uid)
+    const seatAbove = above[0]?.data()
+    return {
+      allTimeRank: above.length + 1,
+      rival: seatAbove
+        ? {
+            name: seatAbove.heroName || "A nameless rival",
+            score: seatAbove.score || 0,
+          }
+        : null,
+    }
+  } catch (err) {
+    logError("Score.fetchStanding", err)
+    return { allTimeRank: null, rival: null }
   }
 }
 
@@ -398,15 +441,23 @@ export const saveGameResults = async (
     updatePlayerScore(roomCode, uid, score, bestCombo, TOTAL_LEVELS, true)
   }
 
-  // Reads that feed the returned result — run concurrently.
-  const [isAllTimeRecord, personalBest, dailyRank, rank] = await Promise.all([
-    checkAllTimeRecord(score),
-    checkPersonalBest(uid, score),
-    dailyMode
-      ? submitAndRankDaily(uid, heroName, score, bestCombo, clearPct)
-      : Promise.resolve<number | null>(null),
-    fetchRank(score),
-  ])
+  // Reads that feed the returned result — run concurrently. The standing read
+  // needs the previous best first (the seat is counted from whichever of this
+  // run / the old best is higher), so it chains off that one read only.
+  const personalBestP = checkPersonalBest(uid, score)
+  const standingP = personalBestP.then((pb) =>
+    fetchStanding(uid, Math.max(score, pb.previousBest)),
+  )
+  const [isAllTimeRecord, personalBest, dailyRank, rank, standing] =
+    await Promise.all([
+      checkAllTimeRecord(score),
+      personalBestP,
+      dailyMode
+        ? submitAndRankDaily(uid, heroName, score, bestCombo, clearPct)
+        : Promise.resolve<number | null>(null),
+      fetchRank(score),
+      standingP,
+    ])
 
   return {
     rank,
@@ -414,5 +465,7 @@ export const saveGameResults = async (
     isAllTimeRecord,
     isPersonalBest: personalBest.isPersonalBest,
     previousBest: personalBest.previousBest,
+    allTimeRank: standing.allTimeRank,
+    rival: standing.rival,
   }
 }

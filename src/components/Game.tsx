@@ -225,6 +225,13 @@ const Game = ({
   const [dailyRank, setDailyRank] = useState<number | null>(null)
   const [isAllTimeRecord, setIsAllTimeRecord] = useState(false)
   const [showCelebration, setShowCelebration] = useState(false)
+  // The all-time seat + the player above it (§6.5 goal / prize line) and the
+  // local games count after this run (battle-gate goals) — game-over only.
+  const [allTimeRank, setAllTimeRank] = useState<number | null>(null)
+  const [rival, setRival] = useState<{ name: string; score: number } | null>(
+    null,
+  )
+  const [gamesPlayedNow, setGamesPlayedNow] = useState<number | null>(null)
 
   const [preBattle, setPreBattle] = useState(true)
   const [gloryCharges, setGloryCharges] = useState(1)
@@ -232,9 +239,11 @@ const Game = ({
 
   // First-battle coach marks (R2): 0 off · 1 armed (waiting for the board) ·
   // 2 mark-match showing · 3 waiting for the first chain · 4 mark-chain ·
-  // 5 mark-draw · then off. Armed only on the first-ever free battle.
+  // 5 mark-blade (the second card is on the dais at that exact moment) ·
+  // 6 mark-draw · then off. Armed only on the first-ever free battle.
   const [coachStep, setCoachStep] = useState(0)
-  const coachVisible = coachStep === 2 || coachStep === 4 || coachStep === 5
+  const coachVisible =
+    coachStep === 2 || coachStep === 4 || coachStep === 5 || coachStep === 6
 
   // First Victory (R5): the first-ever completed battle celebrates once.
   const [showFirstVictory, setShowFirstVictory] = useState(false)
@@ -420,17 +429,19 @@ const Game = ({
             setIsAllTimeRecord(true)
             setShowCelebration(true)
           }
-          if (results.isPersonalBest) {
-            setPreviousBest(results.previousBest)
-            setIsPersonalBest(true)
-          }
+          if (results.isPersonalBest) setIsPersonalBest(true)
+          // Standing best regardless of outcome — the goal module needs the
+          // gap on the miss case, not only on a new record.
+          setPreviousBest(results.previousBest)
           setRank(results.rank)
           setDailyRank(results.dailyRank)
+          setAllTimeRank(results.allTimeRank)
+          setRival(results.rival)
         })
       }
       if (score > 0) {
         saveScore(score, bestCombo)
-        incrementGamesPlayed()
+        incrementGamesPlayed().then((n) => setGamesPlayedNow(n))
         // First Victory — once per device, any solo mode; arena's game-over
         // is the rankings moment and keeps it. The games-played check keeps
         // the overlay away from veterans updating into this build (their
@@ -491,7 +502,11 @@ const Game = ({
         AsyncStorage.setItem(StorageKeys.seenCoachMarks, "1").catch(() => {})
         return 3
       }
+      // chain → blade → draw: three lessons on the one frozen moment where
+      // all three become real (the tap that made the chain also seated the
+      // second card, and the draw decision is what the chain now hangs on).
       if (s === 4) return 5
+      if (s === 5) return 6
       return 0
     })
   }
@@ -1052,6 +1067,13 @@ const Game = ({
     setBountyIndices(new Set())
     setIsPersonalBest(false)
     setPreviousBest(0)
+    // Last run's resolved results must not leak into the next game-over —
+    // isAllTimeRecord in particular used to stick for the whole session.
+    setIsAllTimeRecord(false)
+    setRank(null)
+    setDailyRank(null)
+    setAllTimeRank(null)
+    setRival(null)
     personalBestComboShownRef.current = false
     runPaceRef.current = []
     fieldStartScoreRef.current = 0
@@ -1311,6 +1333,10 @@ const Game = ({
         isPersonalBest={isPersonalBest}
         isAllTimeRecord={isAllTimeRecord}
         previousBest={previousBest}
+        allTimeRank={allTimeRank}
+        rival={rival}
+        gamesPlayed={gamesPlayedNow}
+        ghostFinal={ghostPace?.[ghostPace.length - 1] ?? null}
         showCelebration={showCelebration}
         onPlayAgain={handlePlayAgain}
         onConfirmQuit={handleConfirmQuit}
@@ -1725,7 +1751,13 @@ const Game = ({
           {coachVisible && (
             <CoachMark
               variant={
-                coachStep === 2 ? "match" : coachStep === 4 ? "chain" : "draw"
+                coachStep === 2
+                  ? "match"
+                  : coachStep === 4
+                    ? "chain"
+                    : coachStep === 5
+                      ? "blade"
+                      : "draw"
               }
               onDismiss={dismissCoach}
             />

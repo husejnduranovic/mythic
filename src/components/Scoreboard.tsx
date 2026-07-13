@@ -17,6 +17,7 @@ import { SoundService } from "../services/SoundService"
 import ReturnToCastle from "./ReturnToCastle"
 import { Icon, IconName } from "../ui/Icon"
 import { color, font } from "../ui/theme"
+import { PRIZE_SEATS } from "../game/prize"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Hall of Glory — "Champions' Cards" (DESIGN_PLAN §4.6)
@@ -750,6 +751,16 @@ const Scoreboard = ({ onBack, uid }: ScoreboardProps) => {
                 {/* shelf the trio stands on */}
                 <View style={z.shelf} />
                 <View style={z.shelfGlow} />
+                {/* the prize, on the board it's paid on (§2.4) */}
+                {tab === "alltime" && (
+                  <View style={z.prizeStrip}>
+                    <Icon name="crown" size={12} color={color.goldBright} />
+                    <Text style={z.prizeTxt}>
+                      {PRIZE_SEATS.map((p) => `€${p}`).join(" · ")} — PAID TO
+                      THESE SEATS MONTHLY
+                    </Text>
+                  </View>
+                )}
               </View>
             </View>
 
@@ -895,6 +906,24 @@ const z = StyleSheet.create({
     backgroundColor: "rgba(232,197,71,0.04)",
     borderRadius: 4,
     marginTop: -1,
+  },
+  prizeStrip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: "rgba(255,215,0,0.07)",
+    borderWidth: 1,
+    borderColor: "rgba(255,215,0,0.3)",
+  },
+  prizeTxt: {
+    color: color.goldBright,
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 1.2,
   },
 
   // Roll (right)
