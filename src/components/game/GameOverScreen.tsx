@@ -74,6 +74,7 @@ export const GameOverScreen = ({
   bannersPlanted = 0,
   perfectFields = 0,
   unbrokenFields = 0,
+  crownsTaken = 0,
   totalCleared,
   totalFieldCards,
   dailyMode,
@@ -99,6 +100,7 @@ export const GameOverScreen = ({
   bannersPlanted?: number
   perfectFields?: number
   unbrokenFields?: number
+  crownsTaken?: number
   totalCleared: number
   totalFieldCards: number
   dailyMode: boolean
@@ -524,6 +526,18 @@ export const GameOverScreen = ({
                     value={`${bannersPlanted}`}
                     index={3}
                   />
+                  {crownsTaken > 0 && (
+                    <>
+                      <LedgerSep />
+                      <LedgerRow
+                        icon="crown"
+                        label="Field Crowns Taken"
+                        value={`${crownsTaken}`}
+                        index={4}
+                        valueColor={color.goldBright}
+                      />
+                    </>
+                  )}
                 </View>
 
                 {/* one-more-battle goal */}

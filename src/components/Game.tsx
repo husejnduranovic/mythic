@@ -160,6 +160,14 @@ const Game = ({
     unbroken: number
   } | null>(null)
   const [fieldUnbroken, setFieldUnbroken] = useState(false)
+  // Field Crowns: the field's own personal best (any run, any mode — even a
+  // retreat). A dead run can still take a crown; that is the point.
+  const [fieldCrown, setFieldCrown] = useState<{
+    taken: boolean
+    prev: number
+  } | null>(null)
+  const [crownsTaken, setCrownsTaken] = useState(0)
+  const fieldCrownsRef = useRef<Record<number, number>>({})
   // The ghost: per-field cumulative score of the player's best completed run.
   const [ghostPace, setGhostPace] = useState<number[] | null>(null)
   const [totalCleared, setTotalCleared] = useState(0)
@@ -502,6 +510,16 @@ const Game = ({
         // corrupt ghost — ignore, a new PB rewrites it
       }
     })
+    // Field Crowns — per-field best spoils on this device.
+    AsyncStorage.getItem(StorageKeys.fieldCrowns).then((val) => {
+      if (!val) return
+      try {
+        const crowns = JSON.parse(val)
+        if (crowns && typeof crowns === "object") fieldCrownsRef.current = crowns
+      } catch {
+        // corrupt crowns — ignore, new bests rewrite them
+      }
+    })
   }, [])
 
   useEffect(() => {
@@ -690,6 +708,21 @@ const Game = ({
     setFieldUnbroken(unbroken)
     fieldStartScoreRef.current = fieldEnd
     runPaceRef.current[level - 1] = fieldEnd
+
+    // Field Crown check — beat your best-ever spoils on THIS field and the
+    // crown is yours, run dead or alive. Persisted immediately (crowns are
+    // device records, not run state).
+    const prevCrown = fieldCrownsRef.current[level] ?? 0
+    const crowned = spoilsTaken > 0 && spoilsTaken > prevCrown
+    if (crowned) {
+      fieldCrownsRef.current[level] = spoilsTaken
+      setCrownsTaken((n) => n + 1)
+      AsyncStorage.setItem(
+        StorageKeys.fieldCrowns,
+        JSON.stringify(fieldCrownsRef.current),
+      ).catch(() => {})
+    }
+    setFieldCrown({ taken: crowned, prev: prevCrown })
 
     if (!unbroken) SoundService.playLevelComplete()
     // Sync score to arena room — immediately, never delayed by the hold.
@@ -1009,6 +1042,8 @@ const Game = ({
     setFieldSpoils(0)
     setFieldLedger(null)
     setFieldUnbroken(false)
+    setFieldCrown(null)
+    setCrownsTaken(0)
     setTotalCleared(0)
     setTotalFieldCards(0)
     setGloryCharges(1)
@@ -1263,6 +1298,7 @@ const Game = ({
         bannersPlanted={bannersPlanted}
         perfectFields={perfectFields}
         unbrokenFields={unbrokenFields}
+        crownsTaken={crownsTaken}
         totalCleared={totalCleared}
         totalFieldCards={totalFieldCards}
         dailyMode={dailyMode}
@@ -1312,6 +1348,8 @@ const Game = ({
         fieldSpoils={fieldSpoils}
         fieldLedger={fieldLedger}
         unbroken={fieldUnbroken}
+        crown={fieldCrown}
+        nextCrownTarget={fieldCrownsRef.current[level + 1] ?? 0}
         ghostAt={ghostPace?.[level - 1] ?? null}
         freeDraws={freeDraws}
         gloryActive={gloryActive}

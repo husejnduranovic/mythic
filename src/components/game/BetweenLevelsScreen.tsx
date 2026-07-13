@@ -490,6 +490,8 @@ export const BetweenLevelsScreen = ({
   fieldSpoils = 0,
   fieldLedger = null,
   unbroken = false,
+  crown = null,
+  nextCrownTarget = 0,
   ghostAt = null,
   freeDraws = 0,
   gloryActive,
@@ -516,6 +518,11 @@ export const BetweenLevelsScreen = ({
     unbroken: number
   } | null
   unbroken?: boolean
+  // Field Crowns: taken = this field's spoils beat its device-best; prev = the
+  // dethroned value (0 on a first claim). nextCrownTarget = the crown standing
+  // on the NEXT field — the micro-goal at exactly the "keep going?" moment.
+  crown?: { taken: boolean; prev: number } | null
+  nextCrownTarget?: number
   ghostAt?: number | null
   freeDraws?: number
   gloryActive: boolean
@@ -701,6 +708,19 @@ export const BetweenLevelsScreen = ({
               ))}
             </View>
           )}
+          {crown?.taken && (
+            <View style={b.crownRow}>
+              <Icon name="crown" size={12} color={color.goldBright} />
+              <Text style={b.crownTxt}>
+                FIELD CROWN
+                <Text style={b.crownSub}>
+                  {crown.prev > 0
+                    ? `  ·  DETHRONED ${crown.prev.toLocaleString()}`
+                    : "  ·  FIRST CLAIM"}
+                </Text>
+              </Text>
+            </View>
+          )}
         </Animated.View>
 
         {/* ── Beat 2: the reveal ── */}
@@ -771,6 +791,27 @@ export const BetweenLevelsScreen = ({
                   <Text style={b.ghostNote}>
                     the fields ahead pay up to 4× — the run is alive
                   </Text>
+                )}
+                {!isFinal && (
+                  <View style={b.bankRow}>
+                    <Icon
+                      name="crown"
+                      size={11}
+                      color={
+                        nextCrownTarget > 0 ? color.goldFaded : color.gold
+                      }
+                    />
+                    <Text
+                      style={[
+                        b.bankTxt,
+                        nextCrownTarget <= 0 && { color: color.gold },
+                      ]}
+                    >
+                      {nextCrownTarget > 0
+                        ? `CROWN TO BEAT · ${nextCrownTarget.toLocaleString()}`
+                        : "UNCLAIMED FIELD — ANY SPOILS TAKE ITS CROWN"}
+                    </Text>
+                  </View>
                 )}
                 {freeDraws > 0 && !isFinal && (
                   <View style={b.bankRow}>
@@ -891,6 +932,29 @@ const b = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 1.5,
     marginTop: 1,
+  },
+  crownRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 6,
+    backgroundColor: "rgba(255,215,0,0.07)",
+    borderWidth: 1,
+    borderColor: "rgba(255,215,0,0.28)",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  crownTxt: {
+    color: color.goldBright,
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1.6,
+  },
+  crownSub: {
+    color: "rgba(255,215,0,0.55)",
+    fontSize: 8,
+    letterSpacing: 1,
   },
 
   // The reveal stage
