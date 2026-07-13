@@ -262,7 +262,7 @@ const LAYOUTS = [
 
   // ── PROPOSED (2026-07-10 L3/L7 redesign — the two funnels replaced) ──────
   {
-    name: "The Portcullis (L3, proposed — interlocked jaws, the gate)",
+    name: "The Portcullis (L3, active — 2026-07-14 Task-3 lock rework: the two hinges)",
     file: "LayoutPortcullis.tsx",
     n: 30,
     blockedBy: {
@@ -276,11 +276,16 @@ const LAYOUTS = [
       6: [13], 7: [13, 14], 8: [14],
       // rising fangs — each tip frees its pair (burst from move 1)
       20: [16], 21: [16], 22: [18], 23: [18],
-      // the gate-lock — a bracket tears free when its rising fang is out AND
-      // the gate's heart-stone (center root 4) is pulled; the BAR cannot drop
-      // while a hinge pin (post 28/29) still holds (depth 5 — the last stand)
-      24: [20, 21, 4], 25: [22, 23, 4],
-      26: [24, 25, 28], 27: [24, 25, 29],
+      // THE TWO HINGES (2026-07-14 — the old lock ran through the heart-stone
+      // at the top rail and posts at the meeting row's edges: locked cards
+      // with no visible cover, then all four released at once). Every
+      // dependency is now local: a bracket tears free when its rising pair is
+      // out AND its own hinge post (rendered beside it — the jamb) is pulled;
+      // the bar drops only when BOTH brackets tear — the gate falls as one
+      // beam. Posts stay open from move 1: each is fuel AND the key to its
+      // side's jaw, so WHEN to spend each post is the endgame.
+      24: [20, 21, 28], 25: [22, 23, 29],
+      26: [24, 25], 27: [24, 25],
       // meeting row 15..19 OPEN · hinge posts 28,29 OPEN
     },
     mirror: {

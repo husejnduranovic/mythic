@@ -22,10 +22,10 @@ const isOpen = (cards: ICard[], ...blockers: number[]) =>
  *
  *   [0][1][2]   [3][4][5]   [6][7][8]    falling fangs — roots at the rail
  *     [9][10]    [11][12]    [13][14]    fang waists
- *  [28][15] [16] [17] [18] [19][29]      THE MEETING ROW (5 open) + hinges
- *       [20][21]      [22][23]           rising fangs — pairs off their tips
- *          [24]        [25]              brackets
- *             [26][27]                   THE BAR — depth 5, the last stand
+ *      [15]  [16]  [17]  [18]  [19]      THE MEETING ROW (5 open)
+ *        [20][21]      [22][23]          rising fangs — pairs off their tips
+ *   [28]    [24]        [25]    [29]     hinge posts (open) pin the brackets
+ *              [26][27]                  THE BAR — the gate falls as one beam
  *
  * Blocking (machine-verified clearable + mirror-isomorphic):
  *   waists: bricked ACROSS the meeting row — 9←15 · 10←15,16 · 11←16,17 ·
@@ -35,18 +35,27 @@ const isOpen = (cards: ICard[], ...blockers: number[]) =>
  *   roots:  3-over-2 per fang (outer roots single — early reveals):
  *           0←9 · 1←9,10 · 2←10 · 3←11 · 4←11,12 · 5←12 · 6←13 · 7←13,14 · 8←14
  *   rising: each tip frees its pair — 20,21←16 · 22,23←18 (burst from move 1)
- *   lock:   a bracket tears free when its rising fang is out AND the gate's
- *           heart-stone is pulled — 24←20,21,4 · 25←22,23,4; the bar cannot
- *           drop while a hinge pin holds — 26←24,25,28 · 27←24,25,29
+ *   lock:   THE TWO HINGES (2026-07-14 Task-3 rework — the old lock ran the
+ *           brackets through the heart-stone at the TOP RAIL and the bar
+ *           through posts at the meeting row's far edges: locked cards with
+ *           no visible cover, then all four released at once). Now every
+ *           dependency is local: a bracket tears free when its rising pair
+ *           is out AND its own hinge post is pulled — 24←20,21,28 ·
+ *           25←22,23,29 — and the bar drops only when BOTH brackets tear:
+ *           26,27←24,25. The posts are open from move 1 (held fuel), so
+ *           WHEN to spend each post is the endgame: each post is the key
+ *           to its side's jaw.
  *
- * Feast-or-famine jaws: burst 26.7% and maxBurst 4 (both set records),
- * first-5 5.1, 0.77 cards opened per capture (set best — Floodgates 0.73);
- * the toll is dead taps on the fang roots (57%, high end of the shipped set).
- * One meeting-row tap can advance four cards: two waists AND a rising pair.
+ * Feast-or-famine jaws: burst 24.5% and maxBurst 4 (both set-best),
+ * first-5 5.1; the toll is dead taps on the fang roots (54%, high end of
+ * the shipped set). One meeting-row tap can advance four cards: two waists
+ * AND a rising pair. Depth 4; last-5 1.7 — the old 2.2 was the four-card
+ * simultaneous collapse counting as a "climax"; the bar still lands last.
  *
  * Strategy: UNZIP THE INTERLOCK — order along the meeting row is the whole
- * game. A rising tip pays double (waists both sides + its own pair); posts
- * are held fuel that also pin the bar, so spend them late but not last.
+ * game. A rising tip pays double (waists both sides + its own pair); the
+ * hinge posts are fuel AND keys — spending one commits that jaw to tearing,
+ * so hold the second post until the chain needs the bridge.
  */
 
 // All geometry in card units so every device keeps the shape. A card's
@@ -77,17 +86,21 @@ const LayoutPortcullis = React.memo(
           {/* deepest first — the bar, then up through the lock */}
           <View style={[styles.absRow, { top: V * 5 }]}>
             <View style={styles.row}>
-              {C(26, isOpen(cards, 24, 25, 28))}
-              {C(27, isOpen(cards, 24, 25, 29))}
+              {C(26, isOpen(cards, 24, 25))}
+              {C(27, isOpen(cards, 24, 25))}
             </View>
           </View>
 
-          {/* brackets */}
+          {/* the jambs — hinge posts flanking the brackets they pin */}
           <View style={[styles.absRow, { top: V * 4 }]}>
             <View style={styles.row}>
-              {C(24, isOpen(cards, 20, 21, 4))}
+              {C(28, true)}
+              <View style={{ width: span(1.75) }} />
+              {C(24, isOpen(cards, 20, 21, 28))}
               <View style={{ width: span(3.5) }} />
-              {C(25, isOpen(cards, 22, 23, 4))}
+              {C(25, isOpen(cards, 22, 23, 29))}
+              <View style={{ width: span(1.75) }} />
+              {C(29, true)}
             </View>
           </View>
 
@@ -133,10 +146,9 @@ const LayoutPortcullis = React.memo(
             </View>
           </View>
 
-          {/* THE MEETING ROW — falling tips, rising tips, hinge posts */}
+          {/* THE MEETING ROW — falling tips and rising tips */}
           <View style={[styles.absRow, { top: V * 2 }]}>
             <View style={styles.row}>
-              {C(28, true)}
               {C(15, true)}
               <View style={{ width: span(1.75) }} />
               {C(16, true)}
@@ -146,7 +158,6 @@ const LayoutPortcullis = React.memo(
               {C(18, true)}
               <View style={{ width: span(1.75) }} />
               {C(19, true)}
-              {C(29, true)}
             </View>
           </View>
         </View>
