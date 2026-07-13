@@ -18,6 +18,7 @@ import {
 } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import ReturnToCastle from "../ReturnToCastle"
+import { SoundService } from "../../services/SoundService"
 import { TOTAL_LEVELS } from "../../game/config"
 import { Icon } from "../../ui/Icon"
 import { GoldButton } from "../../ui/GoldButton"
@@ -116,6 +117,9 @@ export const PreBattleScreen = ({
         useNativeDriver: true,
       })
     Animated.stagger(120, [seat(dealBounty, 320), seat(dealBack, 360)]).start()
+    // The road is heard being dealt (2026-07-14 sound pass) — the shuffle
+    // rides the first road card's arrival.
+    const dealT = setTimeout(() => SoundService.playShuffle(), 300)
     const loop = (v: Animated.Value, lo: number, hi: number, d: number) =>
       Animated.loop(
         Animated.sequence([
@@ -125,6 +129,7 @@ export const PreBattleScreen = ({
       ).start()
     loop(float, 0, 1, 2400)
     loop(pulse, 0.3, 0.5, 2000)
+    return () => clearTimeout(dealT)
   }, [])
 
   const kit = getEquippedKit(theme)

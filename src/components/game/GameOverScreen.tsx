@@ -23,6 +23,7 @@ import {
 } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { TOTAL_LEVELS } from "../../game/config"
+import { SoundService } from "../../services/SoundService"
 import { pickNextGoal } from "../../game/nextGoal"
 import { prizeForSeat } from "../../game/prize"
 import ReturnToCastle from "../ReturnToCastle"
@@ -258,6 +259,33 @@ export const GameOverScreen = ({
 
   const crowned =
     isAllTimeRecord || isFlawless || (!arenaMode && isVictory && !dailyMode)
+
+  // The stamp finds its voice (2026-07-14 sound pass): the outcome sound
+  // fires as the title stamps onto the sealed card. Records resolve async
+  // AFTER mount, so the mount verdict is judged on what is known locally
+  // (flawless yes, record no) — a record gets its fanfare from the
+  // celebration effect below. Daily runs are judged on performance, not the
+  // QUEST COMPLETE stamp: a quest that died on the clock sounds like a loss.
+  // Arena still FINALIZING at mount stays silent — no verdict yet.
+  useEffect(() => {
+    if (arenaMode && !allFinished) return
+    const t = setTimeout(() => {
+      if (isFlawless) SoundService.playTriumph()
+      else if (arenaMode ? myArenaRank === 1 : isVictory)
+        SoundService.playVictory()
+      else SoundService.playDefeat()
+    }, 420)
+    return () => clearTimeout(t)
+  }, [])
+
+  // The record celebration overlay gets the apex fanfare when it appears.
+  const celebratedRef = useRef(false)
+  useEffect(() => {
+    if (showCelebration && !celebratedRef.current) {
+      celebratedRef.current = true
+      SoundService.playTriumph()
+    }
+  }, [showCelebration])
 
   // ── Geometry ──
   const padL = Math.max(14, insets.left)

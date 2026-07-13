@@ -26,6 +26,7 @@ import {
 } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { LEVEL_CONFIG, TOTAL_LEVELS } from "../../game/config"
+import { SoundService } from "../../services/SoundService"
 import { Icon, IconName } from "../../ui/Icon"
 import { GoldButton } from "../../ui/GoldButton"
 import { color, font } from "../../ui/theme"
@@ -92,6 +93,11 @@ const FlipCard = ({
       easing: Easing.inOut(Easing.cubic),
       useNativeDriver: true,
     }).start()
+    // The reveal is heard as it turns (2026-07-14 sound pass) — the same
+    // card-flip voice as the deal; the final field carries the summit wind
+    // under its name. Cleared on unmount: the skip button never waits.
+    const t = setTimeout(() => SoundService.playReveal(isFinal), 740)
+    return () => clearTimeout(t)
   }, [])
 
   const nextCfg = LEVEL_CONFIG[level + 1]

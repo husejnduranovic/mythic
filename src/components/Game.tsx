@@ -1000,7 +1000,6 @@ const Game = ({
       clearTimeout(autoAdvanceTimer.current)
       autoAdvanceTimer.current = null
     }
-    SoundService.playDeckDraw()
     Animated.sequence([
       Animated.timing(deckScale, {
         toValue: 0.9,
@@ -1017,9 +1016,11 @@ const Game = ({
     // The grave marker: a chain worth at least one banner dies with a stamp,
     // not in silence — the loss is legible and the banked banners' insurance
     // reads at the exact moment it matters. (combo ≥ 5 ⟹ the 5-banner was
-    // planted this chain, so "banners hold" is always true here.)
+    // planted this chain, so "banners hold" is always true here.) The draw
+    // that kills such a chain sounds heavier than an ordinary draw.
     const brokenCombo = comboRef.current
     if (brokenCombo >= 5) {
+      SoundService.playChainBroken()
       showMilestone(
         "CHAIN BROKEN",
         palette.steel,
@@ -1027,6 +1028,8 @@ const Game = ({
         `x${brokenCombo} FELL · BANNERS HOLD`,
         520,
       )
+    } else {
+      SoundService.playDeckDraw()
     }
 
     setCurrentIndex(deckIndex)
