@@ -120,7 +120,7 @@ One per level, draws a fresh current card **without resetting combo** (`handleFr
 - **Underused potential:** it's one-per-*level* and resets every level (`initLevel:479`), so on a cleared level it's often wasted. A **carry-over** ("unused Free Draws bank to next level, max 2") would reward efficient clears and add a resource-management layer. Low effort, behavior change.
 
 ### 2.6 Glory Hunt
-Once per game: 2× points, 50% time (`Game.tsx:1101-1104` halves `config.time`; `gloryFactor` doubles points), opt-in at pre-battle and between-levels.
+Once per game: 2× points, 50% time (`Game.tsx:1101-1104` halves `config.time`; `gloryFactor` doubles points), opt-in at pre-battle and between-levels. **2026-07-14 (Task 5): armed is a switch, not a sentence** — tapping GLORY HUNT ARMED before the field begins disarms and refunds the charge (`toggleGloryHunt`); once the field starts there is no button, so a begun hunt stays committed.
 
 - **Meaningful choice?** Coarse but real: *which* level to spend it on. Because points scale with layoutMult, the textbook play is "activate on level 6 (3.5×) and pray you clear in half-time." There's a genuine risk/reward (half-time can cost you the perfect-clear bonus and the level).
 - **Weakness:** it's a single binary, decided once, with an obvious-ish answer (later = more points). Little ongoing engagement. **Hook:** make it a *charge you earn* (e.g. earn a Glory charge by hitting combo 15) so high-combo play feeds more Glory windows — ties the two systems together. Phase 4.

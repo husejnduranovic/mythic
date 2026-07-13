@@ -52,21 +52,38 @@ Today's honest answers: the streak (with Ward), the one-attempt Daily, the ghost
 
 | # | Finding | Action this session |
 |---|---|---|
-| 1 | Dead runs bank nothing visible; per-field play has no evergreen goal | **BUILD: Field Crowns** — per-field personal bests (local, display-only): every field of every run, including dead runs, carries a crown to defend or take; surfaced in the Breath + game-over |
-| 2 | Finishing/next-run incentives invisible at game-over | **BUILD: complete the §6.5 goal module** — imminence ladder (Armory unlock ≤3 battles → rank tier → PB gap → named rival gap), one line + Battle-Again subtitle |
-| 3 | Two-active-card rule untaught | **BUILD: fourth coach mark** ("The Second Blade") when the second card first lands on the dais |
-| 4 | Prize invisible in Hall of Glory / game-over | **BUILD: prize strip** on the all-time tab + one game-over line when rank is in prize range |
-| 5 | Dead taps unacknowledged | **BUILD (Task 5): reject feedback** — light haptic + dull thud, zero per-card render cost |
-| 6 | Glory Hunt irreversible mis-tap trap | **BUILD (Task 5): disarm** — tapping GLORY HUNT ARMED un-arms it (refunds the charge) at pre-battle/between-levels only |
-| 7 | Screens outside the board are mute; capture/game-over sound identity weak | **BUILD (Task 4): full sound pass** — game-over win/loss, the Breath, tiered captures, UNBROKEN |
-| 8 | Portcullis endgame collapse + unreadable deps | **BUILD (Task 3): progressive, readable bottom lock** |
-| 9 | Eyrie strategically flat | **BUILD (Task 3): talon-toll + perch-weave dependencies** |
+| 1 | Dead runs bank nothing visible; per-field play has no evergreen goal | **BUILD: Field Crowns** — per-field personal bests (local, display-only): every field of every run, including dead runs, carries a crown to defend or take; surfaced in the Breath + game-over — ✅ `d053ad7` |
+| 2 | Finishing/next-run incentives invisible at game-over | **BUILD: complete the §6.5 goal module** — imminence ladder (Armory unlock ≤3 battles → rank tier → PB gap → named rival gap), one line + Battle-Again subtitle — ✅ `79167cf` |
+| 3 | Two-active-card rule untaught | **BUILD: fourth coach mark** ("The Second Blade") when the second card first lands on the dais — ✅ `450dd4d` |
+| 4 | Prize invisible in Hall of Glory / game-over | **BUILD: prize strip** on the all-time tab + one game-over line when rank is in prize range — ✅ `79167cf` |
+| 5 | Dead taps unacknowledged | **BUILD (Task 5): reject feedback** — light haptic + dull thud, zero per-card render cost — ✅ `8456773` |
+| 6 | Glory Hunt irreversible mis-tap trap | **BUILD (Task 5): disarm** — tapping GLORY HUNT ARMED un-arms it (refunds the charge) at pre-battle/between-levels only — ✅ `8456773` |
+| 7 | Screens outside the board are mute; capture/game-over sound identity weak | **BUILD (Task 4): full sound pass** — game-over win/loss, the Breath, tiered captures, UNBROKEN — ✅ `31b1847` |
+| 8 | Portcullis endgame collapse + unreadable deps | **BUILD (Task 3): progressive, readable bottom lock** — ✅ `9f9de3e` "the two hinges" |
+| 9 | Eyrie strategically flat | **BUILD (Task 3): talon-toll + perch-weave dependencies** — ✅ `6b03ad9` "the grip and the weave" (talon pins the edge mid; head parts the inner mids; the perch-weave variant measured first-5 1.7 and was cut) |
 | 10 | Sign-in wall | **PROPOSE**: anonymous auth → link-at-first-score (Firebase console + flow work; owner-gated) |
 | 11 | No notifications | **PROPOSE**: server-push via Cloud Functions (no native dep) — streak-at-risk + daily reminder; owner deploys |
 | 12 | No async duels / share is a dead end | **PROPOSE**: duel design sketch (seeded, 24h, rides invite-pattern writes); needs owner-deployed Firestore rules — next code phase |
 | 13 | Every day identical | **PROPOSE**: Daily Edict (seeded per-day modifier on the shared deck) — **blocked on an owner decision**: daily runs currently feed `allTimeScores` (verified in `saveGameResults`), so score-affecting edicts pollute the eternal board; decouple first or keep edicts score-neutral |
 | 14 | 10-minute indivisible unit | **PROPOSE** (Phase 4): Skirmish mode — one field, own micro-ladder; big surface, gate on owner appetite |
 | 15 | Timer-vs-demographic tension | **FLAG only** — a positioning fact to hold, not a change to make |
+
+---
+
+## ▶ Fable session — 2026-07-14 (the Critical-Analysis build-out: Tasks 2–5 CLOSED)
+
+Every BUILD row in the verdict table above is now shipped (per-row commit hashes added there). This session: Tasks 3–5, one slice per commit, tsc + `scripts/verify-layouts.js` gated.
+
+**Task 3 — the layout fixes** (all machine-verified clearable + mirror-isomorphic; measured metrics in GAMEPLAY.md §3 notes; owner feel-gate stands):
+- **The Siege eased** `56b8428` — rail pockets under their corner guard alone (1←0 · 3←4 · 12←11 · 14←15); every corner guard is a 2-card burst. First-5 2.9→3.8, burst 11.5→16.4% (was set-worst), last-5 2.6, dead 54% (in band). Double symmetry holds.
+- **The Portcullis lock — "the two hinges"** `9f9de3e` — the heart-stone/far-post opacity and the four-at-once collapse replaced by a local, staged lock: posts render at the bracket row (the jambs), bracket ← its rising pair + its own post, bar ← both brackets (the gate falls as one beam). Posts = fuel AND per-side keys. Depth 5→4; burst 24.5% + maxBurst 4 still set-best.
+- **The Eyrie — "the grip and the weave"** `6b03ad9` — each talon pins its wing's EDGE FEATHER (outermost mid: 3←12,27 · 11←19,28): spend = fuel + that wing's pinion route, hold = insurance, both grips before the crown. The head parts the inner mids (7←6,8,15,16) — the center ascent runs through both wings; leaf mids down to 5/9. Dead 48% (set-best), first-5 2.6, last-5 2.2→2.4, depth 5. *(Judgment call: the fuller perch-weave (15←14,22,23) measured first-5 1.7 — a drought on the 4.0× field — and was cut after measurement.)*
+
+**Task 4 — the sound pass** `31b1847` (all composed from the 11 shipped assets; new `SoundService.playAt(rate, volume)` with a documented invariant — variant-touched sounds route through playAt everywhere): capture pitch CLIMBS the banner ladder (1.0→1.3); game-over verdict at the stamp (playVictory / playDefeat knell / playTriumph, record celebration = apex fanfare, arena FINALIZING silent, daily judged on performance not the QUEST COMPLETE stamp); the Breath's flip-reveal heard (+ summit wind under the campaign-end card); CHAIN BROKEN thuds heavier than a draw; pre-battle road deal audible; dead `playWild`/`wildSound` removed.
+
+**Task 5 — the reject and the disarm** `8456773`: dead taps (≈half of all taps) get the capture's voice dropped low (match @0.55, vol 0.45) + lightest haptic, zero render cost; Glory Hunt armed is now a switch until the gate — tap to disarm refunds the charge at pre-battle/between-levels (`toggleGloryHunt`), mid-field stays committed.
+
+**Open after this session** — the PROPOSE rows (10–15) are the next frontier, all owner-gated: anonymous auth → link-at-first-score (10), server-push notifications (11), async duels design (12), Daily Edict (13, blocked on the allTimeScores/daily coupling decision), Skirmish mode (14), timer positioning flag (15). Release gates unchanged: owner playtest of the five changed boards (now incl. the Siege easing, Portcullis lock, Eyrie grip) + the `allTimeScores` wipe decision. On-device checks worth doing with the playtest: capture pitch ladder feel on Android (ExoPlayer rate), defeat knell volume, reject thud frequency (it fires on ~half of taps — if it grates, drop volume 0.45→0.3 before touching anything else).
 
 ---
 
