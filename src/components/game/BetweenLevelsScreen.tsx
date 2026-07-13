@@ -506,7 +506,7 @@ export const BetweenLevelsScreen = ({
   arenaPlayers,
   uid,
   arenaCountdown,
-  onActivateGlory,
+  onToggleGlory,
   onNextLevel,
 }: {
   theme: ThemeConfig
@@ -537,7 +537,7 @@ export const BetweenLevelsScreen = ({
   arenaPlayers: any[]
   uid?: string | null
   arenaCountdown: number | null
-  onActivateGlory: () => void
+  onToggleGlory: () => void
   onNextLevel: () => void
 }) => {
   const { width: winW, height: winH } = useWindowDimensions()
@@ -863,7 +863,7 @@ export const BetweenLevelsScreen = ({
               {!isFinal && gloryCharges > 0 && !gloryActive && (
                 <TouchableOpacity
                   style={b.gloryChip}
-                  onPress={onActivateGlory}
+                  onPress={onToggleGlory}
                   activeOpacity={0.85}
                 >
                   <Icon name="lightning-bolt" size={14} color={color.ember} />
@@ -871,10 +871,20 @@ export const BetweenLevelsScreen = ({
                 </TouchableOpacity>
               )}
               {gloryActive && (
-                <View style={[b.gloryChip, b.gloryChipArmed]}>
+                // Armed is a switch, not a sentence (Task 5): tapping it
+                // disarms and refunds the charge. On the final reveal the
+                // arm chip cannot return, so the armed state locks there.
+                <TouchableOpacity
+                  style={[b.gloryChip, b.gloryChipArmed]}
+                  onPress={onToggleGlory}
+                  disabled={isFinal}
+                  activeOpacity={0.85}
+                >
                   <Icon name="lightning-bolt" size={14} color={color.ember} />
-                  <Text style={b.gloryTxt}>GLORY ARMED</Text>
-                </View>
+                  <Text style={b.gloryTxt}>
+                    {isFinal ? "GLORY ARMED" : "GLORY ARMED · TAP TO DISARM"}
+                  </Text>
+                </TouchableOpacity>
               )}
               <GoldButton
                 variant={gloryActive ? "ember" : "primary"}

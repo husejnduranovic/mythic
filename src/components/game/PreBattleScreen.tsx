@@ -68,7 +68,7 @@ export const PreBattleScreen = ({
   gloryCharges,
   gloryActive,
   ghostFinal = null,
-  onActivateGlory,
+  onToggleGlory,
   onEnter,
   onHome,
 }: {
@@ -79,7 +79,7 @@ export const PreBattleScreen = ({
   gloryActive: boolean
   // The ghost's final total — the best completed run this device has seen.
   ghostFinal?: number | null
-  onActivateGlory: () => void
+  onToggleGlory: () => void
   onEnter: () => void
   onHome: () => void
 }) => {
@@ -295,11 +295,13 @@ export const PreBattleScreen = ({
               </View>
             )}
 
-            {!dailyMode && gloryCharges > 0 && (
+            {/* Armed is a switch, not a sentence (Task 5): the button stays
+                visible while armed and tapping it disarms — the charge
+                refunds until the battle actually begins. */}
+            {!dailyMode && (gloryCharges > 0 || gloryActive) && (
               <TouchableOpacity
                 style={[p.gloryBtn, gloryActive && p.gloryBtnActive]}
-                onPress={onActivateGlory}
-                disabled={gloryActive}
+                onPress={onToggleGlory}
                 activeOpacity={0.85}
               >
                 <Icon name="lightning-bolt" size={18} color={color.ember} />
@@ -309,7 +311,7 @@ export const PreBattleScreen = ({
                   </Text>
                   <Text style={p.glorySub}>
                     {gloryActive
-                      ? "2× spoils · 50% time"
+                      ? "2× spoils · 50% time · tap to disarm"
                       : `2× spoils · 50% time (${gloryCharges} charge)`}
                   </Text>
                 </View>

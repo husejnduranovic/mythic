@@ -151,6 +151,21 @@ export const SoundService = {
     }
   },
 
+  // The reject — a tap on an open card that matches nothing. About half of
+  // all taps land here and used to be ghosted: indistinguishable from the
+  // app missing the touch. The capture's own voice dropped low and quiet,
+  // plus the lightest haptic — heard, not scolded. Zero per-card render
+  // cost: no board animation, just sound and touch.
+  async playReject() {
+    try {
+      matchToggle = !matchToggle
+      this.playAt(matchToggle ? matchSound1 : matchSound2, 0.55, 0.45)
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    } catch (err) {
+      logError("Sound", err)
+    }
+  },
+
   // The grave marker's sound — a deck draw that kills a banner-worthy chain
   // lands as a heavier, lower thud than an ordinary draw, with the warning
   // haptic. The CHAIN BROKEN stamp is no longer silent.
@@ -261,6 +276,17 @@ export const SoundService = {
   async playFreeze() {
     try {
       this.playAt(freezeSound, 1)
+    } catch (err) {
+      logError("Sound", err)
+    }
+  },
+
+  // Glory Hunt disarmed — the arming freeze voice stepped down: the pact
+  // released, the charge handed back.
+  async playDisarm() {
+    try {
+      this.playAt(freezeSound, 0.8, 0.7)
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
     } catch (err) {
       logError("Sound", err)
     }

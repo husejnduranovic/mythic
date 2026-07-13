@@ -912,7 +912,13 @@ const Game = ({
 
     const mc = isCardMatch(cur, tapped)
     const ms = secondCard !== null && isCardMatch(cards[secondCard], tapped)
-    if (!mc && !ms) return
+    if (!mc && !ms) {
+      // The reject (Task 5): the game's most frequent single interaction —
+      // an open card that matches nothing — was ghosted entirely. Now it is
+      // acknowledged: a low quiet thud + the lightest haptic, no render cost.
+      SoundService.playReject()
+      return
+    }
 
     if (autoAdvanceTimer.current) {
       clearTimeout(autoAdvanceTimer.current)
@@ -982,7 +988,19 @@ const Game = ({
     }
   }, [])
 
-  const activateGloryHunt = () => {
+  // Arms at pre-battle/between-levels — and since Task 5, DISARMS the same
+  // way: tapping GLORY HUNT ARMED before the field begins refunds the charge.
+  // A curious first-run tap is no longer a permanent half-clock; the button
+  // is a switch until the gate. (Mid-field there is no button, so an armed
+  // hunt that has begun still cannot be abandoned.)
+  const toggleGloryHunt = () => {
+    if (gloryActive) {
+      setGloryActive(false)
+      gloryActiveRef.current = false
+      setGloryCharges((c) => c + 1)
+      SoundService.playDisarm()
+      return
+    }
     if (gloryCharges <= 0) return
     setGloryCharges((c) => c - 1)
     setGloryActive(true)
@@ -1279,7 +1297,7 @@ const Game = ({
         gloryCharges={gloryCharges}
         gloryActive={gloryActive}
         ghostFinal={ghostPace ? ghostPace[ghostPace.length - 1] : null}
-        onActivateGlory={activateGloryHunt}
+        onToggleGlory={toggleGloryHunt}
         onEnter={() => {
           setPreBattle(false)
           // Track battle start
@@ -1387,7 +1405,7 @@ const Game = ({
         arenaPlayers={arenaPlayers}
         uid={uid}
         arenaCountdown={arenaCountdown}
-        onActivateGlory={activateGloryHunt}
+        onToggleGlory={toggleGloryHunt}
         onNextLevel={handleNextLevel}
       />
     )
