@@ -167,14 +167,17 @@ const LAYOUTS = [
 
   // ── PROPOSED (2026-07-02 layout redesign) ────────────────────────────────
   {
-    name: "The Siege (L2, active — 2026-07-09 rework: corner breaches + courtyard keep)",
+    name: "The Siege (L2, active — 2026-07-14 easing: the corner guards own the opening)",
     file: "LayoutSiege.tsx",
     n: 32,
     blockedBy: {
-      // outer wall — top arc pockets (guards 0,2,4 open)
-      1: [0, 2], 3: [2, 4],
+      // outer wall — top arc pockets under their CORNER guard alone (2026-07-14
+      // easing: pockets were under two guards; now every corner guard is a
+      // 2-card burst — its pocket AND its breach stone fall with it. The
+      // center guards 2/13 become held fuel; one rule, taught four times.)
+      1: [0], 3: [4],
       // outer wall — bottom arc pockets (guards 11,13,15 open)
-      12: [11, 13], 14: [13, 15],
+      12: [11], 14: [15],
       // sides 5,6,7 (right) and 8,9,10 (left) all open
       // inner wall — CORNER BREACHES: the wall-end stones fall with their
       // corner guard alone (one tap = one reveal from move 1 — the 2026-07-09
