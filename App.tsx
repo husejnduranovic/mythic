@@ -38,6 +38,10 @@ interface UserData {
   uid: string
   heroName: string
   email: string
+  // Anonymous session (signed in without Google). Plays free battles; identity
+  // actions (Hall/Daily/Arena/Lounge, score submit) are gated until the link
+  // moment promotes the account (linkWithCredential, uid preserved).
+  isAnon: boolean
 }
 
 type Screen =

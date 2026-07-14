@@ -34,6 +34,7 @@ interface AuthScreenProps {
     uid: string
     heroName: string
     email: string
+    isAnon: boolean
   }) => void
 }
 
@@ -47,25 +48,48 @@ const AuthScreen = ({ onAuthenticated }: AuthScreenProps) => {
 
   useEffect(() => {
     const unsubscribe = auth().onAuthStateChanged(async (user) => {
-      if (user) {
-        setUid(user.uid)
-        setEmail(user.email || "")
-        const doc = await firestore().collection("users").doc(user.uid).get()
-        if (doc.exists() && doc.data()?.heroName) {
-          onAuthenticated({
-            uid: user.uid,
-            heroName: doc.data()!.heroName,
-            email: user.email || "",
-          })
-          // Subscribe to all-time record notifications
-          messaging()
-            .subscribeToTopic("alltime-record")
-            .catch(() => {})
-        } else {
-          setStep("heroname")
+      if (!user) {
+        // First open (or post-logout): no wall. Sign in anonymously and go
+        // straight to Home — the anon session re-fires this listener below.
+        // If the Anonymous provider isn't enabled yet (owner console gate), we
+        // fall back to the Google door so the app is never bricked.
+        try {
+          setStep("loading")
+          await auth().signInAnonymously()
+        } catch (err: any) {
+          console.warn("Anonymous sign-in failed:", err?.code || err)
+          setStep("signin")
         }
+        return
+      }
+      if (user.isAnonymous) {
+        // Anon plays free battles on a device identity only — no users doc, no
+        // heroname wall. Identity (Hall/Daily/Arena/Lounge, score submit)
+        // unlocks at the link moment (game-over "etch your name").
+        onAuthenticated({
+          uid: user.uid,
+          heroName: "Wanderer",
+          email: "",
+          isAnon: true,
+        })
+        return
+      }
+      setUid(user.uid)
+      setEmail(user.email || "")
+      const doc = await firestore().collection("users").doc(user.uid).get()
+      if (doc.exists() && doc.data()?.heroName) {
+        onAuthenticated({
+          uid: user.uid,
+          heroName: doc.data()!.heroName,
+          email: user.email || "",
+          isAnon: false,
+        })
+        // Subscribe to all-time record notifications
+        messaging()
+          .subscribeToTopic("alltime-record")
+          .catch(() => {})
       } else {
-        setStep("signin")
+        setStep("heroname")
       }
     })
     return unsubscribe
@@ -131,7 +155,7 @@ const AuthScreen = ({ onAuthenticated }: AuthScreenProps) => {
         },
         { merge: true },
       )
-      onAuthenticated({ uid, heroName: trimmed, email })
+      onAuthenticated({ uid, heroName: trimmed, email, isAnon: false })
       messaging()
         .subscribeToTopic("alltime-record")
         .catch(() => {})
