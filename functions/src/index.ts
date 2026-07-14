@@ -164,3 +164,55 @@ export const streakAtRisk = onSchedule(
     )
   },
 )
+
+// ── Duel answered → push the challenger (Tier 3 / REFACTOR_PLAN_V2) ─────────
+//
+// A duel doc flips open → answered when the receiver finishes the run. The
+// challenger, who may be asleep, gets the result push so the loop closes. Fires
+// only on that transition; targets the challenger's per-user fcmToken.
+export const onDuelAnswered = onDocumentWritten(
+  { document: "duels/{code}" },
+  async (event) => {
+    const before = event.data?.before?.data()
+    const after = event.data?.after?.data()
+    if (!after) return
+    // Only the open → answered transition, exactly once.
+    if (before?.state === "answered" || after.state !== "answered") return
+
+    const challengerUid = after.challengerUid
+    if (!challengerUid) return
+
+    const userDoc = await getFirestore()
+      .collection("users")
+      .doc(challengerUid)
+      .get()
+    const token = userDoc.data()?.fcmToken
+    if (!token) return
+
+    const opponentName = after.opponentName || "A rival"
+    const opponentScore = after.opponentScore || 0
+    const challengerScore = after.challengerScore || 0
+    const won = challengerScore > opponentScore
+    const body = won
+      ? `${opponentName} answered with ${opponentScore.toLocaleString()} — your ${challengerScore.toLocaleString()} held. The throne is yours.`
+      : `${opponentName} answered with ${opponentScore.toLocaleString()} to your ${challengerScore.toLocaleString()}. Answer back.`
+
+    try {
+      await getMessaging().send({
+        token,
+        notification: { title: "⚔️ Your challenge was answered", body },
+        data: { type: "duel-answered", code: after.code || "" },
+      })
+      console.log(`Duel push sent to ${challengerUid}`)
+    } catch (err) {
+      const code = (err as { code?: string })?.code
+      if (code === "messaging/registration-token-not-registered") {
+        await userDoc.ref
+          .update({ fcmToken: FieldValue.delete() })
+          .catch(() => undefined)
+      } else {
+        console.error("onDuelAnswered send failed", err)
+      }
+    }
+  },
+)
