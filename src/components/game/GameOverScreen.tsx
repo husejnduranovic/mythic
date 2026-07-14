@@ -97,6 +97,9 @@ export const GameOverScreen = ({
   gamesPlayed = null,
   ghostFinal = null,
   showCelebration,
+  canChallenge = false,
+  onChallenge,
+  duelResult = null,
   onPlayAgain,
   onConfirmQuit,
   onHome,
@@ -127,6 +130,13 @@ export const GameOverScreen = ({
   gamesPlayed?: number | null
   ghostFinal?: number | null
   showCelebration: boolean
+  // A finished free run is reproducible, so it can be flung at a rival. The
+  // button appears only for challengeable runs (not daily/arena/duel-answer).
+  canChallenge?: boolean
+  onChallenge?: () => void
+  // Set when THIS run was an answer to someone's challenge — the game-over
+  // shows the two-row duel verdict instead of a board rank.
+  duelResult?: { challengerName: string; challengerScore: number } | null
   onPlayAgain: () => void
   onConfirmQuit: () => void
   onHome: () => void
@@ -134,6 +144,7 @@ export const GameOverScreen = ({
 }) => {
   const { width: winW, height: winH } = useWindowDimensions()
   const insets = useSafeAreaInsets()
+  const [challengeSent, setChallengeSent] = useState(false)
 
   const fade = useRef(new Animated.Value(0)).current
   const slide = useRef(new Animated.Value(15)).current
@@ -515,7 +526,33 @@ export const GameOverScreen = ({
               </ScrollView>
             ) : (
               <View style={{ flex: 1 }}>
-                {/* async rank slot — reserved height, shimmer until resolved */}
+                {/* duel verdict — replaces the board rank; this run answered a
+                    rival's challenge on the identical deck */}
+                {duelResult ? (
+                  <View style={g.duelWrap}>
+                    <Text style={g.duelHead}>
+                      {score > duelResult.challengerScore
+                        ? "VICTORY — DUEL WON"
+                        : score < duelResult.challengerScore
+                          ? "DEFEAT — DUEL LOST"
+                          : "A DRAW"}
+                    </Text>
+                    <View style={g.duelRow}>
+                      <Text style={g.duelName}>YOU</Text>
+                      <Text style={g.duelScore}>
+                        {score.toLocaleString()}
+                      </Text>
+                    </View>
+                    <View style={g.duelRow}>
+                      <Text style={g.duelName} numberOfLines={1}>
+                        {duelResult.challengerName}
+                      </Text>
+                      <Text style={g.duelScore}>
+                        {duelResult.challengerScore.toLocaleString()}
+                      </Text>
+                    </View>
+                  </View>
+                ) : (
                 <View style={g.rankSlot}>
                   {rankResolved ? (
                     <Animated.View
@@ -550,9 +587,10 @@ export const GameOverScreen = ({
                     </Animated.Text>
                   )}
                 </View>
+                )}
 
                 {/* the prize, where it's decided (§2.4) */}
-                {prizeSeat !== null && (
+                {!duelResult && prizeSeat !== null && (
                   <View style={g.prizeRow}>
                     <Icon name="crown" size={11} color={color.goldBright} />
                     <Text style={g.prizeTxt}>
@@ -621,8 +659,8 @@ export const GameOverScreen = ({
                   )}
                 </View>
 
-                {/* one-more-battle goal */}
-                {goalStruck ? (
+                {/* one-more-battle goal (a duel has its own verdict instead) */}
+                {duelResult ? null : goalStruck ? (
                   <View style={[g.goal, g.goalStruck]}>
                     <Icon
                       name="star-four-points"
@@ -689,6 +727,22 @@ export const GameOverScreen = ({
                   />
                   {!dailyMode && <ReturnToCastle onPress={onHome} />}
                 </>
+              )}
+              {canChallenge && onChallenge && (
+                <TouchableOpacity
+                  style={g.shareBtn}
+                  onPress={() => {
+                    setChallengeSent(true)
+                    onChallenge()
+                  }}
+                  activeOpacity={0.7}
+                  hitSlop={6}
+                >
+                  <Icon name="sword-cross" size={11} color={color.goldFaded} />
+                  <Text style={g.shareTxt}>
+                    {challengeSent ? "CHALLENGE FLUNG" : "CHALLENGE A RIVAL"}
+                  </Text>
+                </TouchableOpacity>
               )}
               <TouchableOpacity
                 style={g.shareBtn}
@@ -826,6 +880,45 @@ const g = StyleSheet.create({
     fontSize: 9,
     fontWeight: "900",
     letterSpacing: 1.5,
+  },
+
+  // Duel verdict — replaces the rank slot when this run answered a challenge.
+  duelWrap: {
+    borderWidth: 1,
+    borderColor: withAlpha(color.goldBright, 0.3),
+    backgroundColor: withAlpha(color.goldBright, 0.06),
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginBottom: 4,
+    gap: 3,
+  },
+  duelHead: {
+    color: color.goldBright,
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+    textAlign: "center",
+    marginBottom: 2,
+  },
+  duelRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  duelName: {
+    color: "rgba(255,255,255,0.78)",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1,
+    flexShrink: 1,
+    marginRight: 8,
+  },
+  duelScore: {
+    color: color.gold,
+    fontSize: 13,
+    fontWeight: "900",
+    fontVariant: ["tabular-nums"],
   },
 
   ledger: { paddingHorizontal: 2, marginVertical: 2 },

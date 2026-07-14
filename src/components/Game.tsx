@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   Animated,
   Dimensions,
+  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -35,6 +36,7 @@ import {
 import { hasPlayedToday } from "../services/DailyQuestService"
 import { saveGameResults } from "../services/ScoreService"
 import { promptForPushIfNeeded } from "../services/NotificationService"
+import { createDuel, submitDuelResult } from "../services/DuelService"
 import { StorageKeys } from "../services/storageKeys"
 import {
   BountyStyleContext,
@@ -102,6 +104,14 @@ interface GameProps {
   heroName?: string
   arenaMode?: boolean
   roomCode?: string
+  // Duel mode: this run answers a rival's challenge on the identical deck. The
+  // seed replays their exact 7 fields; the result posts to the duel doc (never
+  // to the all-time / lounge / daily boards) and the game-over shows a verdict.
+  duelMode?: boolean
+  duelCode?: string
+  duelSeed?: string
+  duelChallengerName?: string
+  duelChallengerScore?: number
   // First Victory (R5): routes the one-time claim CTA into the Armory.
   onGoArmory?: () => void
 }
@@ -126,6 +136,11 @@ const Game = ({
   heroName,
   arenaMode,
   roomCode,
+  duelMode = false,
+  duelCode,
+  duelSeed,
+  duelChallengerName,
+  duelChallengerScore,
   onGoArmory,
 }: GameProps) => {
   const [theme, setTheme] = useState<ThemeConfig>({
@@ -142,7 +157,13 @@ const Game = ({
   const [round, setRound] = useState(0)
   // Seed base for the current free run (see makeRunSeed). Regenerated on Play
   // Again so each free run is its own reproducible deck. Daily/Arena ignore it.
-  const runSeedRef = useRef(makeRunSeed())
+  // A duel answer replays the challenger's exact seed instead.
+  const runSeedRef = useRef(duelMode && duelSeed ? duelSeed : makeRunSeed())
+  // Set once a duel answer resolves — feeds the game-over verdict.
+  const [duelResult, setDuelResult] = useState<{
+    challengerName: string
+    challengerScore: number
+  } | null>(null)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [deckIndex, setDeckIndex] = useState(0)
   const [score, setScore] = useState(0)
@@ -424,7 +445,21 @@ const Game = ({
         totalFieldCards > 0
           ? Math.round((totalCleared / totalFieldCards) * 100)
           : 0
-      if (uid && heroName) {
+      // A duel answer never touches the all-time / lounge / daily boards — it
+      // only posts to the duel doc and renders its own verdict. It still keeps
+      // the local record (saveScore, below).
+      if (duelMode && duelCode && uid && heroName) {
+        submitDuelResult(duelCode, {
+          opponentUid: uid,
+          opponentName: heroName,
+          opponentScore: score,
+          opponentCombo: bestCombo,
+        }).catch(() => {})
+        setDuelResult({
+          challengerName: duelChallengerName || "Rival",
+          challengerScore: duelChallengerScore || 0,
+        })
+      } else if (uid && heroName) {
         saveGameResults({
           uid,
           heroName,
@@ -1110,7 +1145,9 @@ const Game = ({
   }
 
   const handlePlayAgain = () => {
-    if (dailyMode) {
+    // Daily is one-attempt; a duel answer is spent (its code is already used) —
+    // both return to the castle rather than re-dealing.
+    if (dailyMode || duelMode) {
       onHome?.()
       return
     }
@@ -1124,6 +1161,26 @@ const Game = ({
     setRound((r) => r + 1)
     setPreBattle(true)
   }
+  // Challenger flow: seal the just-finished free run into a duel doc and open
+  // the share sheet with the code. The run is reproducible (runSeedRef), so the
+  // receiver faces the identical 7 fields.
+  const handleChallenge = async () => {
+    if (!uid || !heroName) return
+    const code = await createDuel({
+      challengerUid: uid,
+      challengerName: heroName,
+      challengerScore: score,
+      challengerCombo: bestCombo,
+      seedBase: runSeedRef.current,
+    })
+    if (!code) return
+    const link =
+      "https://play.google.com/store/apps/details?id=com.husejn.mythicpeaks"
+    Share.share({
+      message: `I took ${score.toLocaleString()} spoils off this exact deck in Mythic Peaks. Code ${code} — answer the challenge and beat me. ⚔ ${link}`,
+    }).catch(() => {})
+  }
+
   const handleBackPress = () => {
     setShowQuitConfirm(true)
   }
@@ -1371,6 +1428,11 @@ const Game = ({
         gamesPlayed={gamesPlayedNow}
         ghostFinal={ghostPace?.[ghostPace.length - 1] ?? null}
         showCelebration={showCelebration}
+        canChallenge={
+          !dailyMode && !arenaMode && !duelMode && score > 0 && !!uid
+        }
+        onChallenge={handleChallenge}
+        duelResult={duelResult}
         onPlayAgain={handlePlayAgain}
         onConfirmQuit={handleConfirmQuit}
         onHome={onHome}
