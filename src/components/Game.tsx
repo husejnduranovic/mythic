@@ -1381,6 +1381,7 @@ const Game = ({
         theme={theme}
         background={battlefieldMemo}
         dailyMode={dailyMode}
+        edict={dailyEdict}
         gloryCharges={gloryCharges}
         gloryActive={gloryActive}
         ghostFinal={ghostPace ? ghostPace[ghostPace.length - 1] : null}

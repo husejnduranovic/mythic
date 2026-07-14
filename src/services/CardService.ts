@@ -112,5 +112,13 @@ export const getYesterdayString = (): string => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
 }
 
+// Tomorrow's local date — the daily seed rolls at local midnight, so the
+// "already played" screen can name tomorrow's edict as the return hook.
+export const getTomorrowString = (): string => {
+  const d = new Date()
+  d.setDate(d.getDate() + 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+}
+
 // Moved to src/game/match.ts — re-exported here for compatibility.
 export { isCardMatch } from "../game/match"

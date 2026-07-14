@@ -24,6 +24,7 @@ import { Icon } from "../../ui/Icon"
 import { GoldButton } from "../../ui/GoldButton"
 import { color, font } from "../../ui/theme"
 import { HonorCard, withAlpha } from "../../ui/honor"
+import type { Edict } from "../../game/edict"
 import { getEquippedKit, MiniBack, MiniBounty, type ThemeConfig } from "../Armory"
 
 // One face-down battlefield on the road — deals in on its own beat.
@@ -65,6 +66,7 @@ export const PreBattleScreen = ({
   theme,
   background,
   dailyMode,
+  edict = null,
   gloryCharges,
   gloryActive,
   ghostFinal = null,
@@ -75,6 +77,8 @@ export const PreBattleScreen = ({
   theme: ThemeConfig
   background: React.ReactNode
   dailyMode: boolean
+  // Today's Daily Edict (daily mode only) — named on the sealed quest card.
+  edict?: Edict | null
   gloryCharges: number
   gloryActive: boolean
   // The ghost's final total — the best completed run this device has seen.
@@ -162,12 +166,24 @@ export const PreBattleScreen = ({
 
   const dailyBody = (
     <>
-      <Text style={[p.cardTitle, { color: color.gold }]}>TODAY'S TRIAL</Text>
-      <View style={{ flex: 1 }} />
       <Text style={[p.cardOverline, { color: withAlpha(color.gold, 0.55) }]}>
-        ONE ATTEMPT
+        {"TODAY'S DECREE"}
       </Text>
-      <Text style={p.cardSeed}>SEEDED · SHARED DECK</Text>
+      {edict ? (
+        <>
+          <View style={p.edictIcon}>
+            <Icon name={edict.icon} size={26} color={color.gold} />
+          </View>
+          <Text style={[p.cardTitle, { color: color.gold }]} numberOfLines={2}>
+            {edict.name}
+          </Text>
+          <Text style={p.edictTagline}>{edict.tagline}</Text>
+        </>
+      ) : (
+        <Text style={[p.cardTitle, { color: color.gold }]}>TODAY'S TRIAL</Text>
+      )}
+      <View style={{ flex: 1 }} />
+      <Text style={p.cardSeed}>ONE ATTEMPT · SEEDED</Text>
       <View style={{ height: 10 }} />
     </>
   )
@@ -423,7 +439,18 @@ const p = StyleSheet.create({
     fontSize: 18,
     letterSpacing: 2,
     textAlign: "center",
-    marginTop: 8,
+    marginTop: 6,
+  },
+  edictIcon: { alignItems: "center", marginTop: 10 },
+  edictTagline: {
+    color: "rgba(255,255,255,0.55)",
+    fontSize: 9.5,
+    fontStyle: "italic",
+    letterSpacing: 0.3,
+    lineHeight: 13,
+    textAlign: "center",
+    marginTop: 5,
+    paddingHorizontal: 8,
   },
   cardOverline: {
     fontSize: 7,

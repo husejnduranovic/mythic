@@ -17,6 +17,8 @@ import ReturnToCastle from "../ReturnToCastle"
 import { Icon } from "../../ui/Icon"
 import { color, font } from "../../ui/theme"
 import { HonorCard, withAlpha } from "../../ui/honor"
+import { getTomorrowString } from "../../services/CardService"
+import { getDailyEdict } from "../../game/edict"
 import type { ThemeConfig } from "../Armory"
 
 export const AlreadyPlayedScreen = ({
@@ -68,6 +70,9 @@ export const AlreadyPlayedScreen = ({
   const padL = Math.max(14, insets.left)
   const padR = Math.max(14, insets.right)
 
+  // The return hook: name tomorrow's decree where returners already look.
+  const nextEdict = getDailyEdict(getTomorrowString())
+
   return (
     <View style={[a.container, { paddingLeft: padL, paddingRight: padR }]}>
       {background}
@@ -115,6 +120,19 @@ export const AlreadyPlayedScreen = ({
         </View>
 
         <Text style={a.note}>You have already answered today's call</Text>
+
+        <View style={a.tease}>
+          <View style={a.teaseRow}>
+            <Icon name={nextEdict.icon} size={13} color={color.gold} />
+            <Text style={a.teaseLabel}>
+              TOMORROW · <Text style={a.teaseName}>{nextEdict.name}</Text>
+            </Text>
+          </View>
+          <Text style={a.teaseSub} numberOfLines={1}>
+            {nextEdict.tagline}
+          </Text>
+        </View>
+
         <ReturnToCastle onPress={onHome} />
       </Animated.View>
     </View>
@@ -183,6 +201,29 @@ const a = StyleSheet.create({
     fontSize: 11,
     fontStyle: "italic",
     letterSpacing: 0.5,
-    marginBottom: 2,
+    marginBottom: 10,
+  },
+  tease: {
+    alignItems: "center",
+    gap: 3,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderTopWidth: 1,
+    borderTopColor: withAlpha(color.gold, 0.12),
+    marginBottom: 6,
+  },
+  teaseRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  teaseLabel: {
+    color: withAlpha(color.gold, 0.55),
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+  },
+  teaseName: { color: color.gold, letterSpacing: 1 },
+  teaseSub: {
+    color: "rgba(255,255,255,0.4)",
+    fontSize: 8.5,
+    fontStyle: "italic",
+    letterSpacing: 0.3,
   },
 })
