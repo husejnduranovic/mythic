@@ -81,6 +81,25 @@ Three systems answering what v2 didn't: why finish a bad run, and what makes a g
 
 Capture-flash tiers on the field (Card.tsx) sit on the same ladder: ≥8 gold ring, ≥16 ember, ≥24 red.
 
+### The Daily Edict (2026-07-15) — every day now differs
+
+The daily quest was structurally identical day to day (§2.7); the Edict gives each date its own decree. `getDailyEdict(date)` (`src/game/edict.ts`) deterministically picks one of six hand-tuned edicts using the same mulberry32/string-hash seed as the deck, so **every player on a date faces the same edict** — the daily board is per-date, so fairness holds by construction.
+
+**Config-level only, by invariant.** An edict bends exactly one of three `LEVEL_CONFIG` levers and never the scoring math (match/banner/bounty-tier/perfect/unbroken formulas untouched) or a blocking graph (layouts stay symmetric + machine-verified regardless of the day). The table (grow it in `edict.ts`):
+
+| Edict | Lever | Effect |
+|---|---|---|
+| THE OPEN FIELD | — | an ordinary field, a rest day |
+| THE GILDED EDICT | bounty count | 4 seeded bounty slots per field (2→4) |
+| THE LONG FUSE | time | ×1.2 field time |
+| THE QUICK MARCH | time | ×0.82 field time |
+| THE DROUGHT | Free Draw | no Free Draw granted (grant 0 / cap 0) |
+| THE DEEP WELLS | Free Draw | 2 granted per field, bank up to 3 |
+
+Wired in `Game.tsx` daily-mode only: the Timer `initialTime` (time mult, before the glory halving), the seeded bounty count and per-field Free-Draw grant/cap in `initLevel`. Every lever falls back to its default when not daily, so free/arena/duel runs are unchanged. Surfaced on `PreBattleScreen` (the sealed card leads with TODAY'S DECREE — icon, name, tagline) and `AlreadyPlayedScreen` (a TOMORROW · {edict} tease — the return hook where returners already look).
+
+**Prize integrity:** daily runs no longer feed the all-time board (Fix 4) *or* the lounge weekly boards (2026-07-15 decouple) — an edict-shifted score can only ever land on the daily board it was earned on. Owner playtest-gate on feel (edict strengths).
+
 ---
 
 ## 2. Per-feature analysis

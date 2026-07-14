@@ -145,7 +145,7 @@ Everything in MARKET.md and MONETIZE.md gates on v1.4 being live; every tier bel
 
 ---
 
-*Status ledger for this doc: §1 verification complete (2026-07-14). Tiers 0–6 not started. When a tier ships, log the slice here and keep CLAUDE.md's Current state true.*
+*Status ledger for this doc: §1 verification complete (2026-07-14). Feature Tiers 1–3 (notifications, duels, Daily Edict) SHIPPED 2026-07-15 — see the build log below. Doc Tier 1 (sign-in wall) deferred by owner. Tier 0 (ship v1.4) support items still open. When a tier ships, log the slice below and keep CLAUDE.md's Current state true.*
 
 ---
 
@@ -160,3 +160,15 @@ Five fixes off the owner playtest, one commit each, `tsc` clean throughout (veri
 5. **Fix 5** (`d88e210`) — **the wipe script.** `scripts/wipe-alltime-scores.js` (admin SDK, `reset-users.js` pattern, chunked ≤500 batches): deletes `allTimeScores/*`, resets `users.bestScore=0`. Owner-run once pre-release — **not run.** This is Tier 0.3's script half; the record-broadcast throttle decision (§1.2.3) still open.
 
 Still open on Tier 0: owner on-device playtest of the changed boards (The Siege now among them), release `bundleRelease` + smoke, the wipe run itself + throttle decision, prize-terms page.*
+
+---
+
+### Build log — the feature tiers (2026-07-15, Opus)
+
+*Note on numbering: the shipped commits renumber the doc's feature tiers starting from notifications (the sign-in-wall tear-down, doc Tier 1, was deferred by the owner — not built). Commit tags read "Tier 1/2/3" = doc Tiers 2/3/4.*
+
+- **Tier 1 — Notifications v1** *(doc Tier 2)* — **SHIPPED.** `cd86a74` client: per-user FCM tokens (`users/{uid}.fcmToken` + `onTokenRefresh`) and a contextual permission prompt at first game-over with a streak (also closes the Android 13+ gap on the existing record push, §1.2.1). `bde5a11` server: a scheduled streak-at-risk push. Owner gates still real: Blaze plan / Cloud Scheduler, the §1.2.3 broadcast throttle decision.
+- **Tier 2 — Async duels + challenge codes** *(doc Tier 3)* — **SHIPPED** (5 commits `ce08676`→`fd7f5af`): every free run seeded (the enabler), `DuelService` + `duels/{code}`, challenger flow + duel-answer mode in Game, receiver flow off the Arena menu, and the challenger push when a duel is answered. Owner gate: Firestore rules for `duels/`.
+- **Tier 3 — The Daily Edict** *(doc Tier 4)* — **SHIPPED** (4 commits `6f74d56`→`b3fe15b`): the row-4 blocker resolved first — **lounge decouple** (`6f74d56`, `submitLoungeScore` now guarded on `!dailyMode`, owner-decided) completes the daily/prize-board separation Fix 4 began. Then `src/game/edict.ts` (`getDailyEdict`, six config-only edicts, seeded per date), wired into `Game.tsx` (time / bounty count / Free-Draw grant, daily only), surfaced on PreBattle (sealed card) + AlreadyPlayed (tomorrow tease). Config-level only by invariant — no scoring math, no blocking graphs. GAMEPLAY.md §1.5 updated. Owner playtest-gate on edict strengths.
+
+Next (this session): **Tier 4** — small blades (doc Tier 5: proper-noun quieting, `useUserStats` refresh, script hygiene) + a **full sound replacement pass** via `SoundService.playAt` (sources from freesound.org, no new native deps).*
