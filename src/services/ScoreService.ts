@@ -425,7 +425,10 @@ export const saveGameResults = async (
 
   // Fire-and-forget writes.
   submitGameScore(uid, heroName, score, bestCombo, dailyMode)
-  submitAllTimeScore(uid, heroName, score, bestCombo)
+  // Daily runs feed the daily leaderboard only — a one-attempt seeded run and
+  // an unlimited free run are different competitions, so daily scores must NOT
+  // pollute the all-time board (schema intent + prize integrity).
+  if (!dailyMode) submitAllTimeScore(uid, heroName, score, bestCombo)
   getSavedLoungeCode()
     .then((code) => {
       if (code) {
