@@ -78,6 +78,7 @@ import {
   SECOND_CARD_COMBO,
   TOTAL_LEVELS,
 } from "../game/config"
+import { getDailyEdict, type Edict } from "../game/edict"
 import {
   getBannerBank,
   getBountyBonus,
@@ -681,6 +682,13 @@ const Game = ({
   }
 
   const config = LEVEL_CONFIG[level] ?? LEVEL_CONFIG[1]
+  // Today's Daily Edict — the shared per-day decree (config levers only).
+  // Only the daily bends; every other mode plays the ordinary config. Stable
+  // for the session (the date won't roll mid-run in practice).
+  const dailyEdict: Edict | null = useMemo(
+    () => (dailyMode ? getDailyEdict(getTodayString()) : null),
+    [dailyMode],
+  )
   const tableConfig =
     WAR_TABLE_CONFIG[theme.warTable || "classic"] || WAR_TABLE_CONFIG.classic
 
@@ -827,8 +835,15 @@ const Game = ({
     if (alreadyPlayed) return
     setLoading(true)
     // Each field grants one Free Draw; an unused one banks (cap 2). Run-reset
-    // paths zero the count first, so field 1 always starts at exactly 1.
-    setFreeDraws((f) => Math.min(f + 1, 2))
+    // paths zero the count first, so field 1 always starts at exactly 1. The
+    // Daily Edict may bend both the grant (THE DROUGHT → 0) and the bank cap
+    // (THE DEEP WELLS → 2 grant / 3 cap); every other mode keeps 1 / cap 2.
+    setFreeDraws((f) =>
+      Math.min(
+        f + (dailyEdict?.freeDrawGrant ?? 1),
+        dailyEdict?.freeDrawCap ?? 2,
+      ),
+    )
     setReady(false)
     levelCompleteRef.current = false
     if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current)
@@ -844,10 +859,12 @@ const Game = ({
     const deck = generateDailyDeck(seedBase, level)
     setCards(deck.map((c, i) => ({ ...c, visible: i < config.fieldCards })))
     // Bounty placement seeded off the same base — same-deck fairness
-    // (GAMEPLAY.md §8) now holds for free runs too, which duels rely on.
+    // (GAMEPLAY.md §8) now holds for free runs too, which duels rely on. The
+    // Daily Edict may raise the slot count (THE GILDED EDICT → 4); the seed is
+    // unchanged, so every player on the date faces the same extra bounties.
     const bountyPicks = pickSeededIndices(
       config.fieldCards,
-      2,
+      dailyEdict?.bountyCount ?? 2,
       `mythic-${seedBase}-level-${level}-bounty`,
     )
     setBountyIndices(new Set(bountyPicks))
@@ -873,6 +890,7 @@ const Game = ({
     config.fieldCards,
     config.deckStart,
     dailyMode,
+    dailyEdict,
     arenaMode,
     roomCode,
     alreadyPlayed,
@@ -1661,9 +1679,13 @@ const Game = ({
                 <Timer
                   key={layoutKey}
                   initialTime={
-                    gloryActiveRef.current
-                      ? Math.round(config.time * 0.5)
-                      : config.time
+                    // Daily Edict time lever (THE LONG FUSE / THE QUICK MARCH)
+                    // rides before the glory halving; non-daily mult is 1.
+                    Math.round(
+                      config.time *
+                        (dailyEdict?.timeMult ?? 1) *
+                        (gloryActiveRef.current ? 0.5 : 1),
+                    )
                   }
                   onTimeUp={advanceLevel}
                   paused={
