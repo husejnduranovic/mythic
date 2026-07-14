@@ -77,7 +77,8 @@ function App() {
   const fontsReady = fontsLoaded || !!fontError
 
   const onlineCount = usePresence(user?.uid)
-  const { currentStreak, bestStreak, emberWarded } = useUserStats(user?.uid)
+  const { currentStreak, bestStreak, emberWarded, refresh: refreshStats } =
+    useUserStats(user?.uid)
 
   useEffect(() => {
     NavigationBar.setVisibilityAsync("hidden")
@@ -123,6 +124,13 @@ function App() {
   useEffect(() => {
     if (user?.uid) syncPushToken(user.uid)
   }, [user?.uid])
+
+  // Return-to-Home re-pulls the streak/ward stats — a game just played may have
+  // extended the streak or spent the Ember Ward, and the root-level hook won't
+  // have refetched on its own (in-app nav never backgrounds the app).
+  useEffect(() => {
+    if (screen === "home") refreshStats()
+  }, [screen, refreshStats])
 
   const handleAcceptInvite = async () => {
     if (!incomingInvite || !user) return
