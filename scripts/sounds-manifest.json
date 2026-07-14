@@ -1,0 +1,184 @@
+{
+  "_readme": [
+    "Curated freesound.org candidates for the v1.4 sound replacement pass.",
+    "Every 'target' maps to a file in assets/sounds/ that SoundService.init loads.",
+    "Run scripts/fetch-sounds.js with a FREESOUND_TOKEN to download them as mp3.",
+    "The fetch script re-checks each sound's license (CC0 / Attribution only -",
+    "the app monetizes, so NonCommercial is refused) and its duration against",
+    "maxDurationSec, so a wrong-length texture is caught even though the author",
+    "of this manifest cannot audition audio. Auditing by ear before shipping is",
+    "still the owner's call - reorder the combo ladder or swap in an 'alternates'",
+    "id freely. license/durationSec/verified reflect a 2026-07-15 page check;",
+    "where verified=false the script is the source of truth.",
+    "preview-hq-mp3 is already mp3 - no ffmpeg needed."
+  ],
+  "sounds": [
+    {
+      "target": "match.mp3",
+      "role": "card place / successful match tap (played pitched up the combo ladder)",
+      "id": 571576,
+      "author": "el_boss",
+      "url": "https://freesound.org/people/el_boss/sounds/571576/",
+      "license": "CC0",
+      "durationSec": 0.754,
+      "verified": true,
+      "maxDurationSec": 1.5,
+      "alternates": [
+        { "id": 240776, "author": "f4ngy", "note": "Card Flip" }
+      ]
+    },
+    {
+      "target": "draw.mp3",
+      "role": "deck draw / card slide (also the low-rate defeat + chain-broken thud via playAt)",
+      "id": 571575,
+      "author": "el_boss",
+      "url": "https://freesound.org/people/el_boss/sounds/571575/",
+      "license": "CC0",
+      "durationSec": 0.754,
+      "verified": true,
+      "maxDurationSec": 1.5,
+      "note": "Pairs tonally with match.mp3 (same author, louder deal).",
+      "alternates": [
+        { "id": 539274, "author": "paulmerlo", "note": "Playing Cards Being Dealt" }
+      ]
+    },
+    {
+      "target": "shuffle.mp3",
+      "role": "deal-in / reveal (Breath flip, pre-battle deal)",
+      "id": 19245,
+      "author": "deathpie",
+      "url": "https://freesound.org/people/deathpie/sounds/19245/",
+      "license": "CC0",
+      "durationSec": null,
+      "verified": false,
+      "maxDurationSec": 3.0,
+      "note": "Search reports CC0; page 502'd at check time - script confirms.",
+      "alternates": [
+        { "id": 256508, "author": "Kodack", "note": "Riffle Card Shuffle" },
+        { "id": 765639, "author": "ChrisGrundlingh", "note": "Shuffling cards (quick)" }
+      ]
+    },
+    {
+      "target": "freeze.mp3",
+      "role": "banner timer-freeze shimmer (also reveal-final, disarm, defeat-tail via playAt)",
+      "id": 511485,
+      "author": "MLaudio",
+      "url": "https://freesound.org/people/MLaudio/sounds/511485/",
+      "license": "CC0",
+      "durationSec": null,
+      "verified": false,
+      "maxDurationSec": 2.5,
+      "note": "MUST be a SHORT sparkle. The obvious shimmer hits (opticaillusions 521882 = 43s, smokinghotdog 584244 = 35s) are long ambient textures - EXCLUDED. The maxDurationSec guard rejects any long clip; pick the shortest alternate that reads as magical.",
+      "alternates": [
+        { "id": 758819, "author": "Universfield", "note": "Magical Twinkle" },
+        { "id": 825544, "author": "newlocknew", "note": "Sparkling Twinkle Bleep 1" },
+        { "id": 554312, "author": "opticaillusions", "note": "Sparkly.wav (check length)" }
+      ]
+    },
+    {
+      "target": "levelcomplete.mp3",
+      "role": "field cleared flourish (also victory + unbroken base via play/layering)",
+      "id": 26198,
+      "author": "tobyk",
+      "url": "https://freesound.org/people/tobyk/sounds/26198/",
+      "license": "Attribution",
+      "durationSec": 7.133,
+      "verified": true,
+      "maxDurationSec": 8.0,
+      "note": "CC-BY: the script writes assets/sounds/ATTRIBUTION.md. Short 2-trumpet medieval fanfare - on the long side; a snappier clear cue is fine to prefer.",
+      "alternates": [
+        { "id": 572935, "author": "gertraut_hecher", "note": "Medieval Fanfare (Musescore)" },
+        { "id": 669324, "author": "SilverIllusionist", "note": "Victory Fanfare (Light Wills Ever)" }
+      ]
+    },
+    {
+      "target": "combo5.mp3",
+      "role": "banner tier 1 (WORTHY, combo 5) - the combat ladder starts bright",
+      "id": 364529,
+      "author": "Christopherderp",
+      "url": "https://freesound.org/people/Christopherderp/sounds/364529/",
+      "license": "CC0",
+      "durationSec": 1.865,
+      "verified": true,
+      "maxDurationSec": 2.5,
+      "note": "The combo5..30 ladder is one coherent family: escalating sword clashes climaxing on a war-drum boom (combo30). Reorder by ear so intensity rises monotonically.",
+      "alternates": [
+        { "id": 326868, "author": "JohnBuhr", "note": "Sword_Clash (7)" }
+      ]
+    },
+    {
+      "target": "combo10.mp3",
+      "role": "banner tier 2 (VALIANT, combo 8)",
+      "id": 364531,
+      "author": "Christopherderp",
+      "url": "https://freesound.org/s/364531/",
+      "license": "CC0",
+      "durationSec": null,
+      "verified": false,
+      "maxDurationSec": 2.5,
+      "note": "Same HQ sword-clash pack as combo5 (expected CC0).",
+      "alternates": [
+        { "id": 326867, "author": "JohnBuhr", "note": "Sword_Clash (9)" }
+      ]
+    },
+    {
+      "target": "combo15.mp3",
+      "role": "banner tier 3 (GLORIOUS, combo 12)",
+      "id": 326868,
+      "author": "JohnBuhr",
+      "url": "https://freesound.org/people/JohnBuhr/sounds/326868/",
+      "license": "CC0",
+      "durationSec": 1.17,
+      "verified": true,
+      "maxDurationSec": 2.5,
+      "alternates": [
+        { "id": 326867, "author": "JohnBuhr", "note": "Sword_Clash (9)" }
+      ]
+    },
+    {
+      "target": "combo20.mp3",
+      "role": "banner tier 4 (LEGENDARY, combo 16) - also the victory layer via playVictory",
+      "id": 326867,
+      "author": "JohnBuhr",
+      "url": "https://freesound.org/people/JohnBuhr/sounds/326867/",
+      "license": "CC0",
+      "durationSec": null,
+      "verified": false,
+      "maxDurationSec": 2.5,
+      "note": "Same JohnBuhr pack (expected CC0).",
+      "alternates": [
+        { "id": 326861, "author": "JohnBuhr", "note": "Sword_Clash (53)" }
+      ]
+    },
+    {
+      "target": "combo25.mp3",
+      "role": "banner tier 5 (RAMPAGE, combo 20)",
+      "id": 326861,
+      "author": "JohnBuhr",
+      "url": "https://freesound.org/people/JohnBuhr/sounds/326861/",
+      "license": "CC0",
+      "durationSec": null,
+      "verified": false,
+      "maxDurationSec": 3.0,
+      "note": "Same JohnBuhr pack (expected CC0).",
+      "alternates": [
+        { "id": 184422, "author": "qubodup", "note": "Sword Slash Attack (heavier)" }
+      ]
+    },
+    {
+      "target": "combo30.mp3",
+      "role": "banner tiers 6-8 (UNSTOPPABLE+, combo 24/28/32) + unbroken/triumph sting",
+      "id": 248150,
+      "author": "hykenfreak",
+      "url": "https://freesound.org/people/hykenfreak/sounds/248150/",
+      "license": "verify",
+      "durationSec": null,
+      "verified": false,
+      "maxDurationSec": 6.0,
+      "note": "The ladder's climax: a deep war-drum boom instead of another clash (Deepest Boom Yet - long reverb tail is fine here, it layers under the fanfare in playUnbroken). License unverified - if the script refuses it, fall back to the alternate.",
+      "alternates": [
+        { "id": 553418, "author": "EminYILDIRIM", "note": "Cinematic Boom Impact Hit 2021" }
+      ]
+    }
+  ]
+}
