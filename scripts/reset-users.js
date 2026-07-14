@@ -1,6 +1,7 @@
-// reset-users.js
+// reset-users.js — owner-run debug script (from repo root, with
+// service-account.json present at root): node scripts/reset-users.js
 const admin = require("firebase-admin")
-const serviceAccount = require("./service-account.json")
+const serviceAccount = require("../service-account.json")
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
