@@ -8,7 +8,6 @@ import {
   View,
 } from "react-native"
 import {
-  generateDeck,
   generateDailyDeck,
   getTodayString,
   isCardMatch,
@@ -107,6 +106,14 @@ interface GameProps {
   onGoArmory?: () => void
 }
 
+// A random-but-reproducible seed base for a free run. Feeds the seeded deck +
+// bounty infra exactly like a daily/arena seed, so any finished free run can be
+// replayed card-for-card — the async-duel enabler. Distribution is unchanged
+// (mulberry32 over a random seed is still a uniform shuffle); only reproducibility
+// is added.
+const makeRunSeed = (): string =>
+  `free-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window")
 const CARD_SCALE = Math.min(SCREEN_W / 780, SCREEN_H / 360, 1)
 const CARD_W = Math.round(52 * CARD_SCALE)
@@ -133,6 +140,9 @@ const Game = ({
   const [ready, setReady] = useState(false)
   const [level, setLevel] = useState(1)
   const [round, setRound] = useState(0)
+  // Seed base for the current free run (see makeRunSeed). Regenerated on Play
+  // Again so each free run is its own reproducible deck. Daily/Arena ignore it.
+  const runSeedRef = useRef(makeRunSeed())
   const [currentIndex, setCurrentIndex] = useState(0)
   const [deckIndex, setDeckIndex] = useState(0)
   const [score, setScore] = useState(0)
@@ -788,29 +798,23 @@ const Game = ({
     levelCompleteRef.current = false
     if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current)
     if (clearHoldTimer.current) clearTimeout(clearHoldTimer.current)
-    const deck = dailyMode
-      ? generateDailyDeck(getTodayString(), level)
-      : arenaMode && roomCode
-        ? generateDailyDeck(`${roomCode}-${round}`, level)
-        : generateDeck()
-    setCards(deck.map((c, i) => ({ ...c, visible: i < config.fieldCards })))
-    // Bounty placement: seeded on shared decks (Daily/Arena) so every player
-    // faces the same bounties — same-deck fairness (GAMEPLAY.md §8). Free play
-    // stays random.
-    const bountySeedBase = dailyMode
+    // Every mode now deals from a seed base: daily = the date, arena = room+
+    // round, free = the run's random seed (reproducible so the run is
+    // challengeable). Deck and bounty share the base, exactly as Daily/Arena do.
+    const seedBase = dailyMode
       ? getTodayString()
       : arenaMode && roomCode
         ? `${roomCode}-${round}`
-        : null
-    const bountyPicks = bountySeedBase
-      ? pickSeededIndices(
-          config.fieldCards,
-          2,
-          `mythic-${bountySeedBase}-level-${level}-bounty`,
-        )
-      : Array.from({ length: config.fieldCards }, (_, i) => i)
-          .sort(() => Math.random() - 0.5)
-          .slice(0, 2)
+        : runSeedRef.current
+    const deck = generateDailyDeck(seedBase, level)
+    setCards(deck.map((c, i) => ({ ...c, visible: i < config.fieldCards })))
+    // Bounty placement seeded off the same base — same-deck fairness
+    // (GAMEPLAY.md §8) now holds for free runs too, which duels rely on.
+    const bountyPicks = pickSeededIndices(
+      config.fieldCards,
+      2,
+      `mythic-${seedBase}-level-${level}-bounty`,
+    )
     setBountyIndices(new Set(bountyPicks))
     setCurrentIndex(config.deckStart)
     setDeckIndex(config.deckStart + 1)
@@ -1111,6 +1115,9 @@ const Game = ({
       return
     }
     resetRunState()
+    // A fresh free run = a fresh reproducible seed (Play Again should not re-deal
+    // the same cards). Arena/daily derive their seeds from round/date instead.
+    runSeedRef.current = makeRunSeed()
     setLevel(1)
     setGameOver(false)
     setScoreSaved(false)
