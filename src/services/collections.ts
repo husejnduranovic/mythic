@@ -8,6 +8,7 @@ export const Collections = {
   allTimeScores: "allTimeScores",
   loungeScores: "loungeScores",
   lounges: "lounges",
+  duels: "duels",
 } as const
 
 // dailyScores/{date}_{uid}
