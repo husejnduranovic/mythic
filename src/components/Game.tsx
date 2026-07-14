@@ -35,6 +35,7 @@ import {
 } from "./Armory"
 import { hasPlayedToday } from "../services/DailyQuestService"
 import { saveGameResults } from "../services/ScoreService"
+import { promptForPushIfNeeded } from "../services/NotificationService"
 import { StorageKeys } from "../services/storageKeys"
 import {
   BountyStyleContext,
@@ -442,6 +443,10 @@ const Game = ({
       if (score > 0) {
         saveScore(score, bestCombo)
         incrementGamesPlayed().then((n) => setGamesPlayedNow(n))
+        // A completed run builds a streak (currentStreak becomes ≥1), so this
+        // game-over is the contextual moment to ask for notifications — "we'll
+        // guard your streak". One-time, gated inside the service; never at auth.
+        if (uid && !arenaMode) promptForPushIfNeeded(uid)
         // First Victory — once per device, any solo mode; arena's game-over
         // is the rankings moment and keeps it. The games-played check keeps
         // the overlay away from veterans updating into this build (their

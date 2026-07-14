@@ -19,6 +19,7 @@ import {
 import LoungeScreen from "./src/components/LoungeScreen"
 import { getLoungeInfo, getSavedLoungeCode } from "./src/services/LoungeService"
 import { resetV14LocalScaleIfNeeded } from "./src/services/LocalScoreService"
+import { syncPushToken } from "./src/services/NotificationService"
 import * as SplashScreen from "expo-splash-screen"
 import { firestore } from "./src/services/Firebase"
 import { View } from "react-native"
@@ -110,6 +111,13 @@ function App() {
     if (!user?.uid) return
     const unsub = subscribeToMyInvites(user.uid, setIncomingInvite)
     return unsub
+  }, [user?.uid])
+
+  // Keep the FCM token fresh for players who already granted notifications
+  // (never prompts here — the prompt lands at the first streak-building
+  // game-over). Also refreshes the token that the existing record push needs.
+  useEffect(() => {
+    if (user?.uid) syncPushToken(user.uid)
   }, [user?.uid])
 
   const handleAcceptInvite = async () => {

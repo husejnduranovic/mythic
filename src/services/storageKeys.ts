@@ -21,6 +21,9 @@ export const StorageKeys = {
   // One-time gate: clears v1-scale local PB/ghost data on first v1.4 launch so
   // THE SHADOW stays reachable and the PB-gap goal isn't muted after the wipe.
   v14ResetDone: "@mythic_v14_reset_done",
+  // One-time gate: the push-permission prompt fires once, at the first
+  // game-over that built a streak (never at auth), so it lands in context.
+  pushPromptDone: "@mythic_push_prompt_done",
   seenCoachMarks: "@mythic_seen_coachmarks",
   firstVictorySeen: "@mythic_first_victory_seen",
 } as const
