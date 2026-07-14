@@ -167,7 +167,7 @@ const LAYOUTS = [
 
   // ── PROPOSED (2026-07-02 layout redesign) ────────────────────────────────
   {
-    name: "The Siege (L2, active — 2026-07-14 easing: the corner guards own the opening)",
+    name: "The Siege (L2, active — 2026-07-14 endgame ease: the keep splits into two flanks)",
     file: "LayoutSiege.tsx",
     n: 32,
     blockedBy: {
@@ -186,12 +186,17 @@ const LAYOUTS = [
       16: [0], 17: [1, 2], 18: [2, 3], 19: [4],
       20: [6], 21: [9], // posterns — quick side doors once the flank center falls
       22: [11], 23: [12, 13], 24: [13, 14], 25: [15],
-      // the keep — ONE row in the courtyard: west/east gates open when BOTH
-      // wall-ends on that side fall (commit to a flank), each gate frees its
-      // hall, both halls free the twin hearts (pop-pop finish)
-      26: [16, 22], 27: [19, 25],
+      // the keep — ONE row in the courtyard (2026-07-14 endgame ease: the keep
+      // used to gate on BOTH flanks at once — gates needed both wall-ends, both
+      // hearts needed both halls — so nothing in the courtyard opened until the
+      // whole ring was down, then it unwound single-file with dead taps). Now
+      // it splits into two INDEPENDENT finishing chains: each gate opens off its
+      // TOP corner-breach alone (16→26, 19→27), frees its hall (26→28, 27→29),
+      // and each hall frees its OWN heart (28→30, 29→31). Take a flank, take a
+      // heart — the courtyard no longer waits on both walls.
+      26: [16], 27: [19],
       28: [26], 29: [27],
-      30: [28, 29], 31: [28, 29],
+      30: [28], 31: [29],
     },
     mirror: {
       0: 4, 1: 3, 5: 8, 6: 9, 7: 10, 11: 15, 12: 14,

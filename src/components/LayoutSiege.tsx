@@ -38,24 +38,27 @@ const isOpen = (cards: ICard[], ...blockers: number[]) =>
  *                move 1); center stones under two (17←1,2  18←2,3  23←12,13
  *                24←13,14)
  *   posterns:    20←6  21←9 — side doors, open when the flank's center falls
- *   the keep:    one row standing clear in the courtyard. West gate 26←16,22
- *                (BOTH west wall-ends — commit to a flank), east gate 27←19,25;
- *                each gate frees its hall (28←26  29←27); both halls free the
- *                twin hearts (30,31←28,29 — the pop-pop finish)
+ *   the keep:    one row standing clear in the courtyard, split into two
+ *                INDEPENDENT flank chains (2026-07-14 endgame ease — the keep
+ *                used to gate on BOTH walls at once and unwound single-file).
+ *                West gate 26←16 (its TOP corner-breach alone) frees hall
+ *                28←26 frees heart 30←28; east gate 27←19 → hall 29←27 →
+ *                heart 31←29. Take a flank, take a heart.
  *
- * 12 open at start; first-5 now 3.8 with burst 16.4% (the 07-09 rework left
- * the opening at 2.9 / 11.5% — still the set's slowest-bursting board; every
- * corner guard is now a 2-card burst: its pocket AND its breach stone fall
- * with it). Dead taps 54%, inside the shipped 49–59% band, and the late game
- * still climaxes (last-5 2.6 vs the set's 1.4–1.8). As the walls fall their
+ * 12 open at start; first-5 3.9 with burst 13.3% (the 07-09 rework left the
+ * opening at 2.9 / 11.5%; every corner guard is now a 2-card burst — its pocket
+ * AND its breach stone fall with it). Dead taps 51%, inside the shipped 48–59%
+ * band. The 2026-07-14 endgame ease pulled last-5 from 2.6 to 1.9 (into the
+ * pack): the keep no longer waits on the whole ring, so the late reveals spread
+ * instead of back-loading into a single-file wall. As the walls fall their
  * cards stop rendering, so the keep — half-buried behind masonry at the start
  * — stands fully revealed in the courtyard by the time it is playable: the
  * reveal IS the siege.
  *
  * Strategy: the four corner guards own the opening (two cards each); the
- * center guards are held fuel. Commit to a flank for its gate, and keep the
- * chain alive for the keep run — gate → hall → the twin hearts is where the
- * late banners live.
+ * center guards are held fuel. The keep is now two independent flank chains —
+ * take EITHER top corner and its gate → hall → heart run opens without waiting
+ * on the far wall; the two heart pops are where the late banners live.
  */
 
 // All geometry in card units so every device keeps the shape.
@@ -86,12 +89,12 @@ const LayoutSiege = React.memo(
             <View style={styles.row}>
               {C(21, isOpen(cards, 9))}
               <View style={{ width: U }} />
-              {C(26, isOpen(cards, 16, 22))}
+              {C(26, isOpen(cards, 16))}
               {C(28, isOpen(cards, 26))}
-              {C(30, isOpen(cards, 28, 29))}
-              {C(31, isOpen(cards, 28, 29))}
+              {C(30, isOpen(cards, 28))}
+              {C(31, isOpen(cards, 29))}
               {C(29, isOpen(cards, 27))}
-              {C(27, isOpen(cards, 19, 25))}
+              {C(27, isOpen(cards, 19))}
               <View style={{ width: U }} />
               {C(20, isOpen(cards, 6))}
             </View>
