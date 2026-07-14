@@ -40,6 +40,10 @@ export const SoundService = {
       logError("Sound", err)
     }
 
+    // These filenames are the cue→file source of truth in ./soundFiles.ts
+    // (SOUND_FILES), which the fetch script (scripts/sounds-manifest.json) writes
+    // and the sound-assets test keeps in sync. Metro needs literal require paths,
+    // so this list mirrors that map by hand — do not let them drift.
     matchSound1 = await loadSound(require("../../assets/sounds/match.mp3"))
     matchSound2 = await loadSound(require("../../assets/sounds/match.mp3"))
     drawSound = await loadSound(require("../../assets/sounds/draw.mp3"))
