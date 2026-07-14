@@ -18,6 +18,9 @@ export const StorageKeys = {
   warTable: "@mythic_war_table",
   bountyStyle: "@mythic_bounty_style",
   armoryMigratedV2: "@mythic_armory_migrated_v2",
+  // One-time gate: clears v1-scale local PB/ghost data on first v1.4 launch so
+  // THE SHADOW stays reachable and the PB-gap goal isn't muted after the wipe.
+  v14ResetDone: "@mythic_v14_reset_done",
   seenCoachMarks: "@mythic_seen_coachmarks",
   firstVictorySeen: "@mythic_first_victory_seen",
 } as const

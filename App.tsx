@@ -18,6 +18,7 @@ import {
 } from "./src/services/ArenaService"
 import LoungeScreen from "./src/components/LoungeScreen"
 import { getLoungeInfo, getSavedLoungeCode } from "./src/services/LoungeService"
+import { resetV14LocalScaleIfNeeded } from "./src/services/LocalScoreService"
 import * as SplashScreen from "expo-splash-screen"
 import { firestore } from "./src/services/Firebase"
 import { View } from "react-native"
@@ -81,6 +82,7 @@ function App() {
 
   useEffect(() => {
     migrateArmoryIfNeeded()
+    resetV14LocalScaleIfNeeded()
   }, [])
 
   useEffect(() => {
