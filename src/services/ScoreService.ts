@@ -429,15 +429,20 @@ export const saveGameResults = async (
   // an unlimited free run are different competitions, so daily scores must NOT
   // pollute the all-time board (schema intent + prize integrity).
   if (!dailyMode) submitAllTimeScore(uid, heroName, score, bestCombo)
-  getSavedLoungeCode()
-    .then((code) => {
-      if (code) {
-        submitLoungeScore(code, uid, heroName, score, bestCombo).catch((err) =>
-          logError("Score.saveGameResults.lounge", err),
-        )
-      }
-    })
-    .catch((err) => logError("Score.saveGameResults.loungeCode", err))
+  // Lounge weekly boards are venue prize competitions — like the all-time
+  // board above, a one-attempt seeded daily (soon edict-modified) is a
+  // different competition and must not pollute them. Daily feeds the daily
+  // board only.
+  if (!dailyMode)
+    getSavedLoungeCode()
+      .then((code) => {
+        if (code) {
+          submitLoungeScore(code, uid, heroName, score, bestCombo).catch((err) =>
+            logError("Score.saveGameResults.lounge", err),
+          )
+        }
+      })
+      .catch((err) => logError("Score.saveGameResults.loungeCode", err))
   updateUserProfile(uid, score, bestCombo, totalCleared)
   syncGamesPlayed(uid)
   if (arenaMode && roomCode) {
