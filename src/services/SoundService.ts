@@ -243,6 +243,40 @@ export const SoundService = {
     }
   },
 
+  // Duel taken — you outscored the challenger. Distinct from a campaign
+  // VICTORY (which layers combo20 under the flourish): the winning blow is the
+  // top-tier capture ring pitched high, landing an instant before the fanfare —
+  // you can hear the strike that won it. match is in the playAt variant set, so
+  // routing the ring through playAt keeps the invariant.
+  async playDuelWin() {
+    try {
+      matchToggle = !matchToggle
+      this.playAt(matchToggle ? matchSound1 : matchSound2, 1.3)
+      setTimeout(() => this.play(levelCompleteSound), 150)
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+      setTimeout(
+        () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy),
+        170,
+      )
+    } catch (err) {
+      logError("Sound", err)
+    }
+  },
+
+  // Duel lost — outscored, not clock-killed. A low double thud (the draw voice
+  // dropped twice), lighter than the defeat knell and with no cold freeze tail:
+  // outfought, not buried. The challenge still stands. All via playAt (draw is
+  // in the variant set).
+  async playDuelLoss() {
+    try {
+      this.playAt(drawSound, 0.65, 0.85)
+      setTimeout(() => this.playAt(drawSound, 0.5, 0.7), 165)
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    } catch (err) {
+      logError("Sound", err)
+    }
+  },
+
   // The knell — a run dies on the clock. A deep steel thud as BATTLE OVER
   // stamps, then the cold settles. Quiet on purpose: the loss is marked,
   // never punished.

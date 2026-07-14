@@ -281,7 +281,12 @@ export const GameOverScreen = ({
   useEffect(() => {
     if (arenaMode && !allFinished) return
     const t = setTimeout(() => {
-      if (isFlawless) SoundService.playTriumph()
+      // A duel is judged on the challenger, not the field-clear: beating their
+      // score is the win, whatever happened to the board.
+      if (duelResult) {
+        if (score > duelResult.challengerScore) SoundService.playDuelWin()
+        else SoundService.playDuelLoss()
+      } else if (isFlawless) SoundService.playTriumph()
       else if (arenaMode ? myArenaRank === 1 : isVictory)
         SoundService.playVictory()
       else SoundService.playDefeat()
