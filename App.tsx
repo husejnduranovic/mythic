@@ -20,6 +20,7 @@ import LoungeScreen from "./src/components/LoungeScreen"
 import { getLoungeInfo, getSavedLoungeCode } from "./src/services/LoungeService"
 import { resetV14LocalScaleIfNeeded } from "./src/services/LocalScoreService"
 import { syncPushToken } from "./src/services/NotificationService"
+import { Duel } from "./src/services/DuelService"
 import * as SplashScreen from "expo-splash-screen"
 import { firestore } from "./src/services/Firebase"
 import { View } from "react-native"
@@ -48,6 +49,7 @@ type Screen =
   | "profile"
   | "arena"
   | "arenaGame"
+  | "duelGame"
   | "lounge"
 
 function App() {
@@ -55,6 +57,8 @@ function App() {
   const [user, setUser] = useState<UserData | null>(null)
   const [screen, setScreen] = useState<Screen>("home")
   const [roomCode, setRoomCode] = useState("")
+  // The duel being answered — drives the duelGame screen.
+  const [activeDuel, setActiveDuel] = useState<Duel | null>(null)
   // Arena room to auto-join after accepting a global invite.
   const [arenaAutoJoin, setArenaAutoJoin] = useState<string | null>(null)
   const [incomingInvite, setIncomingInvite] = useState<{
@@ -250,8 +254,31 @@ function App() {
         heroName={user.heroName}
         autoJoinCode={arenaAutoJoin}
         onAutoJoinHandled={() => setArenaAutoJoin(null)}
+        onDuelStart={(duel) => {
+          setActiveDuel(duel)
+          setScreen("duelGame")
+        }}
       />
     ),
+    duelGame: () =>
+      activeDuel ? (
+        <Game
+          onHome={() => {
+            setActiveDuel(null)
+            setScreen("home")
+          }}
+          uid={user.uid}
+          heroName={user.heroName}
+          duelMode
+          duelCode={activeDuel.code}
+          duelSeed={activeDuel.seedBase}
+          duelChallengerName={activeDuel.challengerName}
+          duelChallengerScore={activeDuel.challengerScore}
+        />
+      ) : (
+        // Defensive only — activeDuel is always set before navigating here.
+        <View style={{ flex: 1, backgroundColor: "#0B1410" }} />
+      ),
     arenaGame: () => (
       <Game
         onHome={() => setScreen("home")}

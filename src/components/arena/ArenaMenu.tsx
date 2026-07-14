@@ -2,6 +2,7 @@ import React from "react"
 import {
   Animated,
   ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
@@ -26,6 +27,11 @@ interface Props {
   onCreate: () => void
   onJoin: () => void
   onBack: () => void
+  // Async duels: answer a rival's challenge code (6-char alnum, distinct from
+  // the 4-digit live room code). Same 7 fields, played whenever you like.
+  duelCode: string
+  onDuelCodeChange: (code: string) => void
+  onAnswerDuel: () => void
 }
 
 const ArenaMenu = ({
@@ -41,6 +47,9 @@ const ArenaMenu = ({
   onCreate,
   onJoin,
   onBack,
+  duelCode,
+  onDuelCodeChange,
+  onAnswerDuel,
 }: Props) => {
   return (
     <View style={styles.container}>
@@ -181,10 +190,84 @@ const ArenaMenu = ({
           </View>
         </View>
 
+        {/* Async duel — answer a challenge on your own time */}
+        <View style={duelStrip.row}>
+          <Icon name="sword-cross" size={13} color={color.goldFaded} />
+          <Text style={duelStrip.label}>ANSWER A CHALLENGE</Text>
+          <TextInput
+            style={duelStrip.input}
+            value={duelCode}
+            onChangeText={(t) =>
+              onDuelCodeChange(
+                t.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6),
+              )
+            }
+            placeholder="CODE"
+            placeholderTextColor="rgba(232,197,71,0.2)"
+            autoCapitalize="characters"
+            maxLength={6}
+          />
+          <TouchableOpacity
+            style={[
+              duelStrip.btn,
+              duelCode.length !== 6 && { opacity: 0.4 },
+            ]}
+            onPress={onAnswerDuel}
+            disabled={duelCode.length !== 6}
+            activeOpacity={0.85}
+          >
+            <Text style={duelStrip.btnText}>ANSWER</Text>
+          </TouchableOpacity>
+        </View>
+
         <ReturnToCastle onPress={onBack} />
       </Animated.View>
     </View>
   )
 }
+
+const duelStrip = StyleSheet.create({
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 8,
+  },
+  label: {
+    color: color.goldFaded,
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+  },
+  input: {
+    minWidth: 84,
+    borderWidth: 1,
+    borderColor: color.goldLine,
+    borderRadius: 6,
+    backgroundColor: color.bgSunken,
+    color: color.gold,
+    fontSize: 13,
+    fontWeight: "900",
+    letterSpacing: 3,
+    textAlign: "center",
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  btn: {
+    borderWidth: 1,
+    borderColor: color.goldLine,
+    borderRadius: 6,
+    backgroundColor: color.goldWash,
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+  },
+  btnText: {
+    color: color.gold,
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+  },
+})
 
 export default ArenaMenu

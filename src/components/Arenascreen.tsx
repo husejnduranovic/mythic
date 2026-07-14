@@ -16,6 +16,7 @@ import { logError } from "../services/logError"
 import database from "@react-native-firebase/database"
 import ArenaMenu from "./arena/ArenaMenu"
 import ArenaLobby from "./arena/ArenaLobby"
+import { getDuel, Duel } from "../services/DuelService"
 
 interface ArenaScreenProps {
   onBack: () => void
@@ -25,6 +26,8 @@ interface ArenaScreenProps {
   // When set (e.g. from an accepted global invite), auto-join this room on mount.
   autoJoinCode?: string | null
   onAutoJoinHandled?: () => void
+  // Answer-a-challenge: hand a resolved duel up to App to launch in duel mode.
+  onDuelStart: (duel: Duel) => void
 }
 
 const ArenaScreen = ({
@@ -34,10 +37,12 @@ const ArenaScreen = ({
   heroName,
   autoJoinCode,
   onAutoJoinHandled,
+  onDuelStart,
 }: ArenaScreenProps) => {
   const [mode, setMode] = useState<"menu" | "lobby">("menu")
   const [roomCode, setRoomCode] = useState("")
   const [joinCode, setJoinCode] = useState("")
+  const [duelCodeInput, setDuelCodeInput] = useState("")
   const [room, setRoom] = useState<Room | null>(null)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
@@ -176,6 +181,23 @@ const ArenaScreen = ({
     setLoading(false)
   }
 
+  const handleAnswerDuel = async () => {
+    if (duelCodeInput.length !== 6) return
+    setLoading(true)
+    setError("")
+    const duel = await getDuel(duelCodeInput)
+    setLoading(false)
+    if (!duel) {
+      setError("Challenge not found or expired")
+      return
+    }
+    if (duel.state !== "open") {
+      setError("That challenge has already been answered")
+      return
+    }
+    onDuelStart(duel)
+  }
+
   // Auto-join a room when arriving from an accepted global invite.
   useEffect(() => {
     if (!autoJoinCode) return
@@ -262,6 +284,9 @@ const ArenaScreen = ({
       onCreate={handleCreate}
       onJoin={handleJoin}
       onBack={onBack}
+      duelCode={duelCodeInput}
+      onDuelCodeChange={setDuelCodeInput}
+      onAnswerDuel={handleAnswerDuel}
     />
   )
 }
