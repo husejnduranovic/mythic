@@ -543,6 +543,16 @@ export const BetweenLevelsScreen = ({
   const { width: winW, height: winH } = useWindowDimensions()
   const insets = useSafeAreaInsets()
 
+  // Beat-2 card sizing: measure the stage (and, off-arena, the notes beneath the
+  // card) so the reveal always fits the space actually left after the header and
+  // the onward row. A cleared field's header carries the full ledger (up to five
+  // COMBAT/TIME/DECK/PERFECT/UNBROKEN chips) plus a crown row, and landscape
+  // heights are short — with a fixed card height that overflowed the flex:1
+  // stage, centring pushed the card up into the header and the notes down over
+  // the march row (2026-07-14 fix: the middle no longer overlaps).
+  const [stageH, setStageH] = useState(0)
+  const [notesH, setNotesH] = useState(0)
+
   const fade = useRef(new Animated.Value(0)).current
   const stamp = useRef(new Animated.Value(0)).current
   const late = useRef(new Animated.Value(0)).current
@@ -625,9 +635,16 @@ export const BetweenLevelsScreen = ({
   const padL = Math.max(16, insets.left)
   const padR = Math.max(16, insets.right)
 
-  const cardH = Math.round(
-    Math.min(winH - (arenaMode ? 208 : 196), arenaMode ? 150 : 178),
-  )
+  const CARD_GAP = 9 // b.stage gap between the card and the notes
+  const cardCap = arenaMode ? 150 : 178
+  // Space the card may occupy: the measured stage minus the notes stacked under
+  // it (arena keeps its notes column empty — standings sit beside the card).
+  // Before the first layout resolves, fall back to the old viewport estimate.
+  const cardAvail =
+    stageH > 0
+      ? stageH - (arenaMode ? 0 : notesH + CARD_GAP)
+      : winH - (arenaMode ? 208 : 196)
+  const cardH = Math.round(Math.max(96, Math.min(cardCap, cardAvail)))
   const cardW = Math.round(cardH / 1.42)
 
   // Ghost delta at this exact point of the campaign.
@@ -730,7 +747,10 @@ export const BetweenLevelsScreen = ({
         </Animated.View>
 
         {/* ── Beat 2: the reveal ── */}
-        <View style={b.stage}>
+        <View
+          style={b.stage}
+          onLayout={(e) => setStageH(e.nativeEvent.layout.height)}
+        >
           {arenaMode ? (
             <View style={b.arenaRow}>
               <FlipCard w={cardW} h={cardH} level={level} isFinal={isFinal} />
@@ -774,7 +794,10 @@ export const BetweenLevelsScreen = ({
             <>
               <FlipCard w={cardW} h={cardH} level={level} isFinal={isFinal} />
               {/* ── Beat 3: the shadow ── */}
-              <Animated.View style={[b.notes, lateStyle]}>
+              <Animated.View
+                style={[b.notes, lateStyle]}
+                onLayout={(e) => setNotesH(e.nativeEvent.layout.height)}
+              >
                 {ghostDelta !== null && (
                   <View style={b.ghostRow}>
                     <Icon
