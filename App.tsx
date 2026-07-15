@@ -116,19 +116,21 @@ function App() {
   }, [introSeen, fontsReady])
 
   // Listen for arena invites globally, so the modal can appear on any screen —
-  // not only while the recipient happens to be on the Arena menu.
+  // not only while the recipient happens to be on the Arena menu. Anon can't
+  // enter the Arena, so they neither subscribe nor sync a push token (they have
+  // no users doc to hold one) — both begin once they've etched their name.
   useEffect(() => {
-    if (!user?.uid) return
+    if (!user?.uid || user.isAnon) return
     const unsub = subscribeToMyInvites(user.uid, setIncomingInvite)
     return unsub
-  }, [user?.uid])
+  }, [user?.uid, user?.isAnon])
 
   // Keep the FCM token fresh for players who already granted notifications
   // (never prompts here — the prompt lands at the first streak-building
   // game-over). Also refreshes the token that the existing record push needs.
   useEffect(() => {
-    if (user?.uid) syncPushToken(user.uid)
-  }, [user?.uid])
+    if (user?.uid && !user.isAnon) syncPushToken(user.uid)
+  }, [user?.uid, user?.isAnon])
 
   // Return-to-Home re-pulls the streak/ward stats — a game just played may have
   // extended the streak or spent the Ember Ward, and the root-level hook won't
