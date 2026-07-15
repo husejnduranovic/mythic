@@ -100,6 +100,8 @@ export const GameOverScreen = ({
   canChallenge = false,
   onChallenge,
   duelResult = null,
+  isAnon = false,
+  onLink,
   onPlayAgain,
   onConfirmQuit,
   onHome,
@@ -137,6 +139,10 @@ export const GameOverScreen = ({
   // Set when THIS run was an answer to someone's challenge — the game-over
   // shows the two-row duel verdict instead of a board rank.
   duelResult?: { challengerName: string; challengerScore: number } | null
+  // Anonymous run: no board rank was earned. The rank slot becomes the link
+  // moment — "etch your name" → onLink (App's Google link flow).
+  isAnon?: boolean
+  onLink?: () => void
   onPlayAgain: () => void
   onConfirmQuit: () => void
   onHome: () => void
@@ -557,6 +563,24 @@ export const GameOverScreen = ({
                       </Text>
                     </View>
                   </View>
+                ) : isAnon ? (
+                  // The link moment — an anon run earns no rank, so the slot
+                  // becomes the ask: etch your name to take the Hall. Tapping
+                  // runs App's Google link flow (uid preserved).
+                  <TouchableOpacity
+                    style={g.linkCta}
+                    onPress={onLink}
+                    activeOpacity={0.85}
+                  >
+                    <Icon name="fountain-pen-tip" size={15} color={color.gold} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={g.linkCtaTitle}>ETCH YOUR NAME IN THE HALL</Text>
+                      <Text style={g.linkCtaSub}>
+                        This run is yours — claim it to compete for the throne
+                      </Text>
+                    </View>
+                    <Text style={g.linkCtaArrow}>›</Text>
+                  </TouchableOpacity>
                 ) : (
                 <View style={g.rankSlot}>
                   {rankResolved ? (
@@ -664,8 +688,9 @@ export const GameOverScreen = ({
                   )}
                 </View>
 
-                {/* one-more-battle goal (a duel has its own verdict instead) */}
-                {duelResult ? null : goalStruck ? (
+                {/* one-more-battle goal (a duel has its own verdict, and an
+                    anon run's next step is the link CTA above) */}
+                {duelResult || isAnon ? null : goalStruck ? (
                   <View style={[g.goal, g.goalStruck]}>
                     <Icon
                       name="star-four-points"
@@ -699,7 +724,14 @@ export const GameOverScreen = ({
                   </View>
                 ) : null}
 
-                {uid ? (
+                {isAnon ? (
+                  <View style={g.savedRow}>
+                    <Icon name="cellphone" size={11} color={color.steel} />
+                    <Text style={[g.savedTxt, { color: color.steel }]}>
+                      Kept on this device
+                    </Text>
+                  </View>
+                ) : uid ? (
                   <View style={g.savedRow}>
                     <Icon name="check-decagram" size={11} color={color.sage} />
                     <Text style={g.savedTxt}>
@@ -839,6 +871,32 @@ const g = StyleSheet.create({
   chronicle: { flex: 1, justifyContent: "center" },
 
   rankSlot: { height: 26, justifyContent: "center", marginBottom: 2 },
+  linkCta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 2,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: withAlpha(color.gold, 0.4),
+    backgroundColor: withAlpha(color.gold, 0.08),
+  },
+  linkCtaTitle: {
+    fontFamily: font.heading,
+    color: color.gold,
+    fontSize: 13,
+    letterSpacing: 1,
+  },
+  linkCtaSub: {
+    color: withAlpha(color.gold, 0.55),
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+    marginTop: 1,
+  },
+  linkCtaArrow: { color: color.gold, fontSize: 22, fontWeight: "300" },
   rankResolved: {
     flexDirection: "row",
     alignItems: "center",

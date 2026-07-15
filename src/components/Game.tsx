@@ -1462,6 +1462,8 @@ const Game = ({
         }
         onChallenge={handleChallenge}
         duelResult={duelResult}
+        isAnon={isAnon}
+        onLink={onLink}
         onPlayAgain={handlePlayAgain}
         onConfirmQuit={handleConfirmQuit}
         onHome={onHome}
