@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react"
 import * as NavigationBar from "expo-navigation-bar"
 import { StatusBar } from "expo-status-bar"
 import auth from "@react-native-firebase/auth"
+import { GoogleSignin } from "@react-native-google-signin/google-signin"
 import Game from "./src/components/Game"
 import Scoreboard from "./src/components/Scoreboard"
 import HomeScreen from "./src/components/Homescreen"
@@ -150,6 +151,38 @@ function App() {
     if (user) await clearArenaInvite(user.uid)
   }
 
+  // The link moment — an anon "Wanderer" etches their name in the Hall. Shared
+  // by the Home locked tiles and the game-over CTA. Linking PRESERVES the uid
+  // (no data migration), so device-local progress carries into the named
+  // account. GoogleSignin is configured at Authscreen module load.
+  const linkWithGoogle = async () => {
+    try {
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true })
+      const signInResult = await GoogleSignin.signIn()
+      const idToken = signInResult?.data?.idToken
+      if (!idToken) return
+      const cred = auth.GoogleAuthProvider.credential(idToken)
+      const current = auth().currentUser
+      try {
+        if (current?.isAnonymous) await current.linkWithCredential(cred)
+        else await auth().signInWithCredential(cred)
+      } catch (err: any) {
+        // Veteran reinstall: this Google account already owns an account. Sign
+        // into it instead of linking (the anon device progress stays local).
+        if (err?.code === "auth/credential-already-in-use")
+          await auth().signInWithCredential(cred)
+        else throw err
+      }
+      // Re-resolve identity by remounting AuthScreen: it loads the heroName doc
+      // (veteran → straight in) or shows the heroname step (fresh link). The
+      // uid is preserved on the link path.
+      setUser(null)
+      setScreen("home")
+    } catch (err) {
+      logError("App.linkWithGoogle", err)
+    }
+  }
+
   const handleLogout = async () => {
     try {
       if (user) {
@@ -210,11 +243,14 @@ function App() {
         onScoreboard={() => setScreen("scores")}
         onArmory={() => setScreen("armory")}
         heroName={user.heroName}
-        onDailyQuest={() => setScreen("daily")}
+        isAnon={user.isAnon}
+        onDailyQuest={() =>
+          user.isAnon ? linkWithGoogle() : setScreen("daily")
+        }
         onLogout={handleLogout}
         onProfile={() => setScreen("profile")}
-        onArena={() => setScreen("arena")}
-        onLounge={() => setScreen("lounge")}
+        onArena={() => (user.isAnon ? linkWithGoogle() : setScreen("arena"))}
+        onLounge={() => (user.isAnon ? linkWithGoogle() : setScreen("lounge"))}
         loungeCode={loungeCode}
         loungeName={loungeName}
         onlineCount={onlineCount}
@@ -230,6 +266,8 @@ function App() {
         onGoArmory={() => setScreen("armory")}
         uid={user.uid}
         heroName={user.heroName}
+        isAnon={user.isAnon}
+        onLink={linkWithGoogle}
       />
     ),
     daily: () => (

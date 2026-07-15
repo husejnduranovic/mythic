@@ -115,6 +115,11 @@ interface GameProps {
   duelChallengerScore?: number
   // First Victory (R5): routes the one-time claim CTA into the Armory.
   onGoArmory?: () => void
+  // Anonymous session — plays free battles fully (crowns, ghost, local PB,
+  // Armory gates are all device-local), but never submits to the Firestore
+  // boards. The game-over offers to link ("etch your name") instead.
+  isAnon?: boolean
+  onLink?: () => void
 }
 
 // A random-but-reproducible seed base for a free run. Feeds the seeded deck +
@@ -143,6 +148,8 @@ const Game = ({
   duelChallengerName,
   duelChallengerScore,
   onGoArmory,
+  isAnon = false,
+  onLink,
 }: GameProps) => {
   const [theme, setTheme] = useState<ThemeConfig>({
     cardBack: "classic",
@@ -460,7 +467,10 @@ const Game = ({
           challengerName: duelChallengerName || "Rival",
           challengerScore: duelChallengerScore || 0,
         })
-      } else if (uid && heroName) {
+      } else if (uid && heroName && !isAnon) {
+        // Anon never reaches the boards — no all-time/daily/lounge submit, no
+        // Hall entry. Local progress (below) still records; the game-over shows
+        // the link prompt in the rank slot instead of a standing.
         saveGameResults({
           uid,
           heroName,
@@ -492,7 +502,7 @@ const Game = ({
         // A completed run builds a streak (currentStreak becomes ≥1), so this
         // game-over is the contextual moment to ask for notifications — "we'll
         // guard your streak". One-time, gated inside the service; never at auth.
-        if (uid && !arenaMode) promptForPushIfNeeded(uid)
+        if (uid && !arenaMode && !isAnon) promptForPushIfNeeded(uid)
         // First Victory — once per device, any solo mode; arena's game-over
         // is the rankings moment and keeps it. The games-played check keeps
         // the overlay away from veterans updating into this build (their

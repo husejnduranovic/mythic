@@ -40,6 +40,9 @@ interface HomeScreenProps {
   bestStreak?: number
   emberWarded?: boolean
   onHowToPlay?: () => void
+  // Anonymous session: the identity modes (Daily/Arena/Lounge) are locked and
+  // their tiles invite the player to etch their name (tapping links via App).
+  isAnon?: boolean
 }
 
 const withAlpha = (hex: string, a: number): string => {
@@ -208,6 +211,7 @@ const HomeScreen = ({
   currentStreak,
   emberWarded,
   onHowToPlay,
+  isAnon = false,
 }: HomeScreenProps) => {
   const titleOpacity = useRef(new Animated.Value(0)).current
   const titleY = useRef(new Animated.Value(-20)).current
@@ -361,12 +365,22 @@ const HomeScreen = ({
     label: string,
     onPress?: () => void,
     dot?: boolean,
+    locked?: boolean,
   ) =>
     onPress ? (
       <TouchableOpacity style={styles.railItem} onPress={onPress} activeOpacity={0.7}>
         <View>
-          <Icon name={icon} size={20} color={color.goldFaded} />
+          <Icon
+            name={icon}
+            size={20}
+            color={locked ? withAlpha(color.gold, 0.35) : color.goldFaded}
+          />
           {dot && <View style={styles.railDot} />}
+          {locked && (
+            <View style={styles.railLock}>
+              <Icon name="lock" size={9} color={color.gold} />
+            </View>
+          )}
         </View>
         <Text style={styles.railLabel}>{label}</Text>
       </TouchableOpacity>
@@ -629,10 +643,16 @@ const HomeScreen = ({
             <View style={styles.modeHeader}>
               <Icon name="script-text-outline" size={12} color={color.goldFaded} />
               <Text style={styles.modeBadgeGold}>TODAY</Text>
-              <Animated.View style={[styles.liveDot, { opacity: dotPulse }]} />
+              {isAnon ? (
+                <Icon name="lock" size={11} color={withAlpha(color.gold, 0.6)} />
+              ) : (
+                <Animated.View style={[styles.liveDot, { opacity: dotPulse }]} />
+              )}
             </View>
             <Text style={styles.modeTitleGold}>Daily Quest</Text>
-            <Text style={styles.modeDesc}>Same deck for all</Text>
+            <Text style={styles.modeDesc}>
+              {isAnon ? "Etch your name to enter" : "Same deck for all"}
+            </Text>
           </TouchableOpacity>
           </Animated.View>
 
@@ -653,15 +673,23 @@ const HomeScreen = ({
             <View style={styles.modeHeader}>
               <Icon name="sword-cross" size={12} color="rgba(255,140,0,0.7)" />
               <Text style={styles.modeBadgeEmber}>2–6 PLAYERS</Text>
-              {onlineCount > 0 && (
-                <View style={styles.onlineBadge}>
-                  <Animated.View style={[styles.liveDot, { opacity: dotPulse }]} />
-                  <Text style={styles.onlineBadgeText}>{onlineCount}</Text>
-                </View>
+              {isAnon ? (
+                <Icon name="lock" size={11} color="rgba(255,140,0,0.6)" />
+              ) : (
+                onlineCount > 0 && (
+                  <View style={styles.onlineBadge}>
+                    <Animated.View
+                      style={[styles.liveDot, { opacity: dotPulse }]}
+                    />
+                    <Text style={styles.onlineBadgeText}>{onlineCount}</Text>
+                  </View>
+                )
               )}
             </View>
             <Text style={styles.modeTitleEmber}>Arena</Text>
-            <Text style={styles.modeDesc}>Real-time duels</Text>
+            <Text style={styles.modeDesc}>
+              {isAnon ? "Etch your name to enter" : "Real-time duels"}
+            </Text>
           </TouchableOpacity>
           </Animated.View>
         </View>
@@ -681,7 +709,7 @@ const HomeScreen = ({
           <View style={styles.railDivider} />
           {railItem("shield-half-full", "Armory", onArmory)}
           {onLounge && <View style={styles.railDivider} />}
-          {railItem("pillar", "Lounge", onLounge, !!loungeCode)}
+          {railItem("pillar", "Lounge", onLounge, !!loungeCode, isAnon)}
           <View style={styles.railDivider} />
           {railItem("script-text-outline", "Guide", onHowToPlay)}
         </View>
@@ -1293,6 +1321,14 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     backgroundColor: color.sage,
+  },
+  railLock: {
+    position: "absolute",
+    top: -5,
+    right: -7,
+    backgroundColor: color.bgBase,
+    borderRadius: 6,
+    padding: 1,
   },
 
   // Logout
