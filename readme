@@ -1,0 +1,70 @@
+# Mythic Peaks
+
+A medieval-fantasy tri-peaks solitaire game with real-time multiplayer, built solo and shipped to Google Play.
+
+[**Play on Google Play**](https://play.google.com/store/apps/details?id=com.husejn.mythicpeaks)
+
+---
+
+## What it is
+
+Tri-peaks solitaire reskinned into a medieval-fantasy setting, with three things most solitaire games don't have: live head-to-head multiplayer, a persistent progression system, and tournament leaderboards.
+
+Built end to end — game design, client, backend, store listing, release pipeline, and ongoing operation.
+
+## Stack
+
+| Layer              | Technology                      |
+| ------------------ | ------------------------------- |
+| Client             | React Native (Expo), TypeScript |
+| Animation          | React Native Reanimated         |
+| Auth & data        | Firebase Auth, Firestore        |
+| Real-time          | Firebase Realtime Database      |
+| Config & messaging | Firebase Remote Config, FCM     |
+| Server logic       | Cloud Functions                 |
+| Build & release    | EAS Build, EAS Submit           |
+
+## Features
+
+**Real-time multiplayer.** Head-to-head Arena matches over Firebase Realtime Database, with deck state synchronized across both clients and atomic rematch transactions to prevent double-accept races.
+
+**Progression.** An Armory of unlockable card backs and battlefields, persisted per account with versioned schema migrations that run on upgrade.
+
+**Leaderboards.** Global and per-venue tournament boards in Firestore, scoped daily, weekly, and all-time.
+
+**Daily quests.** Rotating objectives with server-side date handling so the reset can't be gamed by changing device time.
+
+## Engineering notes
+
+A few problems worth documenting, since they shaped the architecture more than the gameplay did.
+
+### Version skew
+
+Players don't update in lockstep, so any change has to work against clients running older builds. Remote Config holds a minimum-supported-version value plus per-feature flags. On launch the client compares its own version against the remote minimum: below it, the user gets a blocking update prompt; above it, flags decide which features are active for that build. New features ship to newer clients while older ones keep running the previous path.
+
+### Schema migrations on a live install base
+
+Adding the Armory changed the persisted local schema while existing installs already held data in the old shape. The local schema is versioned, and forward migrations run on first launch after an update, stepping through each version in order. Nothing server-side assumes a single schema version — it tolerates both until the old version is gated out.
+
+### Multiplayer state consistency
+
+Two clients acting on shared state means races. Rematch acceptance runs as an atomic transaction so a simultaneous accept from both players resolves to one match rather than two. Deck state is authoritative in Realtime Database rather than derived independently on each client.
+
+## Release process
+
+Closed testing track → staged rollout → crash monitoring, with Remote Config version gating available as a rollback lever if a release misbehaves. Store listing is localized.
+
+## Running locally
+
+```bash
+npm install
+npx expo start
+```
+
+Requires your own Firebase project. Create one, enable Auth, Firestore, Realtime Database, and Remote Config, then add your config to the appropriate environment file.
+
+> **Note:** never commit service account keys or environment files. `.gitignore` covers the usual paths, but a file already tracked by git stays tracked regardless — use `git rm --cached` if one slips in.
+
+## Status
+
+Live on Google Play and actively maintained.
